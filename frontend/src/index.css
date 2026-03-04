@@ -1,0 +1,502 @@
+@import "tailwindcss";
+
+/* Thêm vào src/index.css */
+/* Hide spin-buttons for Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+/* Hide spin-buttons for Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Thêm vào cuối src/index.css */
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s ease-out forwards;
+}
+
+/* --- HYPER-IMMERSIVE SYSTEM --- */
+
+/* 1. Animated Gradient Typography */
+.text-shimmer {
+  background: linear-gradient(to right,
+      #0f172a 20%,
+      #3b82f6 40%,
+      #60a5fa 60%,
+      #0f172a 80%);
+  background-size: 200% auto;
+  color: #000;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* Unified Gradients */
+.bg-gradient-primary {
+  @apply bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600;
+}
+
+.text-gradient-primary {
+  @apply bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent;
+}
+
+.border-gradient-primary {
+  border-image: linear-gradient(to right, #2563eb, #4f46e5, #9333ea) 1;
+}
+
+/* 2. Custom Cursor Follower */
+
+/* 3. Enhanced Glassmorphism & Background System */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+}
+
+.bg-admin-main {
+  background: #f8fafc;
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+}
+
+.blob-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.15;
+  z-index: 0;
+}
+
+.blob-1 {
+  width: 500px;
+  height: 500px;
+  background: linear-gradient(to right, #3b82f6, #6366f1);
+  top: -10%;
+  left: -10%;
+  animation: float 20s infinite alternate;
+}
+
+.blob-2 {
+  width: 600px;
+  height: 600px;
+  background: linear-gradient(to right, #818cf8, #a855f7);
+  bottom: -10%;
+  right: -10%;
+  animation: float 25s infinite alternate-reverse;
+}
+
+.blob-3 {
+  width: 400px;
+  height: 400px;
+  background: linear-gradient(to right, #f472b6, #db2777);
+  top: 40%;
+  left: 30%;
+  animation: pulse-glow 15s infinite ease-in-out;
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.1;
+  }
+
+  50% {
+    transform: scale(1.2);
+    opacity: 0.2;
+  }
+}
+
+/* 4. Corner-Flush Discount Badge */
+.discount-corner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #2563eb;
+  color: white;
+  padding: 4px 10px;
+  border-bottom-left-radius: 8px;
+  font-weight: 800;
+  font-size: 14px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: -0.02em;
+  font-family: 'Inter', sans-serif;
+  box-shadow: -2px 2px 8px rgba(37, 99, 235, 0.2);
+}
+
+
+.blob-2 {
+  bottom: 10%;
+  right: -10%;
+  animation: float 25s infinite alternate-reverse;
+}
+
+@keyframes float {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  100% {
+    transform: translate(50px, 50px) scale(1.1);
+  }
+}
+
+/* Spotlight Section Polish */
+.spotlight-text {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Tùy chỉnh thanh cuộn cho đẹp */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* src/index.css - Thêm vào cuối file */
+
+/* ⚡ NOTE: @keyframes blob đã được define ở đầu file (line 18-34) */
+
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Thanh cuộn hiện đại */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+}
+
+/* --- THÊM VÀO CUỐI FILE src/index.css --- */
+
+/* Hiệu ứng xoay chậm cho bánh xe */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 6s linear infinite;
+  transform-origin: center;
+  /* Đảm bảo xoay quanh tâm */
+}
+
+/* Hiệu ứng xoay ngược chiều */
+@keyframes spin-reverse-slow {
+  from {
+    transform: rotate(360deg);
+  }
+
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+.animate-spin-reverse-slow {
+  animation: spin-reverse-slow 8s linear infinite;
+  transform-origin: center;
+}
+
+/* Hiệu ứng "thở" (phát sáng xung nhịp) cho khung xe */
+@keyframes pulse-neon {
+
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px rgba(167, 139, 250, 0.5)) brightness(1);
+    stroke-width: 2px;
+  }
+
+  50% {
+    filter: drop-shadow(0 0 8px rgba(96, 165, 250, 0.8)) brightness(1.2);
+    stroke-width: 2.5px;
+  }
+}
+
+.animate-pulse-neon {
+  animation: pulse-neon 3s ease-in-out infinite;
+}
+
+/* Ẩn icon mắt mặc định của browser (Windows Edge/IE) để tránh bị trùng với icon custom */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+/* --- Redesign Home Page Animations --- */
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 30s linear infinite;
+}
+
+.animate-marquee-slow {
+  display: flex;
+  width: max-content;
+  animation: marquee 60s linear infinite;
+}
+
+.hover-pause:hover {
+  animation-play-state: paused;
+}
+
+@keyframes fade-in-blur {
+  0% {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(20px);
+  }
+
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-blur {
+  animation: fade-in-blur 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes slow-zoom {
+  0% {
+    transform: scale(1);
+  }
+
+  100% {
+    transform: scale(1.1);
+  }
+}
+
+.animate-slow-zoom {
+  animation: slow-zoom 20s ease-in-out infinite alternate;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* --- Dark Modern Scrollbar --- */
+.custom-scrollbar-dark::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar-dark::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+.custom-scrollbar-dark::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 10px;
+  border: 2px solid #0f172a;
+}
+
+.custom-scrollbar-dark::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Premium Glow Animation */
+@keyframes premium-glow {
+
+  0%,
+  100% {
+    opacity: 0.3;
+    filter: blur(100px);
+    scale: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+    filter: blur(120px);
+    scale: 1.1;
+  }
+}
+
+.animate-premium-glow {
+  animation: premium-glow 8s ease-in-out infinite;
+}
+
+@keyframes fade-in-down {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-down {
+  animation: fade-in-down 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Shimmer effect for active tabs */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s ease-in-out infinite;
+}
