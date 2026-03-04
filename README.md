@@ -75,11 +75,11 @@ npm run dev
 
 ## 📸 Hình Ảnh Dự Án
 *(Vui lòng cập nhật hình ảnh giao diện tại đây)*
-![alt text](home.png)
-![alt text](ai.png)
-![alt text](dashboard.png)
-![alt text](cart.png)
-![alt text](productdetail.png)
+![Home Page](./images/home.png)
+![AI Assistant](./images/ai.png)
+![Admin Dashboard](./images/dashboard.png)
+![Cart & Checkout](./images/cart.png)
+![Product Detail](./images/productdetail.png)
 ---
 
 ## 👤 Tác Giả
