@@ -8,3 +8,4 @@ from app.models.order import DonHang, ChiTietDonHang  # noqa
 from app.models.marketing import Danhgia, Dsyeuthich, Makhuyenmai  # noqa
 from app.models.payment import ThanhToan  # noqa
 from app.models.chatbot import LichSuChat  # noqa
+from app.models.address import Address  # noqa

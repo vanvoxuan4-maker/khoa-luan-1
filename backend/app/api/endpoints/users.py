@@ -35,8 +35,6 @@ def update_user_me(
         current_user.hovaten = item.hovaten
     if item.sdt is not None:
         current_user.sdt = item.sdt
-    if item.diachi is not None:
-        current_user.diachi = item.diachi
     
     db.add(current_user) # 👈 Thêm dòng này
     db.commit()

@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy import Column, Integer, String, DateTime, text, Enum
 from app.db.base_class import Base
 import datetime
@@ -23,7 +24,6 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     hovaten = Column(String(100))
     sdt = Column(String(20), unique=True)
-    diachi = Column(String(255))
     
     quyen = Column(Enum(QuyenEnum, name="quyen"), default=QuyenEnum.customer)
     status = Column(Enum(TrangThaiUserEnum, name="trang_thai_user"), default=TrangThaiUserEnum.active)
@@ -34,3 +34,20 @@ class User(Base):
     danhgias = relationship("Danhgia", back_populates="user")
     chats = relationship("LichSuChat", back_populates="user")
     donhangs = relationship("DonHang", back_populates="user")
+    addresses = relationship("Address", back_populates="user", cascade="all, delete-orphan")
+
+    @property
+    def joined_date(self) -> Optional[str]:
+        return self.ngay_lap.isoformat() if self.ngay_lap else None
+
+    @property
+    def dia_chi_mac_dinh(self) -> Optional[str]:
+        for addr in self.addresses:
+            if addr.is_mac_dinh:
+                # Tránh lặp lại Tỉnh/Thành nếu người dùng đã gõ trong dia_chi
+                detail = addr.dia_chi.strip()
+                province = addr.tinh_thanh.strip()
+                if province.lower() in detail.lower():
+                    return detail
+                return f"{detail}, {province}"
+        return None

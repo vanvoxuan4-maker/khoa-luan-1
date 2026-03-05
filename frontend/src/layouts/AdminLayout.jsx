@@ -1,14 +1,22 @@
 import React from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import axios from 'axios';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AdminChat from '../components/admin/System/AdminChat';
 import '../components/admin/System/App.css';
 
 const AdminLayout = ({ children }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [breadcrumbSuffix, setBreadcrumbSuffix] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Lắng nghe sự kiện cập nhật Breadcrumb từ các component con
+  useEffect(() => {
+    const handleUpdate = (e) => setBreadcrumbSuffix(e.detail || '');
+    window.addEventListener('admin_breadcrumb_update', handleUpdate);
+    return () => window.removeEventListener('admin_breadcrumb_update', handleUpdate);
+  }, []);
 
   // ĐỌC TỪ ADMIN STORAGE (không phải legacy keys)
   const user = JSON.parse(localStorage.getItem('admin_info') || '{}');
@@ -42,7 +50,7 @@ const AdminLayout = ({ children }) => {
     { path: '/admin', icon: '📊', label: 'Báo Cáo,Thống Kê', id: 'dashboard' },
     { path: '/admin/config-hub', icon: '⚙️', label: 'Cấu Hình Sản Phẩm', id: 'config-hub' },
     { path: '/admin/order-hub', icon: '📦', label: 'Quản Lý Đơn Hàng', id: 'order-hub' },
-    { path: '/admin/users', icon: '👥', label: 'Quản Lý Khách Hàng', id: 'users' },
+    { path: '/admin/users', icon: '👥', label: 'Hồ Sơ Khách Hàng', id: 'users' },
   ];
 
   // 👇 CẬP NHẬT 2: Cập nhật tiêu đề
@@ -54,11 +62,11 @@ const AdminLayout = ({ children }) => {
         case 'dashboard': return 'Báo Cáo Thống Kê';
         case 'config-hub': return 'Cấu Hình Sản Phẩm';
         case 'order-hub': return 'Quản Lý Đơn Hàng';
-        case 'users': return 'Hồ Sơ Khách Hàng';
+        case 'users': return 'Quản Lý Khách Hàng';
         default: return item.label;
       }
     }
-    return 'Hệ Thống Quản Trị';
+    return 'Hồ Sơ Khách Hàng';
   };
 
   const MenuItem = ({ item }) => {
@@ -207,14 +215,22 @@ const AdminLayout = ({ children }) => {
           {/* Page Header */}
           <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6 animate-fade-in-down">
             <div>
-              <nav className="flex items-center gap-2 text-xs font-bold text-blue-600/60 uppercase tracking-widest mb-3">
-                <span className="hover:text-blue-600 cursor-pointer">Admin</span>
-                <span className="text-gray-300">/</span>
-                <span className="text-blue-600">{getCurrentTitle()}</span>
+              <nav className="flex items-center gap-2 mb-4 text-[10px] font-black uppercase tracking-[0.2em] animate-fade-in-down">
+                <span className="text-blue-600/40 hover:text-blue-600 cursor-pointer transition-colors">Admin</span>
+                <span className="text-gray-300 font-normal">/</span>
+                <span className="text-blue-600/60 transition-colors uppercase tracking-widest">{getCurrentTitle()}</span>
+                {breadcrumbSuffix && (
+                  <>
+                    <span className="text-gray-300 font-normal">/</span>
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-600 drop-shadow-sm font-black uppercase tracking-widest">
+                      {breadcrumbSuffix.replace('> ', '').toUpperCase()}
+                    </span>
+                  </>
+                )}
               </nav>
 
               <h2 className="text-4xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-                {getCurrentTitle()}
+                {breadcrumbSuffix ? "Chi Tiết Khách Hàng" : getCurrentTitle()}
                 <div className="h-2 w-2 rounded-full bg-blue-600 animate-pulse"></div>
               </h2>
             </div>

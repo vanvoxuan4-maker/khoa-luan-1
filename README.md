@@ -85,7 +85,7 @@ npm run dev
 ## 👤 Tác Giả
 - **Võ Xuân Văn**
 - **Email:** vanvoxuan4@gmail.com
-- **Dự án:** Khóa luận tốt nghiệp 2026
+- **Dự án:** Đề tài thực tập tốt nghiệp 2026
 
 ---
 *Dự án được phát triển với mục tiêu mang lại giải pháp công nghệ hiện đại cho ngành bán lẻ xe đạp.*

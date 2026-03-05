@@ -12,8 +12,9 @@ from app.models.user import User
 from app.models.product import Sanpham
 # 👇 QUAN TRỌNG: Import thêm TrangThaiPayment
 from app.models.order import DonHang, TrangThaiOrder, TrangThaiPayment
-from app.models.marketing import Danhgia
-from app.schemas.user import UserUpdate # Dùng tạm UserUpdate hoặc tạo schema riêng nếu cần
+from app.schemas.user import UserUpdate 
+from app.models.address import Address
+from app.schemas.address import AddressCreate, AddressUpdate, AddressResponse
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -44,9 +45,35 @@ def get_dashboard_stats(db: Session = Depends(get_db), admin: User = Depends(che
     }
 
 # 2. API QUẢN LÝ USER
-@router.get("/users")
+from app.schemas.user import UserUpdate, UserResponse
+from typing import List
+
+@router.get("/users", response_model=List[UserResponse])
 def get_all_users(db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
-    return db.query(User).all()
+    from sqlalchemy.orm import joinedload
+    return db.query(User).options(joinedload(User.addresses)).all()
+
+@router.get("/users/{user_id}", response_model=UserResponse)
+def get_user_detail(user_id: int, db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
+    from sqlalchemy.orm import joinedload
+    user = db.query(User).options(joinedload(User.addresses)).filter(User.ma_user == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
+    
+    # Đếm số lượng đơn hàng của user
+    order_count = db.query(DonHang).filter(DonHang.ma_user == user_id).count()
+    user.total_orders = order_count
+    
+    # Tính tổng chi tiêu (Các đơn hàng đã giao thành công hoặc đã thanh toán)
+    from sqlalchemy import func
+    total = db.query(func.sum(DonHang.tong_tien)).filter(
+        DonHang.ma_user == user_id,
+        DonHang.trang_thai != "cancelled",
+        DonHang.trang_thai != "failed"
+    ).scalar() or 0
+    user.total_spending = float(total)
+    
+    return user
 
 @router.put("/users/{user_id}/toggle-status")
 def toggle_user_status(user_id: int, request: Request, db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
@@ -124,7 +151,6 @@ class UserUpdateAdmin(BaseModel):
     email: str
     sdt: str
     quyen: str
-    diachi: str = "" 
 
 @router.put("/users/{user_id}")
 def update_user_info(user_id: int, user_in: UserUpdateAdmin, request: Request, db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
@@ -138,8 +164,6 @@ def update_user_info(user_id: int, user_in: UserUpdateAdmin, request: Request, d
     
     # Ép về chữ HOA để lưu vào DB cho chuẩn Enum
     user.quyen = user_in.quyen.lower() 
-    
-    user.diachi = user_in.diachi
     
     
     db.commit()
@@ -229,6 +253,77 @@ def delete_user(user_id: int, request: Request, db: Session = Depends(get_db), a
         print(f"Error deleting user {user_id}: {e}")
         raise HTTPException(status_code=400, detail=f"Lỗi khi xóa: {str(e)}")
 
+
+# --- QUẢN LÝ ĐỊA CHỈ CHO ADMIN ---
+
+@router.get("/users/{user_id}/addresses", response_model=List[AddressResponse])
+def get_user_addresses_admin(user_id: int, db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
+    """Lấy toàn bộ địa chỉ của một khách hàng bất kỳ"""
+    return db.query(Address).filter(Address.ma_user == user_id).order_by(Address.is_mac_dinh.desc(), Address.ngay_tao.desc()).all()
+
+@router.post("/users/{user_id}/addresses", response_model=AddressResponse)
+def add_user_address_admin(user_id: int, address_in: AddressCreate, db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
+    """Thêm địa chỉ mới cho khách hàng"""
+    if address_in.is_mac_dinh:
+        db.query(Address).filter(Address.ma_user == user_id).update({"is_mac_dinh": False})
+    
+    new_address = Address(
+        **address_in.dict(exclude={"is_mac_dinh"}),
+        ma_user=user_id,
+        is_mac_dinh=address_in.is_mac_dinh
+    )
+    db.add(new_address)
+    db.commit()
+    db.refresh(new_address)
+    return new_address
+
+@router.put("/addresses/{ma_dia_chi}", response_model=AddressResponse)
+def update_address_admin(ma_dia_chi: int, address_in: AddressUpdate, db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
+    """Cập nhật một địa chỉ bất kỳ"""
+    address = db.query(Address).filter(Address.ma_dia_chi == ma_dia_chi).first()
+    if not address: raise HTTPException(status_code=404, detail="Không tìm thấy địa chỉ")
+
+    if address_in.is_mac_dinh:
+        db.query(Address).filter(Address.ma_user == address.ma_user).update({"is_mac_dinh": False})
+
+    update_data = address_in.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(address, field, value)
+
+    db.commit()
+    db.refresh(address)
+    return address
+
+@router.delete("/addresses/{ma_dia_chi}")
+def delete_address_admin(ma_dia_chi: int, db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
+    """Xóa một địa chỉ bất kỳ"""
+    address = db.query(Address).filter(Address.ma_dia_chi == ma_dia_chi).first()
+    if not address: raise HTTPException(status_code=404, detail="Không tìm thấy địa chỉ")
+    
+    ma_user = address.ma_user
+    was_default = address.is_mac_dinh
+    db.delete(address)
+    db.commit()
+
+    if was_default:
+        next_default = db.query(Address).filter(Address.ma_user == ma_user).order_by(Address.ngay_tao.desc()).first()
+        if next_default:
+            next_default.is_mac_dinh = True
+            db.commit()
+
+    return {"message": "Đã xóa địa chỉ thành công"}
+
+@router.patch("/addresses/{ma_dia_chi}/default", response_model=AddressResponse)
+def set_default_address_admin(ma_dia_chi: int, db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
+    """Đặt một địa chỉ bất kỳ làm mặc định"""
+    address = db.query(Address).filter(Address.ma_dia_chi == ma_dia_chi).first()
+    if not address: raise HTTPException(status_code=404, detail="Không tìm thấy địa chỉ")
+
+    db.query(Address).filter(Address.ma_user == address.ma_user).update({"is_mac_dinh": False})
+    address.is_mac_dinh = True
+    db.commit()
+    db.refresh(address)
+    return address
 
 # =================================================================
 # 3. CHATBOT ADMIN đã được chuyển sang chat_admin.py

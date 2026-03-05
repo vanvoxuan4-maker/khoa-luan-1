@@ -8,7 +8,7 @@ from app.db.session import engine
 from app.db.base import Base
 # Import router
 from app.api.endpoints import products, auth, cart, orders, marketing, admin, dashboard, chat_admin, users, audit
-from app.api.endpoints import payment
+from app.api.endpoints import payment, addresses
 from app.api.endpoints import vnpay
 from app.utils.image_hooks import init_image_hooks
 import subprocess
@@ -67,6 +67,8 @@ app.include_router(vnpay.router, prefix="/vnpay", tags=["VNPay"])
 app.include_router(users.router, prefix="/users", tags=["Quản lý User"])
 # Thêm router Audit
 app.include_router(audit.router, prefix="/audit", tags=["Audit Log"])
+# Thêm router Address
+app.include_router(addresses.router, prefix="/addresses", tags=["Quản lý Địa chỉ"])
 
 # --- BACKGROUND TASK: DỌN DẸP ẢNH RÁC MỖI 24 GIỜ ---
 async def periodic_image_cleanup_loop():

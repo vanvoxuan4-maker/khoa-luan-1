@@ -13,6 +13,7 @@ import OrderHub from './components/admin/OrderManagement/OrderHub';
 import AdminProfile from './components/admin/UserManagement/AdminProfile';
 import AdminAudit from './components/admin/System/AdminAudit';
 import UserList from './components/admin/UserManagement/UserList';
+import AdminUserDetail from './components/admin/UserManagement/AdminUserDetail';
 
 // New structure imports
 import UserProfile from './components/users/account/UserProfile';
@@ -24,6 +25,7 @@ import Checkout from './components/users/orders/Checkout';
 import OrderSuccess from './components/users/orders/OrderSuccess';
 import OrderHistory from './components/users/orders/OrderHistory';
 import VNPayPayment from './components/users/orders/VNPayPayment';
+import UserAddressPage from './components/users/account/UserAddressPage';
 
 
 import HomePage from './components/users/layouts/HomePage';
@@ -155,6 +157,7 @@ function App() {
 
               <Route path="/my-orders" element={<AuthGuard><UserLayout><OrderHistory /></UserLayout></AuthGuard>} />
               <Route path="/profile" element={<AuthGuard><UserLayout><UserProfile /></UserLayout></AuthGuard>} />
+              <Route path="/profile/addresses" element={<AuthGuard><UserLayout><UserAddressPage /></UserLayout></AuthGuard>} />
 
               {/* --- AUTH ROUTES --- */}
               <Route path="/login" element={<LoginWrapper />} />
@@ -172,6 +175,7 @@ function App() {
               }>
                 <Route index element={<Dashboard />} />
                 <Route path="users" element={<UserList />} />
+                <Route path="users/:id" element={<AdminUserDetail />} />
                 <Route path="config-hub" element={<ConfigHub />} />
                 <Route path="order-hub" element={<OrderHub />} />
                 <Route path="profile" element={<AdminProfile />} />

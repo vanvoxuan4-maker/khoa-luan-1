@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useNotification } from '../../../context/NotificationContext';
+import AddressManager from '../profile/AddressManager';
 
 // --- Styled Input Component for Reusability ---
 const FormInput = ({ label, icon, type = "text", value, onChange, placeholder, disabled, showPasswordToggle, onToggle, autoComplete }) => (
@@ -69,7 +70,7 @@ const UserProfile = () => {
     });
 
     // Form data states
-    const [profileData, setProfileData] = useState({ hovaten: '', sdt: '', diachi: '' });
+    const [profileData, setProfileData] = useState({ hovaten: '', sdt: '' });
     const [showPasswordForm, setShowPasswordForm] = useState(false);
     const [passData, setPassData] = useState({ old_password: '', new_password: '', confirm_password: '' });
 
@@ -84,8 +85,7 @@ const UserProfile = () => {
                 setUser(res.data);
                 setProfileData({
                     hovaten: res.data.hovaten || '',
-                    sdt: res.data.sdt || '',
-                    diachi: res.data.diachi || ''
+                    sdt: res.data.sdt || ''
                 });
                 localStorage.setItem('user_info', JSON.stringify(res.data));
             } catch (err) {
@@ -180,7 +180,8 @@ const UserProfile = () => {
                     Quay lại
                 </button>
             </div>
-            <div className="h-0.5 bg-black w-full mb-10"></div>
+            <div className="h-0.5 bg-black w-full mb-8"></div>
+
             <div className="grid lg:grid-cols-3 gap-8">
 
                 {/* --- Left Column: Summary Card --- */}
@@ -220,24 +221,24 @@ const UserProfile = () => {
 
                         <div className="relative">
                             <h4 className="text-lg font-black text-slate-800 mb-2 flex items-center gap-3">
-                                <span className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-xl">✨</span>
-                                Trung tâm hỗ trợ
+                                <span className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-xl">🏠</span>
+                                Địa chỉ giao hàng
                             </h4>
                             <p className="text-slate-500 text-xs font-bold leading-relaxed mb-8 pl-1">
-                                Bạn cần trợ giúp về tài khoản hoặc đơn hàng? Đội ngũ của chúng tôi luôn sẵn sàng.
+                                Bạn muốn quản lý danh sách các địa chỉ giao hàng của mình?
                             </p>
                             <Link
-                                to="/contact"
-                                className="w-full py-4.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-[0_15px_30px_rgba(37,99,235,0.25)] hover:shadow-[0_20px_40px_rgba(37,99,235,0.4)] hover:-translate-y-1 active:scale-95 transition-all text-xs uppercase tracking-[0.15em] block text-center"
+                                to="/profile/addresses"
+                                className="w-full py-4.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-[0_15px_30px_rgba(16,185,129,0.25)] hover:shadow-[0_20px_40px_rgba(16,185,129,0.4)] hover:-translate-y-1 active:scale-95 transition-all text-xs uppercase tracking-[0.15em] block text-center"
                             >
-                                Liên hệ tư vấn ngay
+                                Quản lý sổ địa chỉ
                             </Link>
                         </div>
                     </div>
                 </div>
 
                 {/* --- Right Column: Forms --- */}
-                <div className="lg:col-span-2 space-y-8">
+                <div className="lg:col-span-2 space-y-8 animate-fade-in">
 
                     {/* Information Section */}
                     <section className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 p-8 lg:p-10 border border-slate-100">
@@ -282,13 +283,6 @@ const UserProfile = () => {
                                 />
                             </div>
 
-                            <FormTextarea
-                                label="Địa chỉ"
-                                icon="📍"
-                                placeholder="Nhập địa chỉ của bạn..."
-                                value={profileData.diachi}
-                                onChange={e => setProfileData({ ...profileData, diachi: e.target.value })}
-                            />
 
                             <div className="flex flex-wrap gap-4">
                                 <button

@@ -150,6 +150,9 @@ const Navbar = () => {
                   <Link to="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold hover:bg-blue-50 hover:text-blue-600 transition-colors">
                     <span>👤</span> Hồ sơ
                   </Link>
+                  <Link to="/profile/addresses" className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                    <span>📍</span> Sổ địa chỉ
+                  </Link>
                   <Link to="/my-orders" className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold hover:bg-blue-50 hover:text-blue-600 transition-colors">
                     <span>📦</span> Đơn mua
                   </Link>

@@ -61,7 +61,8 @@ const Register = ({ onBackToLogin }) => {
     confirmPassword: '',
     hovaten: '',
     sdt: '',
-    diachi: ''
+    dia_chi: '',
+    tinh_thanh: 'Hà Nội'
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -109,7 +110,8 @@ const Register = ({ onBackToLogin }) => {
         confirmPassword: '',
         hovaten: '',
         sdt: '',
-        diachi: ''
+        dia_chi: '',
+        tinh_thanh: 'Hà Nội'
       });
       setErrors({});
       setTouched({});
@@ -238,20 +240,20 @@ const Register = ({ onBackToLogin }) => {
         </div>
 
         <InputField
-          label="địa chỉ liên hệ"
-          name="diachi"
+          label="địa chỉ giao hàng (mặc định)"
+          name="dia_chi"
           icon="📍"
           placeholder="địa chỉ liên hệ"
-          value={formData.diachi}
+          value={formData.dia_chi}
           onChange={handleChange}
-          onFocus={() => setFocusedField('diachi')}
+          onFocus={() => setFocusedField('dia_chi')}
           onBlur={() => {
-            setTouched(prev => ({ ...prev, diachi: true }));
+            setTouched(prev => ({ ...prev, dia_chi: true }));
             setFocusedField(null);
           }}
-          error={errors.diachi}
-          touched={touched.diachi}
-          isFocused={focusedField === 'diachi'}
+          error={errors.dia_chi}
+          touched={touched.dia_chi}
+          isFocused={focusedField === 'dia_chi'}
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InputField

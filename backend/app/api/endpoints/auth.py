@@ -6,6 +6,7 @@ from app.core import security
 from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse
 from app.schemas.token import Token
+from app.models.address import Address
 from app.api import deps
 
 router = APIRouter()
@@ -21,14 +22,13 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     if user_in.sdt and db.query(User).filter(User.sdt == user_in.sdt).first():
         raise HTTPException(status_code=400, detail="Số điện thoại này đã được sử dụng.")
 
-    # 2. Tạo User mới (LUÔN set quyen="customer" để an toàn)
+    # 2. Tạo User mới
     new_user = User(
         email=user_in.email,
         ten_user=user_in.ten_user,
         password_hash=security.get_password_hash(user_in.password),
         hovaten=user_in.hovaten,
         sdt=user_in.sdt,
-        diachi=user_in.diachi,
         quyen="customer",
         status="active"
     )
@@ -36,6 +36,20 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    # 3. Nếu khách có nhập địa chỉ khi đăng ký, lưu vào bảng dia_chi mặc định
+    if user_in.dia_chi:
+        new_address = Address(
+            ma_user=new_user.ma_user,
+            ten_nguoi_nhan=new_user.hovaten or new_user.ten_user,
+            sdt_nguoi_nhan=new_user.sdt or "",
+            dia_chi=user_in.dia_chi,
+            tinh_thanh=user_in.tinh_thanh or "Hà Nội",
+            is_mac_dinh=True
+        )
+        db.add(new_address)
+        db.commit()
+
     return new_user
 
 @router.post("/logout")
