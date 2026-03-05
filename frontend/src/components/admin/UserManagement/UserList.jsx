@@ -14,6 +14,8 @@ const UserList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const token = localStorage.getItem('admin_access_token');
+  const currentAdmin = JSON.parse(localStorage.getItem('admin_info') || '{}');
+  const currentAdminId = currentAdmin.ma_user || currentAdmin.id; // Support both common naming conventions
 
   const fetchUsers = async () => {
     setRefreshing(true);
@@ -118,17 +120,17 @@ const UserList = () => {
       </div>
 
       {/* 🟢 BẢNG KHÁCH HÀNG */}
-      <div className="bg-white rounded-2xl shadow-xl border-2 border-slate-200 overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead className="bg-gradient-to-r from-amber-600 to-yellow-700 text-amber-50">
-            <tr className="text-slate-700 uppercase text-[11px] font-black tracking-widest divide-x-2 divide-slate-200">
-              <th className="py-5 px-6 text-center w-20">ID</th>
-              <th className="py-5 px-6 text-center w-40">Tên tài khoản</th>
-              <th className="py-5 px-6">Thông tin khách hàng</th>
+      <div className="bg-white/80 backdrop-blur-md rounded-[3rem] shadow-xl shadow-blue-500/5 border border-white overflow-hidden">
+        <table className="w-full text-left border-separate border-spacing-0">
+          <thead className="bg-gradient-to-r from-amber-600 to-yellow-700 text-amber-50 text-[11px] uppercase font-black tracking-widest">
+            <tr className="divide-x divide-amber-200/40">
+              <th className="py-8 px-6 text-center w-20">ID</th>
+              <th className="py-8 px-6 text-center w-40">Tên tài khoản</th>
+              <th className="py-8 px-6 text-center">Thông tin khách hàng</th>
               {/* CỘT ĐỊA CHỈ */}
-              <th className="py-5 px-6 w-1/4">Địa chỉ</th>
-              <th className="py-5 px-6 text-center w-36">Vai trò</th>
-              <th className="py-5 px-6 text-center w-[250px]">Hành động</th>
+              <th className="py-8 px-6 w-1/4 text-center">Địa chỉ</th>
+              <th className="py-8 px-6 text-center w-36">Vai trò</th>
+              <th className="py-8 px-10 text-center w-[250px]">Hành động</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -147,14 +149,14 @@ const UserList = () => {
                       {u.ten_user}
                     </span>
                   </td>
-                  <td className="py-4 px-6 align-middle">
+                  <td className="py-4 px-6 align-middle text-center">
                     <div className="font-bold text-gray-800 text-lg leading-tight mb-0.5 uppercase tracking-tighter">{u.hovaten || "---"}</div>
                     <div className="text-[12px] text-gray-500 font-medium opacity-80 uppercase tracking-tighter italic">📧 {u.email}</div>
                     <div className="text-[12px] text-blue-600 font-mono font-bold">📞 {u.sdt || "Chưa có SĐT"}</div>
                   </td>
                   {/* 👇 HIỂN THỊ ĐỊA CHỈ: Đã sửa thành u.diachi */}
-                  <td className="py-4 px-6 align-middle">
-                    <div className="flex items-start gap-1.5 text-gray-600 text-sm italic">
+                  <td className="py-4 px-6 align-middle text-center">
+                    <div className="flex items-start justify-center gap-1.5 text-gray-600 text-sm italic">
                       <span className="opacity-60">📍</span>
                       <p className="font-medium leading-relaxed">
                         {u.diachi && u.diachi.trim() !== "" ? u.diachi : "Chưa cập nhật địa chỉ"}
@@ -162,7 +164,10 @@ const UserList = () => {
                     </div>
                   </td>
                   <td className="py-4 px-6 text-center align-middle">
-                    <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${u.quyen === 'admin' ? 'bg-purple-100 text-purple-700 border-purple-200 shadow-sm' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                    <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border 
+                      ${u.quyen === 'admin'
+                        ? 'bg-purple-100 text-purple-700 border-purple-200 shadow-sm'
+                        : 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm'}`}>
                       {u.quyen}
                     </span>
                   </td>
@@ -245,6 +250,35 @@ const UserList = () => {
                   </div>
                 </div>
               ))}
+
+              {/* Ô XÉT QUYỀN (ROLE) */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-black text-purple-900/40 uppercase tracking-widest px-1 block">
+                  Vai trò (Quyền hạn)
+                </label>
+                <div className="relative group">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-purple-400 rounded-xl blur opacity-10 group-focus-within:opacity-30 transition duration-300"></div>
+                  <select
+                    className={`relative w-full border-2 p-4 rounded-xl font-bold text-base outline-none transition-all shadow-sm appearance-none cursor-pointer 
+                      ${Number(editingUser.ma_user) === Number(currentAdminId) ? 'opacity-50 cursor-not-allowed' : ''}
+                      ${editingUser.quyen === 'admin'
+                        ? 'bg-purple-50 border-purple-300 text-purple-700 focus:border-purple-500'
+                        : 'bg-blue-50 border-blue-300 text-blue-700 focus:border-blue-500'}`}
+                    value={editingUser.quyen || 'customer'}
+                    disabled={Number(editingUser.ma_user) === Number(currentAdminId)}
+                    onChange={e => setEditingUser({ ...editingUser, quyen: e.target.value })}
+                  >
+                    <option value="customer" className="text-blue-700 bg-blue-50">👤 CUSTOMER (Khách hàng)</option>
+                    <option value="admin" className="text-purple-700 bg-purple-50">🛡️ ADMIN (Quản trị viên)</option>
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">▼</div>
+                </div>
+                {Number(editingUser.ma_user) === Number(currentAdminId) && (
+                  <p className="text-[9px] text-amber-600 font-bold italic px-1">
+                    * Bạn không thể tự thay đổi quyền của chính mình.
+                  </p>
+                )}
+              </div>
               <div className="flex gap-4 mt-10">
                 <button type="button" onClick={() => setEditingUser(null)} className="flex-1 bg-rose-50 text-rose-500 border border-rose-100 py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-sm hover:bg-rose-100 transition-all">Hủy bỏ</button>
                 <button type="submit" className="flex-1 bg-blue-500 py-4 rounded-2xl font-black text-white uppercase text-xs tracking-widest shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition-all">Lưu</button>

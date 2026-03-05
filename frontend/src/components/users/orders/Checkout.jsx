@@ -382,7 +382,12 @@ const Checkout = () => {
                             ) : (
                                 <div className="flex items-center justify-between bg-green-50 border-2 border-green-200 rounded-xl px-4 py-3">
                                     <div>
-                                        <p className="text-xs font-black text-green-700 uppercase">{voucherApplied.voucher_info.code}</p>
+                                        <p className="text-xs font-black text-green-700 uppercase">
+                                            {voucherApplied.voucher_info.code}
+                                            <span className="ml-2 text-[10px] bg-green-200 px-1.5 py-0.5 rounded text-green-800">
+                                                -{voucherApplied.voucher_info.type === 'percentage' ? `${voucherApplied.voucher_info.value}%` : `${voucherApplied.voucher_info.value.toLocaleString('vi-VN')}đ`}
+                                            </span>
+                                        </p>
                                         <p className="text-[10px] text-green-600 font-medium mt-0.5">{voucherApplied.message}</p>
                                     </div>
                                     <button type="button" onClick={handleRemoveVoucher} className="w-6 h-6 rounded-full bg-red-100 text-red-500 hover:bg-red-200 flex items-center justify-center font-black text-xs transition">✕</button>
@@ -415,7 +420,14 @@ const Checkout = () => {
 
                             {/* Khuyến mãi */}
                             <div className="flex justify-between items-center text-sm font-medium text-slate-600">
-                                <span>Khuyến mãi</span>
+                                <div className="flex flex-col">
+                                    <span>Khuyến mãi</span>
+                                    {voucherApplied && (
+                                        <span className="text-[10px] text-pink-500 font-bold uppercase tracking-tight">
+                                            {voucherApplied.voucher_info.code} (-{voucherApplied.voucher_info.type === 'percentage' ? `${voucherApplied.voucher_info.value}%` : `${voucherApplied.voucher_info.value.toLocaleString('vi-VN')}đ`})
+                                        </span>
+                                    )}
+                                </div>
                                 <span className="font-bold text-pink-600">
                                     -{(voucherApplied?.discount_amount || 0).toLocaleString('vi-VN')} VND
                                 </span>

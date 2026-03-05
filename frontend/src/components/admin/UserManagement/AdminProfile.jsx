@@ -200,7 +200,14 @@ const AdminProfile = () => {
                                     <input
                                         type="email"
                                         value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                        onChange={(e) => {
+                                            let val = e.target.value.toLowerCase()
+                                                .normalize('NFD')
+                                                .replace(/[\u0300-\u036f]/g, '')
+                                                .replace(/đ/g, 'd')
+                                                .replace(/[^a-z0-9@._-]/g, '');
+                                            setFormData({ ...formData, email: val });
+                                        }}
                                         className="w-full px-6 py-4 bg-gray-50 border-2 border-gray-100 rounded-[1.2rem] font-bold text-gray-700 outline-none focus:border-blue-500 focus:bg-white focus:shadow-[0_10px_25px_rgba(59,130,246,0.1)] transition-all"
                                         placeholder="admin@example.com"
                                     />

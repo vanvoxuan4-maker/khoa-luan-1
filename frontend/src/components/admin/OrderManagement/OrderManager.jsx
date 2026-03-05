@@ -102,7 +102,8 @@ const OrderManager = ({ highlightOrderId }) => {
 
   const updateStatus = async (id, newStatus) => {
     try {
-      await axios.put(`http://localhost:8000/orders/${id}/status?trang_thai_moi=${newStatus}`, {}, { headers: { 'Authorization': `Bearer ${token}` } });
+      const url = `http://localhost:8000/orders/${id}/status?trang_thai_moi=${newStatus}`;
+      await axios.put(url, {}, { headers: { 'Authorization': `Bearer ${token}` } });
       fetchOrders();
     } catch (err) { alert("❌ Lỗi cập nhật đơn hàng"); }
   };
@@ -267,18 +268,28 @@ const OrderManager = ({ highlightOrderId }) => {
       </div>
 
       {/* TABLE */}
-      <div className="bg-white/70 backdrop-blur-sm rounded-[2rem] shadow-[0_10px_40px_rgba(0,0,0,0.03)] border border-white overflow-hidden">
+      <div className="bg-white/80 backdrop-blur-md rounded-[3rem] shadow-xl shadow-blue-500/5 border border-white overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[900px]">
-            <thead className="bg-gradient-to-r from-amber-600 to-yellow-700 text-amber-50">
-              <tr className="text-[11px] font-black uppercase tracking-widest divide-x divide-amber-500/30">
-                <th className="py-4 px-4 text-center w-16">Mã</th>
-                <th className="py-4 px-5 w-[180px]">Khách hàng</th>
-                <th className="py-4 px-4 text-center w-32">Tổng tiền</th>
-                <th className="py-4 px-2 text-center w-20">PT TT</th>
-                <th className="py-4 px-4 text-center w-32">Trạng thái</th>
-                <th className="py-4 px-4 text-center w-32">Thanh toán</th>
-                <th className="py-4 px-3 text-center w-[150px]">Thao tác</th>
+          <table className="w-full text-left border-separate border-spacing-0 min-w-[900px]">
+            <thead className="bg-gradient-to-r from-amber-600 to-yellow-700 text-amber-50 text-[11px] uppercase font-black tracking-widest">
+              <tr className="divide-x divide-amber-200/40">
+                <th className="py-8 px-4 text-center w-16">Mã</th>
+                <th className="py-8 px-5 w-[180px] text-center">Khách hàng</th>
+                <th className="py-8 px-4 text-center w-32">Tổng tiền</th>
+                <th className="py-8 px-2 text-center w-20">PT TT</th>
+                <th className="py-8 px-2 text-center w-40">
+                  <div className="flex flex-col items-center justify-center leading-tight">
+                    <span>Trạng thái</span>
+                    <span>đơn hàng</span>
+                  </div>
+                </th>
+                <th className="py-8 px-2 text-center w-40">
+                  <div className="flex flex-col items-center justify-center leading-tight">
+                    <span>Trạng thái</span>
+                    <span>thanh toán</span>
+                  </div>
+                </th>
+                <th className="py-8 px-3 text-center w-[150px]">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -298,12 +309,8 @@ const OrderManager = ({ highlightOrderId }) => {
                     id={`order-row-${order.ma_don_hang}`}
                     key={order.ma_don_hang}
                     data-order-id={order.ma_don_hang}
-                    onClick={() => {
-                      setSelectedOrder(order);
-                      if (highlightedId === order.ma_don_hang) setHighlightedId(null);
-                    }}
-                    className={`hover:bg-blue-50/40 transition-all duration-300 divide-x divide-gray-100 cursor-pointer
-                      ${order.ma_don_hang === highlightedId ? '!bg-amber-50 !border-amber-300 shadow-md' : (index % 2 === 0 ? 'bg-white' : 'bg-slate-50/40')}`}
+                    className={`hover:bg-blue-50/40 transition-colors group relative ${order.ma_don_hang === highlightedId ? 'bg-amber-50/60 shadow-inner' : ''}`}
+                    onClick={() => setSelectedOrder(order)}
                   >
                     {/* Mã đơn */}
                     <td className="py-3 px-4 text-center align-middle relative">
@@ -317,12 +324,12 @@ const OrderManager = ({ highlightOrderId }) => {
                     </td>
 
                     {/* Khách hàng */}
-                    <td className="py-3 px-5 align-middle">
-                      <div className="font-extrabold text-slate-800 text-[13px] truncate max-w-[170px] uppercase">{order.ten_nguoi_nhan}</div>
-                      <div className="text-[10px] text-slate-400 font-medium mt-0.5 flex items-center gap-1">
+                    <td className="py-3 px-5 align-middle text-center">
+                      <div className="font-extrabold text-slate-800 text-[13px] truncate max-w-[170px] uppercase mx-auto">{order.ten_nguoi_nhan}</div>
+                      <div className="text-[10px] text-slate-400 font-medium mt-0.5 flex items-center justify-center gap-1">
                         <span>📞</span><span>{order.sdt_nguoi_nhan}</span>
                       </div>
-                      <div className="text-[10px] text-slate-400 font-medium truncate max-w-[170px] flex items-center gap-1" title={order.dia_chi_giao}>
+                      <div className="text-[10px] text-slate-400 font-medium truncate max-w-[170px] flex items-center justify-center gap-1 mx-auto" title={order.dia_chi_giao}>
                         <span className="shrink-0">📍</span><span className="truncate">{order.dia_chi_giao}</span>
                       </div>
                     </td>
@@ -347,25 +354,27 @@ const OrderManager = ({ highlightOrderId }) => {
                     </td>
 
                     {/* Trạng thái giao vận */}
-                    <td className="py-3 px-4 text-center align-middle">
-                      <span className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border ${statusInfo.color}`}>
-                        {statusInfo.label}
+                    <td className="py-3 px-2 text-center align-middle">
+                      <span className={`inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase border leading-tight w-[145px] h-[36px] ${statusInfo.color}`}>
+                        <span className="text-center whitespace-nowrap">{statusInfo.label}</span>
                       </span>
                     </td>
 
                     {/* Trạng thái thanh toán */}
-                    <td className="py-3 px-4 text-center align-middle">
+                    <td className="py-3 px-2 text-center align-middle">
                       {order.trangthai_thanhtoan !== 'refunded' ? (
                         <button
                           onClick={(e) => { e.stopPropagation(); updatePaymentStatus(order.ma_don_hang, order.trangthai_thanhtoan, order.tong_tien); }}
-                          className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border transition-all hover:opacity-80 active:scale-95 ${paymentInfo.color}`}
+                          className={`flex items-center justify-center gap-1.5 mx-auto px-2.5 py-1.5 rounded-xl text-[9px] font-black uppercase border transition-all hover:opacity-80 active:scale-95 leading-tight w-[145px] h-[36px] ${paymentInfo.color}`}
                           title={paymentInfo.actionLabel}
                         >
-                          {paymentInfo.icon} {paymentInfo.label}
+                          <span className="text-base leading-none shrink-0">{paymentInfo.icon}</span>
+                          <span className="text-center whitespace-nowrap">{paymentInfo.label}</span>
                         </button>
                       ) : (
-                        <span className={`inline-block px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border ${paymentInfo.color}`}>
-                          {paymentInfo.icon} {paymentInfo.label}
+                        <span className={`flex items-center justify-center mx-auto px-2.5 py-1.5 rounded-xl text-[9px] font-black uppercase border leading-tight w-[145px] h-[36px] ${paymentInfo.color}`}>
+                          <span className="text-base leading-none shrink-0">{paymentInfo.icon}</span>
+                          <span className="text-center whitespace-nowrap">{paymentInfo.label}</span>
                         </span>
                       )}
                     </td>

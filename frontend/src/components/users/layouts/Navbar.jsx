@@ -3,6 +3,7 @@ import { useNavigate, NavLink, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useWishlist } from '../../../context/WishlistContext';
 import { useCart } from '../../../context/CartContext';
+import { getBestToken } from '../../../utils/auth';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -19,32 +20,25 @@ const Navbar = () => {
   const [userEmail, setUserEmail] = useState('');
 
   useEffect(() => {
-    // Lấy token từ USER storage (không phải admin)
-    const token = localStorage.getItem('user_access_token');
-
-    // Mặc định chưa login cho đến khi request thành công
-    // setIsLoggedIn(!!token); <--- BỎ DÒNG NÀY (Vì token có thể rác)
+    // 1. Kiểm tra session từ cả User và Admin (Ưu tiên User nếu đang ở Shop)
+    const token = getBestToken();
 
     if (token) {
-      // 1. Lấy thông tin user (Check token luôn thể)
-      axios.get('http://localhost:8000/users/me', { headers: { Authorization: `Bearer ${token}` } })
+      // Logic xác thực tập trung: Gọi API check me
+      axios.get('http://localhost:8000/users/me')
         .then(res => {
-          // Token ngon -> Set Login OK
           setIsLoggedIn(true);
-          const name = res.data.hovaten || res.data.ten_user || 'Khách hàng';
+          const name = res.data.hovaten || res.data.ten_user || 'Thành viên';
           setUserName(name);
           setUserEmail(res.data.email || '');
 
-          // 2. Đồng bộ giỏ hàng
+          // Ưu tiên đồng bộ giỏ hàng
           fetchCart();
         })
         .catch(() => {
-          // Token lỗi -> Coi như chưa login & Xóa token rác
           setIsLoggedIn(false);
           setUserName('Khách hàng');
           setUserEmail('');
-          localStorage.removeItem('user_access_token');
-          localStorage.removeItem('user_info');
         });
     } else {
       setIsLoggedIn(false);
@@ -58,22 +52,15 @@ const Navbar = () => {
   }, []);
 
   const handleLogout = async () => {
-    setShowLogoutConfirm(false); // Đóng modal trước
+    setShowLogoutConfirm(false);
     try {
-      const token = localStorage.getItem('user_access_token');
-      if (token) {
-        await axios.post('http://localhost:8000/logout', {}, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      }
+      await axios.post('http://localhost:8000/logout');
     } catch (error) {
-      console.error('Error logging out from server:', error);
+      console.error('Error logging out:', error);
     } finally {
-      // Xóa toàn bộ session (cả User và Admin) để đảm bảo sạch sẽ
+      // Chỉ đăng xuất khỏi context hiện tại (Shop) để giữ phiên Admin nếu có
       localStorage.removeItem('user_access_token');
       localStorage.removeItem('user_info');
-      // KHÔNG XÓA admin_access_token để cho phép đăng nhập song song
-
       setIsLoggedIn(false);
       navigate('/login');
     }

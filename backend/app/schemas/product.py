@@ -14,8 +14,8 @@ class KieuGiamGiaEnum(str, Enum):
 class DanhmucBase(BaseModel):
     ten_danhmuc: str
     mo_ta: Optional[str] = None
-    
     hinh_anh: Optional[str] = None 
+    is_active: Optional[bool] = True
 
 class DanhmucCreate(DanhmucBase): pass
 
@@ -30,9 +30,9 @@ class DanhmucResponse(DanhmucBase):
 class ThuonghieuBase(BaseModel):
     ten_thuonghieu: str
     mo_ta: Optional[str] = None
-
     logo: Optional[str] = None     
     xuat_xu: Optional[str] = None
+    is_active: Optional[bool] = True
 
 class ThuonghieuCreate(ThuonghieuBase): pass
 

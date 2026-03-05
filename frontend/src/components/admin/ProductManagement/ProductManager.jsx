@@ -1,75 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import AddProduct from './Addproduct';
+import Pagination from '../../common/Pagination';
+import { getBrandStyle } from '../../../utils/formatUtils';
 
-// Hàm chọn màu cho Thương hiệu (Giữ nguyên)
-const getBrandStyle = (name) => {
-  if (!name) return 'bg-gray-100 text-gray-600 border-gray-200';
-  const firstChar = name.charAt(0).toUpperCase();
-  if (['G', 'H', 'I'].includes(firstChar)) return 'bg-green-100 text-green-700 border-green-200';
-  if (['T', 'U', 'V'].includes(firstChar)) return 'bg-red-100 text-red-700 border-red-200';
-  if (['R', 'S'].includes(firstChar)) return 'bg-orange-100 text-orange-700 border-orange-200';
-  if (['J', 'K', 'L'].includes(firstChar)) return 'bg-purple-100 text-purple-700 border-purple-200';
-  if (['A', 'B', 'C'].includes(firstChar)) return 'bg-blue-100 text-blue-700 border-blue-200';
-  return 'bg-indigo-100 text-indigo-700 border-indigo-200';
-};
-
-// --- COMPONENT PHÂN TRANG CAO CẤP ---
-const Pagination = ({ totalItems, itemsPerPage, currentPage, onPageChange }) => {
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  if (totalPages <= 1) return null;
-
-  const getPages = () => {
-    const pages = [];
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else {
-      pages.push(1);
-      if (currentPage > 3) pages.push('...');
-      const start = Math.max(2, currentPage - 1);
-      const end = Math.min(totalPages - 1, currentPage + 1);
-      for (let i = start; i <= end; i++) pages.push(i);
-      if (currentPage < totalPages - 2) pages.push('...');
-      pages.push(totalPages);
-    }
-    return pages;
-  };
-
-  return (
-    <div className="flex items-center justify-center gap-2 mt-10 mb-6">
-      <button
-        disabled={currentPage === 1}
-        onClick={() => onPageChange(currentPage - 1)}
-        className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center hover:border-blue-500 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
-      >
-        <span className="text-xl">‹</span>
-      </button>
-
-      {getPages().map((p, idx) => (
-        <button
-          key={idx}
-          onClick={() => typeof p === 'number' && onPageChange(p)}
-          className={`w-10 h-10 rounded-xl font-bold transition-all flex items-center justify-center border shadow-sm ${p === currentPage
-            ? 'bg-blue-600 text-white border-blue-600 shadow-blue-200 scale-105'
-            : p === '...'
-              ? 'bg-transparent border-transparent text-slate-400 cursor-default shadow-none'
-              : 'bg-white text-slate-500 border-slate-200 hover:border-blue-500 hover:text-blue-600'
-            }`}
-        >
-          {p}
-        </button>
-      ))}
-
-      <button
-        disabled={currentPage === totalPages}
-        onClick={() => onPageChange(currentPage + 1)}
-        className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center hover:border-blue-500 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
-      >
-        <span className="text-xl">›</span>
-      </button>
-    </div>
-  );
-};
 
 const ProductManager = ({ initialSearch = '' }) => {
   const [products, setProducts] = useState([]);
@@ -95,7 +29,7 @@ const ProductManager = ({ initialSearch = '' }) => {
   const loadData = async () => {
     try {
       const [prodRes, brandRes, catRes] = await Promise.all([
-        axios.get('http://localhost:8000/sanpham'),
+        axios.get('http://localhost:8000/sanpham?include_inactive=true'),
         axios.get('http://localhost:8000/thuonghieu'),
         axios.get('http://localhost:8000/danhmuc')
       ]);
@@ -150,6 +84,28 @@ const ProductManager = ({ initialSearch = '' }) => {
         });
         loadData();
       } catch (e) { alert("Lỗi xóa sản phẩm!"); }
+    }
+  };
+
+  const handleToggleProductActive = async (product) => {
+    try {
+      const updatedProduct = {
+        ...product,
+        is_active: !product.is_active
+      };
+      // Loại bỏ các trường không cần gửi lên hoặc cần format lại
+      delete updatedProduct.hinhanh;
+      delete updatedProduct.danhmuc_rel;
+      delete updatedProduct.thuonghieu_rel;
+      delete updatedProduct.ngay_lap;
+
+      await axios.put(`http://localhost:8000/sanpham/${product.ma_sanpham}`, updatedProduct, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      loadData();
+    } catch (e) {
+      console.error(e);
+      alert("Lỗi chuyển đổi trạng thái sản phẩm!");
     }
   };
 
@@ -236,11 +192,12 @@ const ProductManager = ({ initialSearch = '' }) => {
       <div className="bg-white/80 backdrop-blur-md rounded-[3rem] shadow-xl shadow-blue-500/5 border border-white overflow-hidden">
         <table className="w-full text-left border-separate border-spacing-0">
           <thead className="bg-gradient-to-r from-amber-600 to-yellow-700 text-amber-50 text-[11px] uppercase font-black tracking-widest">
-            <tr>
-              <th className="py-8 px-10 text-[11px] font-black uppercase tracking-[0.2em] w-32">Hình ảnh</th>
+            <tr className="divide-x divide-amber-200/40">
+              <th className="py-8 px-10 text-[11px] font-black uppercase tracking-[0.2em] w-32 text-center">Hình ảnh</th>
               <th className="py-8 px-6 text-[11px] font-black uppercase tracking-[0.2em] text-center w-24">Mã SP</th>
-              <th className="py-8 px-6 text-[11px] font-black uppercase tracking-[0.2em]">Thông tin xe</th>
-              <th className="py-8 px-6 text-[11px] font-black uppercase tracking-[0.2em] text-right">Giá bán</th>
+              <th className="py-8 px-6 text-[11px] font-black uppercase tracking-[0.2em] text-center">Thông tin xe</th>
+              <th className="py-8 px-6 text-[11px] font-black uppercase tracking-[0.2em] text-center">Giá bán</th>
+              <th className="py-8 px-6 text-[11px] font-black uppercase tracking-[0.2em] text-center w-24">Trạng thái</th>
               <th className="py-8 px-6 text-[11px] font-black uppercase tracking-[0.2em] text-center w-32">Kho</th>
               <th className="py-8 px-10 text-[11px] font-black uppercase tracking-[0.2em] text-center w-40">Thao tác</th>
             </tr>
@@ -274,9 +231,9 @@ const ProductManager = ({ initialSearch = '' }) => {
                       <span className="text-base font-black text-blue-600">#{p.ma_sanpham}</span>
                     </div>
                   </td>
-                  <td className="py-6 px-6">
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center gap-2">
+                  <td className="py-6 px-6 text-left">
+                    <div className="flex flex-col gap-1.5 items-start">
+                      <div className="flex items-center justify-start gap-2">
                         <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-white/50 shadow-sm ${getBrandStyle(brandName)}`}>
                           {brandName}
                         </span>
@@ -285,12 +242,12 @@ const ProductManager = ({ initialSearch = '' }) => {
                         </span>
                       </div>
                       <p className="text-base font-black text-slate-800 tracking-tight group-hover:text-blue-600 transition-colors">{p.ten_sanpham}</p>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-start gap-3">
                         <div className="flex items-center gap-1 text-[12px] font-bold text-slate-800 uppercase tracking-wider">
                           <span className="opacity-50">Mã Xe:</span>
                           <span className="text-blue-500 font-mono">#{p.sanpham_code}</span>
                         </div>
-                        <div className="w-1 h-1 rounded-full bg-slate-200"></div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
                         <div className="flex items-center gap-1 text-[11px] font-black text-violet-500 uppercase tracking-wider">
                           <span className="opacity-70">Size:</span>
                           <span className="text-slate-800 font-extrabold">{p.size_banh_xe}" / <span className="text-orange-500 font-bold uppercase">Khung:</span> {p.size_khung}</span>
@@ -308,6 +265,15 @@ const ProductManager = ({ initialSearch = '' }) => {
                       </div>
                       <div className="w-10 h-0.5 bg-blue-500 rounded-full scale-x-0 group-hover:scale-x-100 transition-transform origin-right duration-500"></div>
                     </div>
+                  </td>
+                  <td className="py-6 px-6 text-center">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleToggleProductActive(p); }}
+                      className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all ${p.is_active ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-600 hover:text-white' : 'bg-slate-100 text-slate-400 border-slate-200 hover:bg-slate-600 hover:text-white'}`}
+                      title={p.is_active ? "Đang hiện - Nhấn để ẩn" : "Đang ẩn - Nhấn để hiện"}
+                    >
+                      {p.is_active ? '✅ HIỆN' : '🚫 ẨN'}
+                    </button>
                   </td>
                   <td className="py-6 px-6 text-center">
                     <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl border transition-all duration-300 ${p.ton_kho > 5 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'}`}>

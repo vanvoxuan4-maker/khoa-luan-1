@@ -58,7 +58,7 @@ def create_danhmuc(item: DanhmucCreate, db: Session = Depends(get_db)):
 
 @router.get("/danhmuc", response_model=List[DanhmucResponse])
 def get_all_danhmuc(db: Session = Depends(get_db)):
-    return db.query(Danhmuc).all()
+    return db.query(Danhmuc).filter(Danhmuc.is_active == True).all()
 
 @router.put("/danhmuc/{ma_dm}")
 def update_danhmuc(ma_dm: int, ten_moi: str, db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
@@ -106,7 +106,7 @@ def create_thuonghieu(item: ThuonghieuCreate, db: Session = Depends(get_db)):
 
 @router.get("/thuonghieu", response_model=List[ThuonghieuResponse])
 def get_all_thuonghieu(db: Session = Depends(get_db)):
-    return db.query(Thuonghieu).all()
+    return db.query(Thuonghieu).filter(Thuonghieu.is_active == True).all()
 
 @router.put("/thuonghieu/{ma_th}")
 def update_thuonghieu(ma_th: int, ten_moi: str, db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
@@ -242,18 +242,11 @@ def delete_sanpham(ma_sanpham: int, db: Session = Depends(get_db), admin: User =
     product_code = db_product.sanpham_code
     
     try:
-        # 1. Lấy danh sách ảnh để xóa file vật lý
-        product_images = db.query(Hinhanh).filter(Hinhanh.ma_sanpham == ma_sanpham).all()
-        for img in product_images:
-            try:
-                # image_url thường là /static/images/xyz.jpg
-                path_to_delete = img.image_url.lstrip('/')
-                if os.path.exists(path_to_delete):
-                    os.remove(path_to_delete)
-            except Exception as e:
-                print(f"Error deleting file {img.image_url}: {e}")
-
-        # 2. Xóa các dữ liệu liên quan trong DB
+        # 1. Xóa các dữ liệu liên quan trong DB
+        # Lưu ý: Hinhanh has cascade="all, delete-orphan" in Sanpham model
+        # nhưng ta vẫn delete trực tiếp để kích hoạt Hook 'after_delete' của Hinhanh
+        db.query(Hinhanh).filter(Hinhanh.ma_sanpham == ma_sanpham).delete()
+        
         db.query(Danhgia).filter(Danhgia.ma_sanpham == ma_sanpham).delete()
         db.query(Dsyeuthich).filter(Dsyeuthich.ma_sanpham == ma_sanpham).delete()
         db.query(Hinhanh).filter(Hinhanh.ma_sanpham == ma_sanpham).delete()
@@ -366,9 +359,14 @@ def get_sanphams(
     min_rating: Optional[float] = None,
     discounted_only: bool = False,
     sort_by: Optional[str] = "newest",
+    include_inactive: bool = False,  # ✅ Thêm parameter này
     db: Session = Depends(get_db)
 ):
-    query = db.query(Sanpham).options(joinedload(Sanpham.hinhanh)).filter(Sanpham.is_active == True)
+    query = db.query(Sanpham).options(joinedload(Sanpham.hinhanh))
+    
+    # Nếu không phải admin hoặc không yêu cầu xem hàng ẩn, thì chỉ lấy hàng đang active
+    if not include_inactive:
+        query = query.filter(Sanpham.is_active == True)
     if discounted_only:
         query = query.filter(Sanpham.gia_tri_giam > 0)
 
@@ -392,35 +390,7 @@ def get_sanphams(
     if brand_id is not None:
         query = query.filter(Sanpham.ma_thuonghieu == brand_id)
 
-    # 4. Lọc theo Giá (GIÁ SAU GIẢM)
-    # Tính giá sau giảm trong SQL
-    if min_price is not None or max_price is not None:
-        # Biểu thức tính giá sau giảm
-        # Nếu kieu_giam_gia = percentage -> gia * (1 - gia_tri/100)
-        # Nếu kieu_giam_gia = fixed_amount -> gia - gia_tri
-        # Nếu null -> gia
-        
-        # SQL expression
-        final_price_expr = func.coalesce(
-            case(
-                (Sanpham.kieu_giam_gia == 'percentage', Sanpham.gia * (1 - func.coalesce(Sanpham.gia_tri_giam, 0) / 100)),
-                (Sanpham.kieu_giam_gia == 'fixed_amount', Sanpham.gia - func.coalesce(Sanpham.gia_tri_giam, 0)),
-                else_=Sanpham.gia
-            ), Sanpham.gia
-        )
-
-        if min_price is not None:
-            query = query.filter(final_price_expr >= min_price)
-        
-        if max_price is not None:
-            query = query.filter(final_price_expr <= max_price)
-
-    # 5. Lọc theo Đánh giá
-    if min_rating is not None:
-        query = query.filter(Sanpham.diem_danh_gia >= min_rating)
-
-    # 6. Sắp xếp (Sorting)
-    # Định nghĩa biểu thức tính giá sau giảm lần nữa để dùng cho order_by nếu cần
+    # Final price expression for filtering and sorting
     final_price_expr = func.coalesce(
         case(
             (Sanpham.kieu_giam_gia == 'percentage', Sanpham.gia * (1 - func.coalesce(Sanpham.gia_tri_giam, 0) / 100)),
@@ -429,6 +399,17 @@ def get_sanphams(
         ), Sanpham.gia
     )
 
+    if min_price is not None:
+        query = query.filter(final_price_expr >= min_price)
+    
+    if max_price is not None:
+        query = query.filter(final_price_expr <= max_price)
+
+    # 5. Lọc theo Đánh giá
+    if min_rating is not None:
+        query = query.filter(Sanpham.diem_danh_gia >= min_rating)
+
+    # 6. Sắp xếp (Sorting)
     if sort_by == "price_asc":
         query = query.order_by(final_price_expr.asc())
     elif sort_by == "price_desc":
@@ -533,15 +514,8 @@ def delete_image(ma_anh: int, db: Session = Depends(get_db), admin: User = Depen
     if not image:
         raise HTTPException(status_code=404, detail="Không tìm thấy ảnh")
     
-    # Xóa file vật lý
-    try:
-        # Sửa lỗi: image_url thường bắt đầu bằng /static/...
-        # Nếu url là /static/images/abc.jpg -> path_to_delete là static/images/abc.jpg
-        path_to_delete = image.image_url.lstrip('/')
-        if os.path.exists(path_to_delete):
-            os.remove(path_to_delete)
-    except Exception as e:
-        print(f"Lỗi xóa file: {e}")
+    # Hooks in app.utils.image_hooks will automatically handle physical file deletion
+    # when db.delete(image) is called.
     
     # Xóa record trong DB
     db.delete(image)
@@ -571,7 +545,7 @@ def create_category_admin(cat: DanhmucCreate, db: Session = Depends(get_db), adm
         ten_danhmuc=cat.ten_danhmuc,
         mo_ta=cat.mo_ta,          # ✅ Đã thêm
         hinh_anh=cat.hinh_anh,    # ✅ Đã thêm
-        is_active=True
+        is_active=cat.is_active if cat.is_active is not None else True
     )
     db.add(new_cat)
     db.commit()
@@ -608,6 +582,8 @@ def update_category_admin(id: int, cat: DanhmucCreate, db: Session = Depends(get
     db_cat.ten_danhmuc = cat.ten_danhmuc
     db_cat.mo_ta = cat.mo_ta         # ✅ Cập nhật mô tả
     db_cat.hinh_anh = cat.hinh_anh   # ✅ Cập nhật ảnh
+    if cat.is_active is not None:
+        db_cat.is_active = cat.is_active
     
     db.commit()
     return {"message": "Cập nhật thành công"}
@@ -641,7 +617,7 @@ def create_brand_admin(brand: ThuonghieuCreate, db: Session = Depends(get_db), a
         mo_ta=brand.mo_ta,       # ✅ Đã thêm
         logo=brand.logo,         # ✅ Đã thêm
         xuat_xu=brand.xuat_xu,   # ✅ Đã thêm
-        is_active=True
+        is_active=brand.is_active if brand.is_active is not None else True
     )
     db.add(new_brand)
     db.commit()
@@ -678,6 +654,8 @@ def update_brand_admin(id: int, brand: ThuonghieuCreate, db: Session = Depends(g
     db_brand.mo_ta = brand.mo_ta      # ✅ Cập nhật mô tả
     db_brand.logo = brand.logo        # ✅ Cập nhật logo
     db_brand.xuat_xu = brand.xuat_xu  # ✅ Cập nhật xuất xứ
+    if brand.is_active is not None:
+        db_brand.is_active = brand.is_active
 
     db.commit()
     return {"message": "Cập nhật thành công"}

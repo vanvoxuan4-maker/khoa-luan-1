@@ -83,8 +83,8 @@ const OrderDetailModal = ({ order, products, onClose }) => {
                         {/* 3. Phải: Trạng thái & Đóng */}
                         <div className="flex items-start gap-4 flex-1 justify-end">
                             <div className={`px-4 py-1.5 rounded-full text-[10px] font-black border uppercase tracking-wider ${isCancelled ? 'bg-red-500/20 border-red-400/40 text-red-300' :
-                                    order.trang_thai === 'returned' ? 'bg-purple-500/20 border-purple-400/40 text-purple-300' :
-                                        'bg-indigo-500/20 border-indigo-400/40 text-indigo-300'
+                                order.trang_thai === 'returned' ? 'bg-purple-500/20 border-purple-400/40 text-purple-300' :
+                                    'bg-indigo-500/20 border-indigo-400/40 text-indigo-300'
                                 }`}>
                                 {isCancelled ? 'Đã hủy' : (TRANG_THAI_VIET[order.trang_thai]?.label || order.trang_thai)}
                             </div>
@@ -285,7 +285,15 @@ const OrderDetailModal = ({ order, products, onClose }) => {
                                         </tr>
                                         {giamGia > 0 && (
                                             <tr>
-                                                <td className="py-4 text-pink-400 font-black italic">🎟️ Giảm giá Voucher:</td>
+                                                <td className="py-4 text-pink-400 font-black italic">
+                                                    <span className="underline decoration-pink-500/30 decoration-2 underline-offset-4">
+                                                        🎟️ Giảm giá Voucher: {order.voucher_info && (
+                                                            <span className="text-[11px] text-pink-300 font-bold uppercase tracking-tight not-italic ml-1">
+                                                                ({order.ma_giamgia} -{order.voucher_info.type === 'percentage' ? `${order.voucher_info.value}%` : `${order.voucher_info.value.toLocaleString('vi-VN')} VND`})
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                </td>
                                                 <td className="py-4 text-right text-pink-400 font-black text-lg">-{giamGia.toLocaleString('vi-VN')} VND</td>
                                             </tr>
                                         )}

@@ -57,7 +57,13 @@ const ForgotPassword = ({ onBackToLogin }) => {
                 message: res.data.message || 'Mật khẩu đã được cập nhật.',
             });
 
+            // Clear fields immediately on success
+            setEmail('');
+            setNewPassword('');
+            setConfirmPassword('');
+
             setTimeout(() => {
+                setNotification(null);
                 onBackToLogin();
             }, 2000);
 
@@ -75,29 +81,37 @@ const ForgotPassword = ({ onBackToLogin }) => {
     return (
         <div className="w-full max-w-sm mx-auto">
             <div className="mb-10 text-center">
-                <h2 className="text-5xl font-black text-indigo-600 tracking-tight mb-3 italic">Reset Password</h2>
-                <p className="text-sm font-medium text-slate-500 uppercase tracking-widest">Change your password</p>
+                <h2 className="text-5xl font-black text-indigo-600 tracking-tight mb-3 italic">quên mật khẩu</h2>
+                <p className="text-sm font-medium text-slate-500 uppercase tracking-widest">đặt lại mật khẩu của bạn</p>
             </div>
 
             <form onSubmit={handleResetPassword} className="space-y-6">
                 <FloatingInput
-                    label="Email của bạn"
+                    label="email của bạn"
                     icon="📧"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                        let val = e.target.value.toLowerCase();
+                        // Làm sạch email (xóa dấu, xóa khoảng trắng, giữ ký tự email)
+                        val = val.normalize('NFD')
+                            .replace(/[\u0300-\u036f]/g, '')
+                            .replace(/đ/g, 'd')
+                            .replace(/[^a-z0-9@._-]/g, '');
+                        setEmail(val);
+                    }}
                     autoComplete="email"
-                    placeholder="Nhập email đã đăng ký"
+                    placeholder="nhập email đã đăng ký"
                 />
 
                 <FloatingInput
-                    label="Mật khẩu mới"
+                    label="mật khẩu mới"
                     icon="🔒"
                     type={showNewPassword ? 'text' : 'password'}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     autoComplete="new-password"
-                    placeholder="Mật khẩu bảo mật mới"
+                    placeholder="mật khẩu bảo mật mới"
                     rightElement={
                         <button
                             type="button"
@@ -114,13 +128,13 @@ const ForgotPassword = ({ onBackToLogin }) => {
                 />
 
                 <FloatingInput
-                    label="Xác nhận lại"
+                    label="xác nhận lại"
                     icon="✅"
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     autoComplete="new-password"
-                    placeholder="Nhập lại mật khẩu"
+                    placeholder="nhập lại mật khẩu"
                     rightElement={
                         <button
                             type="button"
@@ -144,7 +158,7 @@ const ForgotPassword = ({ onBackToLogin }) => {
                     <div className="absolute inset-0 bg-indigo-600 group-hover:bg-indigo-700 transition-colors" />
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                     <span className="relative flex items-center justify-center gap-3">
-                        {isResetting ? "Đang xử lý..." : "Change password 🚀"}
+                        {isResetting ? "Đang xử lý..." : "thay đổi mật khẩu 🚀"}
                     </span>
                 </button>
 
@@ -154,7 +168,7 @@ const ForgotPassword = ({ onBackToLogin }) => {
                         onClick={onBackToLogin}
                         className="text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest transition-colors"
                     >
-                        ← login to back
+                        ← quay lại đăng nhập
                     </button>
                 </div>
             </form>

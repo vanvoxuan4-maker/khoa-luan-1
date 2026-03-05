@@ -3,12 +3,15 @@ import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { initiateVNPayPayment } from './VNPayPayment';
 import { useNotification } from '../../../context/NotificationContext';
+import StatusTracker from './StatusTracker';
 
 const OrderHistory = () => {
     const navigate = useNavigate();
     const { addToast, showConfirm } = useNotification();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showTracker, setShowTracker] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState(null);
 
     const fetchOrders = async () => {
         const token = localStorage.getItem('user_access_token');
@@ -168,9 +171,11 @@ const OrderHistory = () => {
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border text-xs font-black uppercase ${status.color}`}>
+                                            {/* Standard Status Badge */}
+                                            <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border text-[10px] font-black uppercase ${status.color}`}>
                                                 <span>{status.icon}</span> {status.label}
                                             </div>
+
                                             <div className="flex items-center gap-2">
                                                 {(() => {
                                                     const ps = order.trangthai_thanhtoan?.toLowerCase();
@@ -278,7 +283,13 @@ const OrderHistory = () => {
                                                             </tr>
                                                             {order.voucher_giam > 0 && (
                                                                 <tr>
-                                                                    <td className="py-3 text-pink-500 font-medium text-sm">🎟️ Voucher giảm giá</td>
+                                                                    <td className="py-3 text-pink-500 font-medium text-sm">
+                                                                        <span>🎟️ Voucher giảm giá {order.voucher_info && (
+                                                                            <span className="text-[10px] text-pink-400 font-bold uppercase tracking-tight ml-1">
+                                                                                ({order.ma_giamgia} -{order.voucher_info.type === 'percentage' ? `${order.voucher_info.value}%` : `${order.voucher_info.value.toLocaleString('vi-VN')} VND`})
+                                                                            </span>
+                                                                        )}</span>
+                                                                    </td>
                                                                     <td className="py-3 text-right text-pink-600 font-bold text-sm">-{order.voucher_giam?.toLocaleString('vi-VN')} <span className="text-xs text-pink-400">VND</span></td>
                                                                 </tr>
                                                             )}
@@ -318,6 +329,17 @@ const OrderHistory = () => {
                                         </div>
                                     </div>
                                     <div className="flex gap-3">
+                                        {!['delivered', 'cancelled', 'returned'].includes(order.trang_thai.toLowerCase()) && (
+                                            <button
+                                                onClick={() => {
+                                                    setSelectedOrder(order);
+                                                    setShowTracker(true);
+                                                }}
+                                                className="px-6 py-2 bg-indigo-50 text-indigo-600 border-2 border-indigo-100 font-black rounded-2xl hover:bg-indigo-600 hover:text-white transition-all text-[11px] uppercase tracking-wider shadow-sm"
+                                            >
+                                                📍 Theo dõi
+                                            </button>
+                                        )}
                                         {(order.trang_thai === 'delivered' || order.trang_thai === 'cancelled') && (
                                             <Link
                                                 to={`/products/${order.chitiet_donhang[0].ma_sanpham}`}
@@ -334,15 +356,15 @@ const OrderHistory = () => {
                                                 💳 Thanh toán lại
                                             </Link>
                                         )}
-                                        {(order.trang_thai === 'pending' || order.trang_thai === 'cancelled') && (
+                                        {(order.trang_thai === 'pending' || order.trang_thai === 'cancelled' || order.trang_thai === 'delivered' || order.trang_thai === 'returned' || order.trang_thai === 'failed') && (
                                             <button
-                                                onClick={() => handleCancelOrder(order.ma_don_hang, order.trang_thai)}
-                                                className={`px-5 py-2 font-black rounded-2xl transition-all text-[11px] uppercase tracking-wider border-2 ${order.trang_thai === 'pending'
+                                                onClick={() => handleCancelOrder(order.ma_don_hang, order.trang_thai.toLowerCase())}
+                                                className={`px-5 py-2 font-black rounded-2xl transition-all text-[11px] uppercase tracking-wider border-2 ${order.trang_thai.toLowerCase() === 'pending'
                                                     ? 'text-rose-500 border-blue-500 bg-rose-50/30 hover:bg-rose-500 hover:text-white hover:border-rose-500'
                                                     : 'text-green-600 border-blue-500 bg-white hover:bg-blue-500 hover:text-white shrink-0'
                                                     }`}
                                             >
-                                                {order.trang_thai === 'pending' ? 'Hủy đơn' : 'Xóa đơn'}
+                                                {order.trang_thai.toLowerCase() === 'pending' ? 'Hủy đơn' : 'Xóa đơn'}
                                             </button>
                                         )}
                                     </div>
@@ -351,6 +373,54 @@ const OrderHistory = () => {
                         );
                     })}
                 </div >
+            )}
+
+            {/* Tracking Modal */}
+            {showTracker && selectedOrder && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"
+                        onClick={() => setShowTracker(false)}
+                    ></div>
+
+                    {/* Modal Content */}
+                    <div className="relative bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+                        {/* Header */}
+                        <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <div>
+                                <h3 className="text-2xl font-black text-gray-800 uppercase tracking-tighter flex items-center gap-3">
+                                    <span className="w-2 h-8 bg-indigo-500 rounded-sm"></span>
+                                    Hành trình đơn hàng
+                                </h3>
+                                <p className="text-sm font-bold text-gray-400 mt-1 uppercase tracking-widest">
+                                    Đơn hàng #{selectedOrder.ma_don_hang}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setShowTracker(false)}
+                                className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border-2 border-gray-100 text-gray-400 hover:text-rose-500 hover:border-rose-100 transition-all hover:rotate-90"
+                            >
+                                <span className="text-2xl">✕</span>
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="max-h-[60vh] overflow-y-auto custom-scrollbar p-4">
+                            <StatusTracker history={selectedOrder.lichsu_donhang} />
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-6 bg-gray-50/50 border-t border-gray-100 text-center">
+                            <button
+                                onClick={() => setShowTracker(false)}
+                                className="px-10 py-3 bg-gray-900 text-white font-black rounded-2xl hover:bg-gray-800 transition-all uppercase text-xs tracking-widest shadow-xl shadow-gray-200"
+                            >
+                                Đóng
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div >
     );

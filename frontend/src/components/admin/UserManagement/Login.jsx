@@ -72,7 +72,7 @@ const Login = ({ onSwitchToRegister, onSwitchToForgot }) => {
     return (
         <div className="w-full max-w-sm mx-auto">
             <div className="mb-10 text-center">
-                <h2 className="text-5xl font-black text-indigo-600 tracking-tight mb-3">Login Account</h2>
+                <h2 className="text-5xl font-black text-indigo-600 tracking-tight mb-3">Login</h2>
                 <p className="text-sm font-medium text-slate-500">Sign in to your account</p>
             </div>
 
@@ -81,7 +81,18 @@ const Login = ({ onSwitchToRegister, onSwitchToForgot }) => {
                     label="User Identifier"
                     icon="👤"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                        let val = e.target.value.toLowerCase();
+                        // Làm sạch chung: xóa dấu và ký tự lạ, giữ lại @ và . nếu là email
+                        val = val.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+
+                        if (val.includes('@')) {
+                            val = val.replace(/[^a-z0-9@._-]/g, '');
+                        } else {
+                            val = val.replace(/[^a-z0-9_]/g, '');
+                        }
+                        setEmail(val);
+                    }}
                     placeholder="Email hoặc Tên đăng nhập"
                     autoComplete="username"
                 />

@@ -4,6 +4,7 @@ import {
     PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
     AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar
 } from 'recharts';
+import StatBox from './StatBox';
 
 const TIME_RANGES = [
     { label: '7 ngày', days: 7 },
@@ -66,173 +67,128 @@ const Dashboard = () => {
         }
     }, [timeRange, rawOrders, buildRevenueChart]);
 
-    useEffect(() => {
-        const loadDashboard = async () => {
-            try {
-                const token = localStorage.getItem('admin_access_token');
-                const headers = { Authorization: `Bearer ${token}` };
+    const loadDashboard = async () => {
+        try {
+            const token = localStorage.getItem('admin_access_token');
+            const headers = { Authorization: `Bearer ${token}` };
 
-                const [ordersRes, usersRes, productsRes, paymentsRes] = await Promise.all([
-                    axios.get('http://localhost:8000/orders/all', { headers }),
-                    axios.get('http://localhost:8000/admin/users', { headers }),
-                    axios.get('http://localhost:8000/sanpham'),
-                    axios.get('http://localhost:8000/payment/all', { headers })
-                ]);
+            const [ordersRes, usersRes, productsRes, paymentsRes] = await Promise.all([
+                axios.get('http://localhost:8000/orders/all', { headers }),
+                axios.get('http://localhost:8000/admin/users', { headers }),
+                axios.get('http://localhost:8000/sanpham'),
+                axios.get('http://localhost:8000/payment/all', { headers })
+            ]);
 
-                const orders = ordersRes.data;
-                const users = usersRes.data;
-                const products = productsRes.data;
-                const payments = paymentsRes.data;
+            const orders = ordersRes.data;
+            const users = usersRes.data;
+            const products = productsRes.data;
+            const payments = paymentsRes.data;
 
-                setRawOrders(orders);
+            setRawOrders(orders);
 
-                // ── KPI STATS ──
-                let paidAmount = 0, refundedAmount = 0, cancelledAmount = 0, unpaidAmount = 0;
+            // ── KPI STATS ──
+            const { stats: kpiStats, cancelledToday } = calculateKPIs(orders, users, products);
+            setStats({ ...kpiStats, cancelledToday });
 
-                // Helper to get local date string YYYY-MM-DD
-                const getLocalDateStr = (dateObj) => {
-                    if (!dateObj) return '';
-                    const d = new Date(dateObj);
-                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                };
+            // ── STATUS CHART ──
+            setStatusChart(processStatusChart(orders));
 
-                const today = getLocalDateStr(new Date());
-                let cancelledToday = 0;
+            // ── REVENUE CHART ──
+            setRevenueChart(buildRevenueChart(orders, 7));
 
-                orders.forEach(o => {
-                    const status = (o.trang_thai || '').toLowerCase();
-                    const ps = (o.trangthai_thanhtoan || '').toLowerCase();
-                    const total = o.tong_tien || 0;
-                    const orderDateStr = getLocalDateStr(o.ngay_dat || o.created_at);
+            // ── RECENT TRANSACTIONS ──
+            setRecentPayments([...payments].sort((a, b) => b.ma_thanhtoan - a.ma_thanhtoan).slice(0, 5));
 
-                    // Identify if order is cancelled/failed/returned
-                    const isFailedOrCancelled = ['cancelled', 'failed', 'returned'].includes(status);
+            // ── TOP 5 SẢN PHẨM BÁN CHẠY ──
+            setTopProducts(processTopProducts(orders, products));
 
-                    if (isFailedOrCancelled) {
-                        cancelledAmount += total;
-                        if (orderDateStr === today) cancelledToday++;
-                    }
+            // ── SẢN PHẨM SẮP HẾT KHO ──
+            setLowStockProducts(processLowStock(products));
 
-                    if (ps === 'refunded') {
-                        refundedAmount += total;
-                    } else if (ps === 'paid' || ps === 'success' || ps === 'completed') {
-                        // Only count as revenue if not cancelled/returned
-                        if (!isFailedOrCancelled) paidAmount += total;
-                    } else if (!isFailedOrCancelled) {
-                        unpaidAmount += total;
-                    }
-                });
+            setLoading(false);
+        } catch (error) {
+            console.error('Dashboard Error:', error);
+            setLoading(false);
+        }
+    };
 
-                const revenue = paidAmount;
-                const refundRate = revenue > 0 ? ((refundedAmount / (revenue + refundedAmount)) * 100).toFixed(1) : 0;
+    const calculateKPIs = (orders, users, products) => {
+        let paidAmount = 0, refundedAmount = 0;
+        const today = new Date().toISOString().split('T')[0];
+        let cancelledToday = 0;
 
-                // New users this month
-                const nowMonth = new Date().getMonth();
-                const nowYear = new Date().getFullYear();
-                const newUsersThisMonth = users.filter(u => {
-                    const d = new Date(u.ngay_lap);
-                    return d.getMonth() === nowMonth && d.getFullYear() === nowYear;
-                }).length;
+        orders.forEach(o => {
+            const status = (o.trang_thai || '').toLowerCase();
+            const ps = (o.trangthai_thanhtoan || '').toLowerCase();
+            const total = o.tong_tien || 0;
+            const orderDateStr = new Date(o.ngay_dat || o.created_at).toISOString().split('T')[0];
 
-                setStats({
-                    revenue, refunded: refundedAmount, orders: orders.length,
-                    users: users.length, products: products.length,
-                    cancelledToday, newUsersThisMonth, refundRate
-                });
+            const isFailedOrCancelled = ['cancelled', 'failed', 'returned'].includes(status);
 
-                // ── STATUS CHART ──
-                const statusCounts = orders.reduce((acc, o) => {
-                    const s = (o.trang_thai || 'unknown').toLowerCase();
-                    acc[s] = (acc[s] || 0) + 1;
-                    return acc;
-                }, {});
-                const statusMapping = {
-                    pending: 'Chờ xử lý', confirmed: 'Đã xác nhận',
-                    shipping: 'Đang giao', delivered: 'Hoàn thành',
-                    cancelled: 'Đã hủy', failed: 'Thất bại',
-                    returned: 'Trả hàng'
-                };
-                const statusColors = {
-                    pending: '#eab308', confirmed: '#2563eb', shipping: '#f97316',
-                    delivered: '#22c55e', cancelled: '#ef4444', failed: '#6b7280',
-                    returned: '#9333ea' // Purple color
-                };
-                setStatusChart(Object.keys(statusCounts).map(k => ({
-                    name: statusMapping[k] || k, value: statusCounts[k], color: statusColors[k] || '#9ca3af'
-                })));
+            if (isFailedOrCancelled && orderDateStr === today) cancelledToday++;
 
-                // ── REVENUE CHART ──
-                setRevenueChart(buildRevenueChart(orders, 7));
-
-                // ── RECENT TRANSACTIONS ──
-                setRecentPayments([...payments].sort((a, b) => b.ma_thanhtoan - a.ma_thanhtoan).slice(0, 5));
-
-                // ── TOP 5 SẢN PHẨM BÁN CHẠY ──
-                const productSales = {};
-                orders.forEach(o => {
-                    if (!o.chitiet_donhang) return;
-                    const status = (o.trang_thai || '').toLowerCase();
-                    if (status === 'cancelled' || status === 'failed' || status === 'returned') return;
-                    o.chitiet_donhang.forEach(item => {
-                        if (!item.ma_sanpham) return;
-                        if (!productSales[item.ma_sanpham]) {
-                            const pInfo = products.find(p => p.ma_sanpham === item.ma_sanpham);
-                            productSales[item.ma_sanpham] = {
-                                id: item.ma_sanpham,
-                                name: item.ten_sanpham,
-                                qty: 0,
-                                revenue: 0,
-                                code: pInfo?.sanpham_code || '',
-                                size_banh: pInfo?.size_banh_xe || '',
-                                size_khung: pInfo?.size_khung || '',
-                                mau: pInfo?.mau || '',
-                                image: (pInfo?.hinhanh && pInfo.hinhanh.length > 0)
-                                    ? (pInfo.hinhanh.find(img => img.is_main)?.image_url || pInfo.hinhanh[0].image_url)
-                                    : null
-                            };
-                        }
-                        productSales[item.ma_sanpham].qty += item.so_luong;
-                        productSales[item.ma_sanpham].revenue += item.thanh_tien || 0;
-                    });
-                });
-                const top5 = Object.values(productSales)
-                    .sort((a, b) => b.qty - a.qty)
-                    .slice(0, 5);
-                setTopProducts(top5);
-
-                // ── SẢN PHẨM SẮP HẾT KHO ──
-                const lowStock = products
-                    .filter(p => (p.ton_kho || 0) <= LOW_STOCK_THRESHOLD && (p.is_active !== false))
-                    .sort((a, b) => (a.ton_kho || 0) - (b.ton_kho || 0));
-                setLowStockProducts(lowStock);
-
-                setLoading(false);
-            } catch (error) {
-                console.error('Dashboard Error:', error);
-                setLoading(false);
+            if (ps === 'refunded') {
+                refundedAmount += total;
+            } else if ((ps === 'paid' || ps === 'success' || ps === 'completed') && !isFailedOrCancelled) {
+                paidAmount += total;
             }
+        });
+
+        const revenue = paidAmount;
+        const refundRate = revenue > 0 ? ((refundedAmount / (revenue + refundedAmount)) * 100).toFixed(1) : 0;
+
+        const nowMonth = new Date().getMonth();
+        const nowYear = new Date().getFullYear();
+        const newUsersThisMonth = users.filter(u => {
+            const d = new Date(u.ngay_lap);
+            return d.getMonth() === nowMonth && d.getFullYear() === nowYear;
+        }).length;
+
+        return {
+            stats: { revenue, refunded: refundedAmount, orders: orders.length, users: users.length, products: products.length, newUsersThisMonth, refundRate },
+            cancelledToday
         };
-        loadDashboard();
-    }, [buildRevenueChart]);
+    };
 
-    // ─── COMPONENTS ───
+    const processStatusChart = (orders) => {
+        const counts = orders.reduce((acc, o) => {
+            const s = (o.trang_thai || 'unknown').toLowerCase();
+            acc[s] = (acc[s] || 0) + 1;
+            return acc;
+        }, {});
+        const mapping = { pending: 'Chờ xử lý', confirmed: 'Đã xác nhận', shipping: 'Đang giao', delivered: 'Hoàn thành', cancelled: 'Đã hủy', failed: 'Thất bại', returned: 'Trả hàng' };
+        const colors = { pending: '#eab308', confirmed: '#2563eb', shipping: '#f97316', delivered: '#22c55e', cancelled: '#ef4444', failed: '#6b7280', returned: '#9333ea' };
+        return Object.keys(counts).map(k => ({ name: mapping[k] || k, value: counts[k], color: colors[k] || '#9ca3af' }));
+    };
 
-    const StatBox = ({ label, value, sub, icon, gradient, shadow, alert, border }) => (
-        <div className={`group relative p-7 rounded-3xl bg-white border-2 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl overflow-hidden ${shadow} ${alert ? 'border-red-500 ring-1 ring-red-500' : (border || 'border-slate-100')}`}>
-            <div className={`absolute top-0 right-0 w-28 h-28 bg-gradient-to-br ${gradient} opacity-5 rounded-full -mr-14 -mt-14 transition-transform duration-700 group-hover:scale-150`} />
-            <div className="relative z-10 flex items-start justify-between gap-3">
-                <div className="flex flex-col gap-1 min-w-0">
-                    <h3 className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-0.5">{label}</h3>
-                    <p className="text-2xl font-black text-slate-900 tracking-tight truncate">{value}</p>
-                    {sub && <p className="text-[11px] text-slate-400 font-semibold mt-0.5">{sub}</p>}
-                </div>
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-lg bg-gradient-to-br flex-shrink-0 transition-all duration-500 group-hover:rotate-6 group-hover:scale-110 ${gradient} text-white`}>
-                    {icon}
-                </div>
-            </div>
-            <div className={`absolute bottom-0 left-6 right-6 h-0.5 bg-gradient-to-r ${gradient} rounded-full opacity-20 group-hover:opacity-100 transition-opacity`} />
-        </div>
-    );
+    const processTopProducts = (orders, products) => {
+        const productSales = {};
+        orders.forEach(o => {
+            if (!o.chitiet_donhang) return;
+            const status = (o.trang_thai || '').toLowerCase();
+            if (['cancelled', 'failed', 'returned'].includes(status)) return;
+            o.chitiet_donhang.forEach(item => {
+                if (!item.ma_sanpham) return;
+                if (!productSales[item.ma_sanpham]) {
+                    const pInfo = products.find(p => p.ma_sanpham === item.ma_sanpham);
+                    productSales[item.ma_sanpham] = {
+                        id: item.ma_sanpham, name: item.ten_sanpham, qty: 0, revenue: 0,
+                        code: pInfo?.sanpham_code || '',
+                        image: (pInfo?.hinhanh?.length > 0) ? (pInfo.hinhanh.find(img => img.is_main)?.image_url || pInfo.hinhanh[0].image_url) : null
+                    };
+                }
+                productSales[item.ma_sanpham].qty += item.so_luong;
+                productSales[item.ma_sanpham].revenue += item.thanh_tien || 0;
+            });
+        });
+        return Object.values(productSales).sort((a, b) => b.qty - a.qty).slice(0, 5);
+    };
+
+    const processLowStock = (products) => {
+        return products.filter(p => (p.ton_kho || 0) <= LOW_STOCK_THRESHOLD && (p.is_active !== false)).sort((a, b) => (a.ton_kho || 0) - (b.ton_kho || 0));
+    };
+
+    useEffect(() => { loadDashboard(); }, [buildRevenueChart]);
 
     if (loading) return (
         <div className="flex flex-col items-center justify-center p-20 min-h-[60vh]">
@@ -259,7 +215,7 @@ const Dashboard = () => {
 
             {/* ── HEADER ── */}
             <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">📊 Báo cáo thống kê</h2>
+                <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">📊 Tổng Quan Hệ Thống</h2>
                 <button
                     onClick={() => { setLoading(true); window.location.reload(); }}
                     className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-black uppercase tracking-wider hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl hover:scale-105 flex items-center gap-2"
@@ -433,87 +389,61 @@ const Dashboard = () => {
                     </div>
 
                     {topProducts.length > 0 ? (
-                        <div className="flex-1 space-y-6">
-                            {topProducts.map((product, index) => {
-                                const rankColors = [
-                                    { bg: 'bg-blue-600', text: 'text-white', label: '01', shadow: 'shadow-blue-200' },
-                                    { bg: 'bg-slate-800', text: 'text-white', label: '02', shadow: 'shadow-slate-200' },
-                                    { bg: 'bg-slate-400', text: 'text-white', label: '03', shadow: 'shadow-slate-100' },
-                                    { bg: 'bg-slate-100', text: 'text-slate-400', label: '04', shadow: 'shadow-transparent' },
-                                    { bg: 'bg-slate-100', text: 'text-slate-400', label: '05', shadow: 'shadow-transparent' }
-                                ];
+                        <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar max-h-[480px]">
+                            <div className="space-y-3 pb-4">
+                                {topProducts.map((product, index) => {
+                                    const rankColors = [
+                                        { bg: 'bg-blue-600', text: 'text-white', label: '01' },
+                                        { bg: 'bg-slate-800', text: 'text-white', label: '02' },
+                                        { bg: 'bg-slate-400', text: 'text-white', label: '03' },
+                                        { bg: 'bg-slate-100', text: 'text-slate-400', label: '04' },
+                                        { bg: 'bg-slate-100', text: 'text-slate-400', label: '05' }
+                                    ];
 
-                                const rank = rankColors[index];
+                                    const rank = rankColors[index];
 
-                                return (
-                                    <div key={product.id || index} className="group flex items-center gap-6 p-4 rounded-[2rem] hover:bg-slate-50 transition-all duration-500 border border-transparent hover:border-slate-100 relative overflow-hidden">
-                                        {/* Product Image - Larger & Clearer */}
-                                        <div className="w-24 h-24 rounded-2xl bg-white border border-slate-100 p-2 flex-shrink-0 relative overflow-hidden shadow-sm group-hover:shadow-md transition-all duration-500">
-                                            {/* Rank Badge - Integrated */}
-                                            <div className={`absolute top-0 left-0 z-20 px-2.5 py-1 rounded-br-2xl text-[10px] font-black ${rank.bg} ${rank.text} shadow-sm uppercase tracking-tighter`}>
-                                                Top {rank.label}
+                                    return (
+                                        <div key={product.id || index} className="group flex items-center gap-4 p-3 rounded-2xl hover:bg-slate-50 transition-all duration-300 border border-transparent hover:border-slate-100 relative overflow-hidden">
+                                            {/* Product Image - Smaller & Compact */}
+                                            <div className="w-16 h-16 rounded-xl bg-white border border-slate-100 p-1.5 flex-shrink-0 relative overflow-hidden shadow-sm">
+                                                <div className={`absolute top-0 left-0 z-20 px-1.5 py-0.5 rounded-br-lg text-[8px] font-black ${rank.bg} ${rank.text} shadow-sm uppercase tracking-tighter`}>
+                                                    #{rank.label}
+                                                </div>
+                                                {product.image ? (
+                                                    <img
+                                                        src={`http://localhost:8000${product.image}`}
+                                                        alt={product.name}
+                                                        className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700 relative z-10"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-slate-300 text-[8px] font-black">N/A</div>
+                                                )}
                                             </div>
 
-                                            <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity blur-xl rounded-full scale-150"></div>
-                                            {product.image ? (
-                                                <img
-                                                    src={`http://localhost:8000${product.image}`}
-                                                    alt={product.name}
-                                                    className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700 relative z-10 drop-shadow-md"
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-slate-300 text-[10px] font-black uppercase tracking-widest">
-                                                    🚲 BIKE
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Info & Progress */}
-                                        <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                            <div className="flex justify-between items-start mb-0.5">
-                                                <div className="min-w-0 pr-4">
-                                                    <h4 className="text-[15px] font-black text-slate-800 truncate group-hover:text-blue-600 transition-colors uppercase tracking-tight leading-none mb-0">
-                                                        {product.name}
-                                                    </h4>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.2em] bg-slate-100 px-2 py-0.5 rounded-md">
-                                                            #{product.code}
-                                                        </span>
+                                            {/* Info */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="min-w-0">
+                                                        <h4 className="text-sm font-black text-slate-800 truncate leading-tight mb-0.5 uppercase">
+                                                            {product.name}
+                                                        </h4>
+                                                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">#{product.code}</span>
+                                                    </div>
+                                                    <div className="text-right flex-shrink-0">
+                                                        <div className="flex items-baseline justify-end gap-1">
+                                                            <span className="text-sm font-black text-slate-900">{product.qty}</span>
+                                                            <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest italic">Bán</span>
+                                                        </div>
+                                                        <div className="text-[9px] font-bold text-slate-400">
+                                                            {(product.revenue / 1000000).toFixed(1)}M <span className="text-[7px]">VND</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="text-right flex-shrink-0 pt-1">
-                                                    <div className="flex items-baseline justify-end gap-1">
-                                                        <span className="text-lg font-black text-slate-900 tabular-nums">{product.qty}</span>
-                                                        <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest italic">Đã bán</span>
-                                                    </div>
-                                                    <div className="text-[10px] font-bold text-slate-400 tabular-nums mt-0.5">
-                                                        {product.revenue.toLocaleString('vi-VN')} <span className="text-[8px] opacity-70">VND</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Bike Specifications - Replacing Progress Bar */}
-                                            <div className="flex flex-wrap items-center gap-2 mt-0">
-                                                {product.size_banh && (
-                                                    <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-tighter border border-blue-100/50">
-                                                        Bánh: {product.size_banh}"
-                                                    </span>
-                                                )}
-                                                {product.size_khung && (
-                                                    <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-tighter border border-indigo-100/50">
-                                                        Khung: {product.size_khung}
-                                                    </span>
-                                                )}
-                                                {product.mau && (
-                                                    <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-tighter border border-slate-200/50">
-                                                        Màu: {product.mau}
-                                                    </span>
-                                                )}
                                             </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center py-20 opacity-30">

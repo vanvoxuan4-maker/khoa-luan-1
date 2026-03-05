@@ -121,18 +121,17 @@ const ReviewList = () => {
         </div>
       </div>
 
-      {/* 🟢 BẢNG ĐÁNH GIÁ ĐÃ ĐỒNG BỘ MÀU (Slate) */}
-      <div className="bg-white rounded-2xl shadow-xl border-2 border-slate-200 overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          {/* Header màu Slate giống OrderManager và UserList */}
-          <thead className="bg-gradient-to-r from-amber-600 to-yellow-700 text-amber-50">
-            <tr className="text-slate-700 uppercase text-[11px] font-black tracking-widest divide-x-2 divide-slate-200">
-              <th className="py-5 px-6 text-center w-20">ID</th>
-              <th className="py-5 px-6 w-1/4">Sản Phẩm & Khách</th>
-              <th className="py-5 px-6 text-center w-32">Đánh Giá</th>
-              <th className="py-5 px-6">Nội Dung</th>
-              <th className="py-5 px-6 text-center w-36">Trạng Thái</th>
-              <th className="py-5 px-6 text-center w-40">Hành Động</th>
+      {/* 🟢 BẢNG ĐÁNH GIÁ */}
+      <div className="bg-white/80 backdrop-blur-md rounded-[3rem] shadow-xl shadow-blue-500/5 border border-white overflow-hidden">
+        <table className="w-full text-left border-separate border-spacing-0">
+          <thead className="bg-gradient-to-r from-amber-600 to-yellow-700 text-amber-50 text-[11px] uppercase font-black tracking-widest">
+            <tr className="divide-x divide-amber-200/40">
+              <th className="py-8 px-6 text-center w-20">ID</th>
+              <th className="py-8 px-6 w-1/4 text-center">Sản Phẩm & Khách</th>
+              <th className="py-8 px-6 text-center w-32">Đánh Giá</th>
+              <th className="py-8 px-6 text-center">Nội Dung</th>
+              <th className="py-8 px-6 text-center w-36">Trạng Thái</th>
+              <th className="py-8 px-10 text-center w-40">Hành Động</th>
             </tr>
           </thead>
 
@@ -146,14 +145,14 @@ const ReviewList = () => {
 
                 <td className="py-4 px-6 text-center align-middle font-bold text-gray-400 text-base">#{r.ma_danhgia}</td>
 
-                <td className="py-4 px-6 align-middle">
+                <td className="py-4 px-6 align-middle text-center">
                   <div className="font-bold text-gray-800 text-sm mb-1 line-clamp-1 uppercase tracking-tighter" title={r.sanpham?.ten_sanpham}>
                     {r.sanpham?.ten_sanpham || "Sản phẩm đã xóa"}
                   </div>
                   <div className="text-[11px] text-blue-600 font-black uppercase tracking-wider">
                     👤 {r.user?.hovaten || "Khách ẩn danh"}
                   </div>
-                  <div className="text-[10px] text-gray-400 mt-0.5 italic">
+                  <div className="text-[10px] text-gray-400 mt-0.5 italic text-center">
                     {r.ngay_lap ? new Date(r.ngay_lap).toLocaleDateString('vi-VN') : '---'}
                   </div>
                 </td>
@@ -162,8 +161,8 @@ const ReviewList = () => {
                   <div className="flex justify-center gap-0.5">{renderStars(r.diem_danhgia)}</div>
                 </td>
 
-                <td className="py-4 px-6 align-middle">
-                  <p className="text-gray-600 text-sm italic border-l-4 border-yellow-400/30 pl-3 leading-relaxed">"{r.viet_danhgia}"</p>
+                <td className="py-4 px-6 align-middle text-center text-gray-600 text-sm italic leading-relaxed">
+                  "{r.viet_danhgia}"
                 </td>
 
                 <td className="py-4 px-6 text-center align-middle">

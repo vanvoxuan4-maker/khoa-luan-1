@@ -1,14 +1,27 @@
 import { useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNotification } from '../../context/NotificationContext';
+import { getBestToken } from '../../utils/auth';
 
 const AxiosInterceptor = () => {
     const { showAlert } = useNotification();
     const isAlerting = useRef(false);
 
     useEffect(() => {
-        // Gắn interceptor ngay lập tức khi component mount
-        const interceptor = axios.interceptors.response.use(
+        // 1. Request Interceptor: Tự động đính kèm token vào mọi request
+        const requestInterceptor = axios.interceptors.request.use(
+            (config) => {
+                const token = getBestToken();
+                if (token) {
+                    config.headers.Authorization = `Bearer ${token}`;
+                }
+                return config;
+            },
+            (error) => Promise.reject(error)
+        );
+
+        // 2. Response Interceptor: Xử lý lỗi tập trung
+        const responseInterceptor = axios.interceptors.response.use(
             (response) => response,
             async (error) => {
                 // Kiểm tra mã lỗi 401 hoặc 403
@@ -57,9 +70,10 @@ const AxiosInterceptor = () => {
             }
         );
 
-        // Cleanup: Gỡ bỏ interceptor khi component unmount
+        // Cleanup: Gỡ bỏ cả 2 interceptors khi component unmount
         return () => {
-            axios.interceptors.response.eject(interceptor);
+            axios.interceptors.request.eject(requestInterceptor);
+            axios.interceptors.response.eject(responseInterceptor);
         };
     }, [showAlert]);
 

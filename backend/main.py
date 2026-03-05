@@ -6,11 +6,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.sql import text
 from app.db.session import engine
 from app.db.base import Base
-from app.db.base_class import Base
 # Import router
 from app.api.endpoints import products, auth, cart, orders, marketing, admin, dashboard, chat_admin, users, audit
 from app.api.endpoints import payment
 from app.api.endpoints import vnpay
+from app.utils.image_hooks import init_image_hooks
+import subprocess
+import asyncio
 
 
 def init_db_structure():
@@ -26,6 +28,7 @@ def init_db_structure():
 
 init_db_structure()
 Base.metadata.create_all(bind=engine)
+init_image_hooks() # Kích hoạt tự động xóa ảnh khi record thay đổi
 
 app = FastAPI(title="Bike Shop API - Final Version")
 
@@ -65,6 +68,28 @@ app.include_router(users.router, prefix="/users", tags=["Quản lý User"])
 # Thêm router Audit
 app.include_router(audit.router, prefix="/audit", tags=["Audit Log"])
 
+# --- BACKGROUND TASK: DỌN DẸP ẢNH RÁC MỖI 24 GIỜ ---
+async def periodic_image_cleanup_loop():
+    # Đợi 10 giây sau khi startup để server ổn định rồi mới chạy lần đầu
+    await asyncio.sleep(10)
+    while True:
+        try:
+            print("INFO: Bat dau don dep anh rac dinh ky (Background Task)...")
+            import sys
+            cleanup_script = os.path.join("app", "utils", "cleanup_images.py")
+            if os.path.exists(cleanup_script):
+                # Chạy script cleanup_images.py với tham số --delete
+                subprocess.run([sys.executable, cleanup_script, "--delete"], input="y\n", text=True)
+                print("DONE: Don dep anh rac dinh ky hoan tat.")
+        except Exception as e:
+            print(f"ERROR: Loi khi chay background cleanup: {e}")
+        
+        await asyncio.sleep(60 * 60 * 24)  # Chạy lại sau mỗi 24 giờ
+
+@app.on_event("startup")
+async def startup_event():
+    # Khởi tạo background task
+    asyncio.create_task(periodic_image_cleanup_loop())
 
 @app.get("/")
 def read_root():

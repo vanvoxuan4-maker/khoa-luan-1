@@ -520,6 +520,20 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel }) => {
                     <span className="absolute right-6 top-1/2 -translate-y-1/2 text-red-400/20 font-black">% OFF</span>
                   </div>
                 </div>
+                <div className="pt-4 border-t border-white/5">
+                  <label className="flex items-center cursor-pointer group/toggle">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={formData.is_active}
+                      onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                    />
+                    <div className="w-14 h-7 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-emerald-500 peer-checked:to-teal-500 shadow-inner"></div>
+                    <span className="ml-4 text-xs font-black uppercase tracking-[0.2em] text-slate-400 group-hover/toggle:text-emerald-400 transition-colors">
+                      {formData.is_active ? 'Sản phẩm đang bán' : 'Sản phẩm đang ẩn'}
+                    </span>
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -555,7 +569,7 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel }) => {
           </button>
         </div>
       </form>
-    </div>
+    </div >
   );
 };
 

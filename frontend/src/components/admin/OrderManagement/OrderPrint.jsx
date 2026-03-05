@@ -241,8 +241,8 @@ const OrderPrint = ({ order, itemsOnly, subtotal, shipFee, giamGia, tongSauGiam 
                             </tr>
                             {giamGia > 0 && (
                                 <tr>
-                                    <td colSpan="6" style={{ border: '1pt solid #ccc', padding: '5px 10px', textAlign: 'right', fontWeight: '600', color: '#c00' }}>
-                                        Giảm giá ({order.ma_giamgia}):
+                                    <td colSpan="6" style={{ border: '1pt solid #ccc', padding: '5px 10px', textAlign: 'right', fontWeight: '600', color: '#c00', whiteSpace: 'nowrap' }}>
+                                        Giảm giá ({order.ma_giamgia}{order.voucher_info ? ` -${order.voucher_info.type === 'percentage' ? `${order.voucher_info.value}%` : `${order.voucher_info.value.toLocaleString('vi-VN')} VND`}` : ''}):
                                     </td>
                                     <td style={{ border: '1pt solid #ccc', padding: '5px 8px', textAlign: 'right', fontWeight: '700', color: '#c00' }}>-{giamGia.toLocaleString('vi-VN')}</td>
                                 </tr>

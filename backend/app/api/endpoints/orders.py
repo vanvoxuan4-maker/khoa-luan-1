@@ -7,8 +7,9 @@ from app.models.cart import GioHang, ChiTietGioHang
 from app.models.order import DonHang, ChiTietDonHang, TrangThaiOrder, TrangThaiPayment, PhuongThucPayment
 from app.models.payment import ThanhToan
 from app.models.marketing import Makhuyenmai
+from app.models.history import LichSuDonHang
 from app.schemas.order import OrderCreate, OrderResponse
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timedelta
 
 # 👇 Import deps chuẩn từ package cha
@@ -251,13 +252,22 @@ def checkout(
         # Sử dụng đơn mới
         current_order = new_order
 
+    # 4.4.5 Ghi lịch sử đơn hàng ban đầu
+    initial_history = LichSuDonHang(
+        ma_don_hang=current_order.ma_don_hang,
+        trang_thai="pending",
+        mo_ta="Đơn hàng đã được khởi tạo thành công."
+    )
+    db.add(initial_history)
+
     # 4.5. Nếu là COD -> Tạo bản ghi ThanhToan (Trạng thái Pending)
     if phuong_thuc_enum == PhuongThucPayment.COD:
         new_payment = ThanhToan(
             ma_don_hang=current_order.ma_don_hang,
             thanh_tien=current_order.tong_tien,
             pt_thanhtoan="cod",
-            trang_thai="pending"
+            trang_thai="pending",
+            ma_giamgia=current_order.ma_giamgia # 👇 Lưu mã giảm giá
         )
         db.add(new_payment)
         db.commit() # Lưu payment record
@@ -298,6 +308,7 @@ def checkout(
 def update_order_status(
     ma_don_hang: int, 
     trang_thai_moi: str, 
+    mo_ta: Optional[str] = None,
     db: Session = Depends(get_db), 
     current_user: User = Depends(deps.check_admin_role)
 ):
@@ -376,6 +387,26 @@ def update_order_status(
                     payment_record.ngay_thanhtoan = datetime.now()
 
         order.trang_thai = new_status_enum
+        
+        # 👇 GHI LỊCH SỬ THAY ĐỔI
+        default_descriptions = {
+            "pending": "Đơn hàng đang chờ xử lý.",
+            "confirmed": "Đơn hàng của bạn đã được xác nhận.",
+            "shipping": "Đơn hàng đang được giao đến bạn.",
+            "delivered": "Đã giao hàng thành công.",
+            "cancelled": "Đơn hàng đã bị hủy.",
+            "returned": "Đơn hàng đã được trả lại."
+        }
+        
+        final_desc = mo_ta if mo_ta else default_descriptions.get(new_status_val, f"Cập nhật trạng thái thành {new_status_val}")
+        
+        new_history = LichSuDonHang(
+            ma_don_hang=ma_don_hang,
+            trang_thai=new_status_val,
+            mo_ta=final_desc
+        )
+        db.add(new_history)
+        
         db.commit()
         
         # Audit log
@@ -464,6 +495,15 @@ def update_payment_status(
                 if product:
                     product.ton_kho += item.so_luong
 
+        # 👇 GHI LỊCH SỬ TỰ ĐỘNG KHI HOÀN TIỀN
+        new_status_v = (order.trang_thai.value if hasattr(order.trang_thai, 'value') else str(order.trang_thai)).lower()
+        new_history = LichSuDonHang(
+            ma_don_hang=ma_don_hang,
+            trang_thai=new_status_v,
+            mo_ta=f"Trạng thái đơn hàng tự động chuyển sang {new_status_v} do thực hiện hoàn tiền."
+        )
+        db.add(new_history)
+
     db.commit()
     
     # Audit log
@@ -512,7 +552,10 @@ def get_all_orders_admin(db: Session = Depends(get_db), current_user: User = Dep
 def get_my_orders(db: Session = Depends(get_db), current_user: User = Depends(deps.get_current_user)):
     orders = db.query(DonHang).filter(
         DonHang.ma_user == current_user.ma_user,
-        DonHang.xoa_don == False  # Chỉ lấy đơn chưa bị user ẩn
+        DonHang.xoa_don == False
+    ).options(
+        joinedload(DonHang.lichsu_donhang),
+        joinedload(DonHang.chitiet_donhang)
     ).order_by(DonHang.ngay_dat.desc()).all()
     
     # Duyệt qua từng đơn hàng để đảm bảo dữ liệu hiển thị đầy đủ
@@ -596,11 +639,19 @@ def delete_my_order(ma_don_hang: int, db: Session = Depends(get_db), current_use
             if payment_record:
                 payment_record.trang_thai = "failed"
         
+        # 👇 GHI LỊCH SỬ KHÁCH HỦY
+        new_h = LichSuDonHang(
+            ma_don_hang=ma_don_hang,
+            trang_thai="cancelled",
+            mo_ta="Đơn hàng đã được khách hàng hủy."
+        )
+        db.add(new_h)
+        
         db.commit()
         return {"message": "Đã hủy đơn hàng thành công"}
 
-    # TRƯỜNG HỢP 2: Đơn hàng đã CANCELLED hoặc FAILED -> Soft delete (ẩn với user, admin vẫn thấy)
-    if current_status in ["cancelled", "failed"]:
+    # TRƯỜNG HỢP 2: Đơn hàng đã CANCELLED, FAILED, DELIVERED hoặc RETURNED -> Soft delete (ẩn với user, admin vẫn thấy)
+    if current_status in ["cancelled", "failed", "delivered", "returned"]:
         order.xoa_don = True  # Chỉ ẩn khỏi lịch sử user, không xóa thật
         db.commit()
         return {"message": "Đã xóa đơn hàng khỏi lịch sử của bạn"}

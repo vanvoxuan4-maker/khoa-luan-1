@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 from enum import Enum
+from app.schemas.history import LichSuDonHangResponse
 
 # Enum phải khớp với Model
 class PhuongThucThanhToanEnum(str, Enum):
@@ -56,6 +57,7 @@ class OrderResponse(BaseModel):
     ma_giamgia: Optional[str] = None
     voucher_giam: Optional[float] = 0.0
     voucher_info: Optional[dict] = None
+    lichsu_donhang: List[LichSuDonHangResponse] = []
 
     class Config:
         from_attributes = True

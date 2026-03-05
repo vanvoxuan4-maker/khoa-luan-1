@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { getBestToken } from '../utils/auth';
 import { useNotification } from './NotificationContext';
 
 const WishlistContext = createContext();
@@ -9,20 +10,15 @@ export const WishlistProvider = ({ children }) => {
     const [loading, setLoading] = useState(false);
     const { addToast } = useNotification();
 
-    // Hàm lấy token động để đảm bảo luôn có token mới nhất
-    const getToken = () => localStorage.getItem('user_access_token') || localStorage.getItem('admin_access_token');
-
     const fetchWishlist = async () => {
-        const token = getToken();
+        const token = getBestToken();
         if (!token) {
             setWishlistItems([]);
             return;
         }
         setLoading(true);
         try {
-            const res = await axios.get('http://localhost:8000/wishlist/me', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await axios.get('http://localhost:8000/wishlist/me');
             setWishlistItems(res.data);
         } catch (err) {
             console.error("Lỗi tải Wishlist:", err);
@@ -41,7 +37,7 @@ export const WishlistProvider = ({ children }) => {
     }, []);
 
     const toggleWishlist = async (productId) => {
-        const token = getToken();
+        const token = getBestToken();
         if (!token) {
             addToast("Vui lòng đăng nhập để yêu thích sản phẩm!", "warning", "Yêu cầu đăng nhập");
             return;
@@ -49,8 +45,7 @@ export const WishlistProvider = ({ children }) => {
 
         try {
             const res = await axios.post('http://localhost:8000/wishlist/toggle',
-                { ma_sanpham: productId },
-                { headers: { Authorization: `Bearer ${token}` } }
+                { ma_sanpham: productId }
             );
 
             if (res.data.action === 'added') {
@@ -59,7 +54,6 @@ export const WishlistProvider = ({ children }) => {
             } else {
                 addToast(res.data.message, "info", "Đã xóa");
                 setWishlistItems(prev => prev.filter(item => (item.ma_sanpham === productId || item.sanpham?.ma_sanpham === productId) === false));
-                // Refetch to be sure state is correct
                 fetchWishlist();
             }
         } catch (err) {
@@ -72,13 +66,11 @@ export const WishlistProvider = ({ children }) => {
     };
 
     const clearWishlist = async () => {
-        const token = getToken();
+        const token = getBestToken();
         if (!token) return;
 
         try {
-            await axios.delete('http://localhost:8000/wishlist/clear', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await axios.delete('http://localhost:8000/wishlist/clear');
             setWishlistItems([]);
             addToast("Đã xóa toàn bộ danh sách yêu thích", "info", "Thành công");
         } catch (err) {

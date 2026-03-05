@@ -213,19 +213,26 @@ const UserProfile = () => {
                         </div>
                     </div>
 
-                    <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden">
-                        <div className="absolute inset-0 bg-blue-600 opacity-20 pointer-events-none"></div>
-                        <h4 className="text-lg font-black mb-4 flex items-center gap-3">
-                            <span className="text-2xl">✨</span>
-                            Trung tâm hỗ trợ
-                        </h4>
-                        <p className="text-slate-400 text-sm font-bold leading-relaxed mb-6">Bạn cần trợ giúp về tài khoản hoặc đơn hàng?</p>
-                        <Link
-                            to="/contact"
-                            className="w-full py-4 bg-white/10 hover:bg-white/20 text-white font-black rounded-2xl border border-white/20 transition-all text-sm uppercase tracking-widest block text-center"
-                        >
-                            Liên hệ tư vấn
-                        </Link>
+                    <div className="bg-gradient-to-br from-blue-50 to-white rounded-[3.5rem] p-8 border-2 border-blue-200/60 shadow-xl shadow-blue-500/5 relative overflow-hidden group">
+                        {/* Decorative background shape */}
+                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-100/50 rounded-full blur-3xl group-hover:bg-blue-200/50 transition-colors duration-700"></div>
+                        <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-indigo-100/50 rounded-full blur-2xl"></div>
+
+                        <div className="relative">
+                            <h4 className="text-lg font-black text-slate-800 mb-2 flex items-center gap-3">
+                                <span className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-xl">✨</span>
+                                Trung tâm hỗ trợ
+                            </h4>
+                            <p className="text-slate-500 text-xs font-bold leading-relaxed mb-8 pl-1">
+                                Bạn cần trợ giúp về tài khoản hoặc đơn hàng? Đội ngũ của chúng tôi luôn sẵn sàng.
+                            </p>
+                            <Link
+                                to="/contact"
+                                className="w-full py-4.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-[0_15px_30px_rgba(37,99,235,0.25)] hover:shadow-[0_20px_40px_rgba(37,99,235,0.4)] hover:-translate-y-1 active:scale-95 transition-all text-xs uppercase tracking-[0.15em] block text-center"
+                            >
+                                Liên hệ tư vấn ngay
+                            </Link>
+                        </div>
                     </div>
                 </div>
 

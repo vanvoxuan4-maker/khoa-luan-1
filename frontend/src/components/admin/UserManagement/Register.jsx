@@ -2,9 +2,21 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import AnimatedLogo from '../../common/AnimatedLogo';
 
+const sanitizeUsername = (val) => {
+  if (!val) return '';
+  return val
+    .toLowerCase()
+    .normalize('NFD') // Tách dấu ra khỏi chữ (e.g., 'ư' -> 'u' + '̛')
+    .replace(/[\u0300-\u036f]/g, '') // Xóa các ký tự dấu
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .replace(/[^a-z0-9_]/g, ''); // Chỉ giữ lại chữ, số và gạch dưới
+};
+
 const validate = (data) => {
   const errs = {};
   if (!data.ten_user) errs.ten_user = 'Yêu cầu tên đăng nhập';
+  else if (data.ten_user.length < 3) errs.ten_user = 'Tối thiểu 3 ký tự';
   if (!data.email) errs.email = 'Yêu cầu email';
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) errs.email = 'Email sai định dạng';
   if (!data.password) errs.password = 'Yêu cầu mật khẩu';
@@ -13,16 +25,17 @@ const validate = (data) => {
   return errs;
 };
 
-const InputField = ({ label, name, type = 'text', icon, placeholder, required, value, onChange, onBlur, error, touched, rightElement }) => (
+const InputField = ({ label, name, type = 'text', icon, placeholder, required, value, onChange, onBlur, onFocus, error, touched, rightElement, isFocused }) => (
   <div className="relative group/field space-y-1">
-    <div className={`relative flex items-center transition-all duration-300 min-h-[56px] rounded-2xl border-2 ${error && touched ? 'border-rose-400 bg-white shadow-[0_4px_20px_rgba(244,63,94,0.08)]' : 'border-slate-200 bg-white shadow-sm group-focus-within/field:border-indigo-500 group-focus-within/field:shadow-[0_12px_40px_rgba(79,70,229,0.12)]'
+    <div className={`relative flex items-center transition-all duration-300 min-h-[56px] rounded-2xl border-2 ${error && touched && !isFocused ? 'border-rose-400 bg-white shadow-[0_4px_20px_rgba(244,63,94,0.08)]' : 'border-slate-200 bg-white shadow-sm group-focus-within/field:border-indigo-500 group-focus-within/field:shadow-[0_12px_40px_rgba(79,70,229,0.12)]'
       } overflow-hidden`}>
-      <span className={`pl-5 font-bold text-lg ${error && touched ? 'text-rose-400' : 'text-slate-400 group-focus-within/field:text-indigo-500'}`}>{icon}</span>
+      <span className={`pl-5 font-bold text-lg ${error && touched && !isFocused ? 'text-rose-400' : 'text-slate-400 group-focus-within/field:text-indigo-500'}`}>{icon}</span>
       <input
         name={name}
         type={type}
         onChange={onChange}
         onBlur={onBlur}
+        onFocus={onFocus}
         value={value}
         className={`w-full h-full pl-3 pr-4 py-4 bg-transparent text-slate-800 text-sm font-bold outline-none placeholder:text-slate-400 placeholder:font-semibold caret-indigo-600 ${rightElement ? 'pr-12' : ''}`}
         placeholder={placeholder || label}
@@ -34,7 +47,7 @@ const InputField = ({ label, name, type = 'text', icon, placeholder, required, v
         </div>
       )}
     </div>
-    {error && touched && (
+    {error && touched && !isFocused && (
       <p className="px-3 text-[9px] text-rose-500 font-black uppercase tracking-tighter animate-fade-in">{error}</p>
     )}
   </div>
@@ -56,6 +69,7 @@ const Register = ({ onBackToLogin }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+  const [focusedField, setFocusedField] = useState(null);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [notification, setNotification] = useState(null);
 
@@ -116,9 +130,30 @@ const Register = ({ onBackToLogin }) => {
   };
 
   const handleChange = (e) => {
-    const updated = { ...formData, [e.target.name]: e.target.value };
+    let { name, value } = e.target;
+
+    // Tự động làm sạch tên đăng nhập
+    if (name === 'ten_user') {
+      value = sanitizeUsername(value);
+    }
+
+    // Làm sạch email (xóa dấu, xóa khoảng trắng)
+    if (name === 'email') {
+      value = value.toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd')
+        .replace(/[^a-z0-9@._-]/g, '');
+    }
+
+    // Chỉ cho phép nhập số cho SĐT
+    if (name === 'sdt') {
+      value = value.replace(/\D/g, '');
+    }
+
+    const updated = { ...formData, [name]: value };
     setFormData(updated);
-    if (touched[e.target.name]) setErrors(validate(updated));
+    if (touched[name]) setErrors(validate(updated));
   };
 
   return (
@@ -131,81 +166,111 @@ const Register = ({ onBackToLogin }) => {
       <form onSubmit={handleRegister} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InputField
-            label="Tên đăng nhập"
+            label="tên đăng nhập"
             name="ten_user"
             icon="👤"
-            placeholder="Username"
+            placeholder="tên đăng nhập"
             required
             value={formData.ten_user}
             onChange={handleChange}
-            onBlur={() => setTouched(prev => ({ ...prev, ten_user: true }))}
+            onFocus={() => setFocusedField('ten_user')}
+            onBlur={() => {
+              setTouched(prev => ({ ...prev, ten_user: true }));
+              setFocusedField(null);
+            }}
             error={errors.ten_user}
             touched={touched.ten_user}
+            isFocused={focusedField === 'ten_user'}
           />
           <InputField
-            label="Họ và tên"
+            label="họ và tên"
             name="hovaten"
             icon="🖋️"
-            placeholder="Full Name"
+            placeholder="họ và tên"
             value={formData.hovaten}
             onChange={handleChange}
-            onBlur={() => setTouched(prev => ({ ...prev, hovaten: true }))}
+            onFocus={() => setFocusedField('hovaten')}
+            onBlur={() => {
+              setTouched(prev => ({ ...prev, hovaten: true }));
+              setFocusedField(null);
+            }}
             error={errors.hovaten}
             touched={touched.hovaten}
+            isFocused={focusedField === 'hovaten'}
           />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InputField
-            label="Email"
+            label="địa chỉ email"
             name="email"
             type="email"
             icon="📧"
-            placeholder="your@email.com"
+            placeholder="email của bạn"
             required
             value={formData.email}
             onChange={handleChange}
-            onBlur={() => setTouched(prev => ({ ...prev, email: true }))}
+            onFocus={() => setFocusedField('email')}
+            onBlur={() => {
+              setTouched(prev => ({ ...prev, email: true }));
+              setFocusedField(null);
+            }}
             error={errors.email}
             touched={touched.email}
+            isFocused={focusedField === 'email'}
           />
           <InputField
-            label="SĐT"
+            label="số điện thoại"
             name="sdt"
             icon="📞"
-            placeholder="phone number"
+            placeholder="số điện thoại"
             value={formData.sdt}
             onChange={handleChange}
-            onBlur={() => setTouched(prev => ({ ...prev, sdt: true }))}
+            onFocus={() => setFocusedField('sdt')}
+            onBlur={() => {
+              setTouched(prev => ({ ...prev, sdt: true }));
+              setFocusedField(null);
+            }}
             error={errors.sdt}
             touched={touched.sdt}
+            isFocused={focusedField === 'sdt'}
           />
         </div>
 
         <InputField
-          label="Địa chỉ"
+          label="địa chỉ liên hệ"
           name="diachi"
           icon="📍"
-          placeholder="Address"
+          placeholder="địa chỉ liên hệ"
           value={formData.diachi}
           onChange={handleChange}
-          onBlur={() => setTouched(prev => ({ ...prev, diachi: true }))}
+          onFocus={() => setFocusedField('diachi')}
+          onBlur={() => {
+            setTouched(prev => ({ ...prev, diachi: true }));
+            setFocusedField(null);
+          }}
           error={errors.diachi}
           touched={touched.diachi}
+          isFocused={focusedField === 'diachi'}
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InputField
-            label="Mật khẩu"
+            label="mật khẩu"
             name="password"
             type={showPassword ? 'text' : 'password'}
             icon="🔑"
-            placeholder="Password"
+            placeholder="mật khẩu"
             required
             value={formData.password}
             onChange={handleChange}
-            onBlur={() => setTouched(prev => ({ ...prev, password: true }))}
+            onFocus={() => setFocusedField('password')}
+            onBlur={() => {
+              setTouched(prev => ({ ...prev, password: true }));
+              setFocusedField(null);
+            }}
             error={errors.password}
             touched={touched.password}
+            isFocused={focusedField === 'password'}
             rightElement={
               <button
                 type="button"
@@ -215,23 +280,28 @@ const Register = ({ onBackToLogin }) => {
                 {showPassword ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>
                 ) : (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268-2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                 )}
               </button>
             }
           />
           <InputField
-            label="Xác nhận"
+            label="xác nhận lại"
             name="confirmPassword"
             type={showConfirmPassword ? 'text' : 'password'}
             icon="🛡️"
-            placeholder="Confirm Password"
+            placeholder="xác nhận mật khẩu"
             required
             value={formData.confirmPassword}
             onChange={handleChange}
-            onBlur={() => setTouched(prev => ({ ...prev, confirmPassword: true }))}
+            onFocus={() => setFocusedField('confirmPassword')}
+            onBlur={() => {
+              setTouched(prev => ({ ...prev, confirmPassword: true }));
+              setFocusedField(null);
+            }}
             error={errors.confirmPassword}
             touched={touched.confirmPassword}
+            isFocused={focusedField === 'confirmPassword'}
             rightElement={
               <button
                 type="button"

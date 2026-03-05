@@ -51,7 +51,7 @@ const AdminLayout = ({ children }) => {
     const item = menuItems.find(i => i.path === currentPath);
     if (item) {
       switch (item.id) {
-        case 'dashboard': return 'Tổng Quan Hệ Thống';
+        case 'dashboard': return 'Báo Cáo Thống Kê';
         case 'config-hub': return 'Cấu Hình Sản Phẩm';
         case 'order-hub': return 'Quản Lý Đơn Hàng';
         case 'users': return 'Hồ Sơ Khách Hàng';

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useWishlist } from '../../../context/WishlistContext';
 import { useCart } from '../../../context/CartContext';
 import { useNotification } from '../../../context/NotificationContext';
+import { formatVND, calculateFinalPrice } from '../../../utils/formatUtils';
 
 const ProductCard = ({
     product,
@@ -106,15 +107,15 @@ const ProductCard = ({
                             {product.gia_tri_giam > 0 ? (
                                 <>
                                     <span className="text-xl font-black text-blue-600">
-                                        {(product.gia * (1 - (product.gia_tri_giam || 0) / 100))?.toLocaleString('vi-VN')} <span className="text-xs">VND</span>
+                                        {formatVND(calculateFinalPrice(product.gia, product.gia_tri_giam, product.kieu_giam_gia))} <span className="text-xs">VND</span>
                                     </span>
                                     <span className="text-xs font-bold text-slate-400 line-through">
-                                        {product.gia?.toLocaleString('vi-VN')} VND
+                                        {formatVND(product.gia)} VND
                                     </span>
                                 </>
                             ) : (
                                 <span className="text-xl font-black text-slate-900 group-hover:text-blue-600 transition-colors">
-                                    {product.gia?.toLocaleString('vi-VN')} <span className="text-xs">VND</span>
+                                    {formatVND(product.gia)} <span className="text-xs">VND</span>
                                 </span>
                             )}
                         </div>

@@ -141,32 +141,32 @@ const PaymentManager = () => {
       </div>
 
       {/* TABLE */}
-      <div className="bg-white rounded-[1.5rem] shadow-xl border border-gray-100 overflow-hidden">
+      <div className="bg-white/80 backdrop-blur-md rounded-[3rem] shadow-xl shadow-blue-500/5 border border-white overflow-hidden">
         {loading ? (
           <div className="p-10 text-center text-blue-500 font-bold animate-pulse">🚀 Đang tải dữ liệu giao dịch...</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-separate border-spacing-0">
               <thead className="bg-gradient-to-r from-amber-600 to-yellow-700 text-amber-50 text-[11px] uppercase font-black tracking-widest">
-                <tr className="uppercase text-[11px] font-black tracking-widest whitespace-nowrap">
-                  <th className="py-5 px-6 border-r border-amber-500/30">ID_GD</th>
-                  <th className="py-5 px-6 border-r border-amber-500/30">Đơn Hàng</th>
-                  <th className="py-5 px-6 border-r border-amber-500/30">Ngân Hàng</th>
-                  <th className="py-5 px-6 border-r border-amber-500/30">Mã Giao Dịch</th>
-                  <th className="py-5 px-6 border-r border-amber-500/30">Thời gian</th>
-                  <th className="py-5 px-6 text-right border-r border-amber-500/30">Số tiền</th>
-                  <th className="py-5 px-6 text-center border-r border-amber-500/30">Mã Giảm Giá</th>
-                  <th className="py-5 px-6 text-center border-r border-amber-500/30">PT TT</th>
-                  <th className="py-5 px-6 text-center">Trạng thái</th>
+                <tr className="divide-x divide-amber-200/40">
+                  <th className="py-8 px-6 text-center">ID_GD</th>
+                  <th className="py-8 px-6 text-center">Đơn Hàng</th>
+                  <th className="py-8 px-6 text-center">Ngân Hàng</th>
+                  <th className="py-8 px-6 text-center">Mã Giao Dịch</th>
+                  <th className="py-8 px-6 text-center">Thời gian</th>
+                  <th className="py-8 px-6 text-center">Số tiền</th>
+                  <th className="py-8 px-6 text-center">Mã Giảm Giá</th>
+                  <th className="py-8 px-6 text-center">PT TT</th>
+                  <th className="py-8 px-10 text-center">Trạng thái</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filteredPayments.length > 0 ? filteredPayments.map((pay) => (
                   <tr key={pay.ma_thanhtoan} className="hover:bg-blue-50/30 transition-colors">
-                    <td className="py-4 px-6 font-mono font-bold text-slate-400 text-xs whitespace-nowrap">
+                    <td className="py-4 px-6 font-mono font-bold text-slate-400 text-xs whitespace-nowrap text-center">
                       #{pay.ma_thanhtoan}
                     </td>
-                    <td className="py-4 px-6 whitespace-nowrap">
+                    <td className="py-4 px-6 whitespace-nowrap text-center">
                       <button
                         onClick={(e) => {
                           e.preventDefault();
@@ -177,16 +177,16 @@ const PaymentManager = () => {
                         Đơn #{pay.ma_don_hang}
                       </button>
                     </td>
-                    <td className="py-4 px-6 font-bold text-xs text-blue-600 uppercase whitespace-nowrap">
+                    <td className="py-4 px-6 font-bold text-xs text-blue-600 uppercase whitespace-nowrap text-center">
                       {pay.bank_code || '-'}
                     </td>
-                    <td className="py-4 px-6 font-mono text-xs text-slate-600 whitespace-nowrap max-w-[150px] overflow-hidden text-ellipsis" title={pay.transaction_id}>
+                    <td className="py-4 px-6 font-mono text-xs text-slate-600 whitespace-nowrap max-w-[150px] overflow-hidden text-ellipsis text-center mx-auto" title={pay.transaction_id}>
                       {pay.transaction_id || '-'}
                     </td>
-                    <td className="py-4 px-6 text-sm font-medium text-slate-600 whitespace-nowrap">
+                    <td className="py-4 px-6 text-sm font-medium text-slate-600 whitespace-nowrap text-center">
                       {new Date(pay.ngay_thanhtoan).toLocaleString('vi-VN')}
                     </td>
-                    <td className="py-4 px-6 text-right font-black text-blue-600 text-sm whitespace-nowrap">
+                    <td className="py-4 px-6 text-center font-black text-blue-600 text-sm whitespace-nowrap">
                       {formatMoney(pay.thanh_tien)}
                     </td>
                     <td className="py-4 px-6 text-center whitespace-nowrap">

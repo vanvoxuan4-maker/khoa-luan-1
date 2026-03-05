@@ -12,7 +12,7 @@ const getImageUrl = (url) => {
   return `http://localhost:8000${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
-const ManagerList = ({ title, icon, data, type, onEdit, onDelete }) => (
+const ManagerList = ({ title, icon, data, type, onEdit, onDelete, onToggleActive }) => (
   <div className="flex-1 flex flex-col gap-5">
     {/* ... (Header components) ... */}
     <div className="flex items-center gap-4 mb-3 px-2">
@@ -57,6 +57,15 @@ const ManagerList = ({ title, icon, data, type, onEdit, onDelete }) => (
 
             {/* Nút thao tác */}
             <div className="flex flex-col gap-2 pl-4 border-l border-slate-100 ml-2 opacity-60 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => onToggleActive(type, item)}
+                className={`px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-tighter transition-all ${item.is_active
+                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200 border border-slate-200'
+                  }`}
+              >
+                {item.is_active ? '✅ HIỆN' : '🚫 ẨN'}
+              </button>
               <button onClick={() => onEdit(type, item)} className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center shadow-sm text-xs border border-blue-100" title="Sửa">✏️</button>
               <button onClick={() => onDelete(type, item.ma_danhmuc || item.ma_thuonghieu)} className="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center shadow-sm text-xs border border-red-100" title="Xóa">🗑️</button>
             </div>
@@ -121,6 +130,19 @@ const ModalForm = ({ type, formData, setFormData, onSubmit, onCancel, isEditing 
             />
           </div>
 
+          <div className="flex items-center gap-3 px-1">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={formData.is_active}
+                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+              />
+              <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+              <span className="ml-3 text-sm font-bold text-slate-400 uppercase tracking-wider">Trạng thái hoạt động</span>
+            </label>
+          </div>
+
           <div className="flex gap-3 pt-4">
             <button
               onClick={onSubmit}
@@ -148,7 +170,7 @@ const CategoryBrandManager = () => {
 
   const [activeModal, setActiveModal] = useState(null);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', desc: '', image: '' });
+  const [formData, setFormData] = useState({ name: '', desc: '', image: '', is_active: true });
 
   const fetchData = async () => {
     try {
@@ -164,17 +186,17 @@ const CategoryBrandManager = () => {
   useEffect(() => { fetchData(); }, []);
 
   const openAddModal = (type) => {
-    setFormData({ name: '', desc: '', image: '' });
+    setFormData({ name: '', desc: '', image: '', is_active: true });
     setEditingId(null);
     setActiveModal(type);
   };
 
   const openEditModal = (type, item) => {
     if (type === 'category') {
-      setFormData({ name: item.ten_danhmuc, desc: item.mo_ta || '', image: item.hinh_anh || '' });
+      setFormData({ name: item.ten_danhmuc, desc: item.mo_ta || '', image: item.hinh_anh || '', is_active: item.is_active });
       setEditingId(item.ma_danhmuc);
     } else {
-      setFormData({ name: item.ten_thuonghieu, desc: item.mo_ta || '', image: item.logo || '' });
+      setFormData({ name: item.ten_thuonghieu, desc: item.mo_ta || '', image: item.logo || '', is_active: item.is_active });
       setEditingId(item.ma_thuonghieu);
     }
     setActiveModal(type);
@@ -188,8 +210,8 @@ const CategoryBrandManager = () => {
       const endpoint = isCategory ? '/admin/categories' : '/admin/brands';
 
       const payload = isCategory
-        ? { ten_danhmuc: formData.name, mo_ta: formData.desc, hinh_anh: formData.image }
-        : { ten_thuonghieu: formData.name, mo_ta: formData.desc, logo: formData.image };
+        ? { ten_danhmuc: formData.name, mo_ta: formData.desc, hinh_anh: formData.image, is_active: formData.is_active }
+        : { ten_thuonghieu: formData.name, mo_ta: formData.desc, logo: formData.image, is_active: formData.is_active };
 
       if (editingId) {
         await axios.put(`http://localhost:8000${endpoint}/${editingId}`, payload, { headers: { Authorization: `Bearer ${token}` } });
@@ -212,6 +234,23 @@ const CategoryBrandManager = () => {
         await axios.delete(`http://localhost:8000${endpoint}`, { headers: { Authorization: `Bearer ${token}` } });
         fetchData();
       } catch (err) { alert("❌ Không thể xóa (Có thể mục này đang chứa sản phẩm)"); }
+    }
+  };
+
+  const handleToggleActive = async (type, item) => {
+    try {
+      const isCategory = type === 'category';
+      const id = isCategory ? item.ma_danhmuc : item.ma_thuonghieu;
+      const endpoint = isCategory ? `/admin/categories/${id}` : `/admin/brands/${id}`;
+
+      const payload = isCategory
+        ? { ten_danhmuc: item.ten_danhmuc, mo_ta: item.mo_ta, hinh_anh: item.hinh_anh, is_active: !item.is_active }
+        : { ten_thuonghieu: item.ten_thuonghieu, mo_ta: item.mo_ta, logo: item.logo, is_active: !item.is_active };
+
+      await axios.put(`http://localhost:8000${endpoint}`, payload, { headers: { Authorization: `Bearer ${token}` } });
+      fetchData();
+    } catch (err) {
+      alert("❌ Lỗi chuyển đổi trạng thái");
     }
   };
 
@@ -248,11 +287,11 @@ const CategoryBrandManager = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
           <ManagerList
             title="Danh Mục" icon="📂" data={categories} type="category"
-            onEdit={openEditModal} onDelete={handleDelete}
+            onEdit={openEditModal} onDelete={handleDelete} onToggleActive={handleToggleActive}
           />
           <ManagerList
             title="Thương Hiệu" icon="🏷️" data={brands} type="brand"
-            onEdit={openEditModal} onDelete={handleDelete}
+            onEdit={openEditModal} onDelete={handleDelete} onToggleActive={handleToggleActive}
           />
         </div>
       </div>

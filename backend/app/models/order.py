@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base_class import Base
 import enum
+from app.models.history import LichSuDonHang
 
 # 👇 KHÔI PHỤC LẠI CÁC CLASS NÀY (Để các file khác import không bị lỗi)
 # Lưu ý: Chúng chỉ dùng để định danh trong code, không ép buộc Database phải theo
@@ -55,6 +56,7 @@ class DonHang(Base):
     user = relationship("User", back_populates="donhangs")
     thanhtoan_rel = relationship("ThanhToan", back_populates="donhang")
     voucher = relationship("Makhuyenmai", back_populates="donhangs")
+    lichsu_donhang = relationship("LichSuDonHang", backref="donhang", cascade="all, delete-orphan", order_by="LichSuDonHang.thoi_gian.asc()")
 
     @property
     def ma_giamgia(self):
