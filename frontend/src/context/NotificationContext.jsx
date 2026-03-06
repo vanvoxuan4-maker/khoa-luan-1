@@ -103,7 +103,7 @@ export const NotificationProvider = ({ children }) => {
                                 'bg-blue-600'
                             }`}></div>
 
-                        <h3 className={`font-black text-gray-800 mb-4 flex items-center gap-3 leading-none ${confirmModal.type === 'alert' ? 'text-3xl justify-center' : 'text-xl'}`}>
+                        <h3 className={`font-black text-gray-800 mb-4 flex items-center justify-center gap-3 leading-none ${confirmModal.type === 'alert' ? 'text-3xl' : 'text-2xl'}`}>
                             <span className={`flex items-center ${confirmModal.type === 'alert' ? 'text-4xl shadow-sm rounded-full' : ''}`}>
                                 {confirmModal.type === 'confirm' ? '❓' :
                                     confirmModal.alertType === 'error' ? '🚫' :
@@ -115,7 +115,7 @@ export const NotificationProvider = ({ children }) => {
                                         confirmModal.alertType === 'success' ? 'Thành công' : 'Thông báo'}
                             </span>
                         </h3>
-                        <div className={`text-gray-600 mb-8 font-medium leading-relaxed ${confirmModal.type === 'alert' ? 'text-lg text-center px-2' : ''}`}>
+                        <div className={`text-gray-600 mb-8 font-medium leading-relaxed text-center px-2 ${confirmModal.type === 'alert' ? 'text-lg' : 'text-sm'}`}>
                             {confirmModal.message.split('\n').map((line, i) => (
                                 <p key={i} className={line.includes('Hotline') ? "mt-4 p-3 bg-red-50 text-red-700 rounded-xl border border-red-100 font-bold text-sm" : ""}>
                                     {line}
@@ -123,7 +123,7 @@ export const NotificationProvider = ({ children }) => {
                             ))}
                         </div>
 
-                        <div className={`flex flex-col sm:flex-row gap-3 ${confirmModal.type === 'alert' ? 'justify-center' : 'justify-end'}`}>
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
                             {confirmModal.type === 'confirm' && (
                                 <button
                                     onClick={confirmModal.onCancel}

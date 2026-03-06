@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
+import { useNotification } from '../../../context/NotificationContext';
 
 // Class màu Galaxy
 const galaxyTextClass = "bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent font-black";
@@ -66,12 +67,15 @@ const CinemaSelect = ({ label, options, value, onChange, placeholder, icon }) =>
   );
 };
 
-const AddProduct = ({ onProductAdded, editProduct, onCancel }) => {
+const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands = [], categories: propCategories = [] }) => {
   const isEditMode = editProduct && editProduct.ma_sanpham;
+  const { addToast } = useNotification();
+  const API_BASE = 'http://localhost:8000';
 
-  // State chứa danh sách tải từ API
-  const [brands, setBrands] = useState([]);
-  const [categories, setCategories] = useState([]);
+  // State danh sách - dùng props nếu có, sinon fetch
+  const [brands, setBrands] = useState(propBrands);
+  const [categories, setCategories] = useState(propCategories);
+  const [formErrors, setFormErrors] = useState({});
 
   const [formData, setFormData] = useState({
     ten_sanpham: '',
@@ -119,34 +123,33 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel }) => {
 
   const [specs, setSpecs] = useState(isEditMode ? [{ ten: '', gia_tri: '' }] : defaultSpecs); // Thông số kỹ thuật
 
-  // 👇 1. Tải danh sách Thương hiệu & Danh mục từ API thật
+  // Chỉ fetch brands/categories nếu parent không cung cấp qua props
   useEffect(() => {
+    if (propBrands.length > 0 && propCategories.length > 0) {
+      setBrands(propBrands);
+      setCategories(propCategories);
+      return; // Không gọi API vì đã có data từ parent
+    }
+
     const fetchData = async () => {
       try {
         const [brandRes, catRes] = await Promise.all([
-          axios.get('http://localhost:8000/thuonghieu'),
-          axios.get('http://localhost:8000/danhmuc')
+          axios.get(`${API_BASE}/thuonghieu`),
+          axios.get(`${API_BASE}/danhmuc`)
         ]);
-
         setBrands(brandRes.data);
         setCategories(catRes.data);
-
-        // Nếu đang thêm mới (không phải sửa) và có dữ liệu -> Tự chọn cái đầu tiên cho tiện
         if (!isEditMode) {
-          if (brandRes.data.length > 0) {
-            setFormData(prev => ({ ...prev, ma_thuonghieu: brandRes.data[0].ma_thuonghieu }));
-          }
-          if (catRes.data.length > 0) {
-            setFormData(prev => ({ ...prev, ma_danhmuc: catRes.data[0].ma_danhmuc }));
-          }
+          if (brandRes.data.length > 0) setFormData(prev => ({ ...prev, ma_thuonghieu: brandRes.data[0].ma_thuonghieu }));
+          if (catRes.data.length > 0) setFormData(prev => ({ ...prev, ma_danhmuc: catRes.data[0].ma_danhmuc }));
         }
       } catch (err) {
-        console.error("❌ Lỗi tải danh mục/thương hiệu:", err);
-        alert("Không tải được danh sách thương hiệu/danh mục. Hãy kiểm tra Backend!");
+        console.error('Lỗi tải danh mục/thương hiệu:', err);
+        addToast('Không tải được danh sách thương hiệu/danh mục. Kiểm tra Backend!', 'error');
       }
     };
     fetchData();
-  }, [isEditMode]);
+  }, [isEditMode, propBrands, propCategories]);
 
   // 👇 2. Điền dữ liệu khi bấm Sửa
   useEffect(() => {
@@ -199,6 +202,14 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel }) => {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
+    const MAX_IMAGES = 10;
+
+    if (imagePreviews.length + files.length > MAX_IMAGES) {
+      addToast(`Chỉ được phép tải lên tối đa ${MAX_IMAGES} ảnh!`, "error");
+      e.target.value = null;
+      return;
+    }
+
     if (files.length > 0) {
       const newPreviews = files.map(file => ({
         file,
@@ -210,49 +221,51 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel }) => {
     }
   };
 
-  const handleRemoveImage = async (index) => {
+  const handleRemoveImage = useCallback(async (index) => {
     const imageToRemove = imagePreviews[index];
-
-    // Nếu là ảnh đã tồn tại trong DB (có id), gọi API xóa
     if (imageToRemove.isExisting && imageToRemove.id) {
-      if (!window.confirm("Bạn có chắc muốn xóa ảnh này vĩnh viễn không?")) return;
-
       const token = localStorage.getItem('admin_access_token');
       try {
-        await axios.delete(`http://localhost:8000/xoa-anh/${imageToRemove.id}`, {
+        await axios.delete(`${API_BASE}/xoa-anh/${imageToRemove.id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        // alert('✅ Đã xóa ảnh khỏi database!');
       } catch (error) {
         console.error('Lỗi xóa ảnh:', error);
-        alert('❌ Lỗi xóa ảnh: ' + (error.response?.data?.detail || error.message));
-        return; // Không xóa khỏi preview nếu API lỗi
+        addToast('Lỗi xóa ảnh: ' + (error.response?.data?.detail || error.message), 'error');
+        return;
       }
     }
-
-    // Xóa khỏi preview
     const newPreviews = imagePreviews.filter((_, i) => i !== index);
-    // Lưu ý: imageFiles chỉ dính với những ảnh MỚI.
-    // Nếu xóa ảnh cũ -> không ảnh hưởng imageFiles
-    // Nếu xóa ảnh mới -> phải tính toán đúng index trong imageFiles?
-    // Đơn giản nhất:
-    // Filter previews. Nếu preview bị xóa là 'isExisting: false', ta cần xóa tương ứng trong imageFiles.
-    // Lấy danh sách ảnh mới hiện tại từ previews
-    const remainingNewImages = newPreviews.filter(p => !p.isExisting).map(p => p.file);
-    setImageFiles(remainingNewImages);
-
+    setImageFiles(newPreviews.filter(p => !p.isExisting).map(p => p.file));
     setImagePreviews(newPreviews);
-  };
+  }, [imagePreviews, addToast]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // ─── Form Validation ──────────────────────────────────────────────────
+    const errors = {};
+    if (!formData.ten_sanpham?.trim()) errors.ten_sanpham = 'Tên sản phẩm là bắt buộc';
+    if (!formData.sanpham_code?.trim()) errors.sanpham_code = 'Mã xe là bắt buộc';
+    if (!formData.gia || parseFloat(formData.gia) <= 0) errors.gia = 'Giá niêm yết phải lớn hơn 0';
+    if (!formData.ma_thuonghieu) errors.ma_thuonghieu = 'Vui lòng chọn thương hiệu';
+    if (!formData.ma_danhmuc) errors.ma_danhmuc = 'Vui lòng chọn danh mục';
+    if (formData.gia_tri_giam < 0 || formData.gia_tri_giam > 100) errors.gia_tri_giam = 'Khuyến mãi phải từ 0-100%';
+    if (imagePreviews.length === 0) errors.images = 'Vui lòng thêm ít nhất một ảnh sản phẩm';
+    if (imagePreviews.length > 10) errors.images = 'Tối đa 10 ảnh sản phẩm';
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      addToast(Object.values(errors)[0], 'error'); // Show first error
+      return;
+    }
+    setFormErrors({});
+
     const token = localStorage.getItem('admin_access_token');
     const config = { headers: { 'Authorization': `Bearer ${token}` } };
 
     try {
-      // Clean specs: loại bỏ dòng trống
       const cleanSpecs = specs.filter(s => s.ten.trim());
-
       const productData = {
         ...formData,
         ma_thuonghieu: parseInt(formData.ma_thuonghieu),
@@ -263,37 +276,39 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel }) => {
         size_khung: formData.size_khung || null,
         gia_tri_giam: parseFloat(formData.gia_tri_giam) || 0,
         kieu_giam_gia: 'percentage',
-        thong_so_ky_thuat: cleanSpecs // Gửi JSON array
+        thong_so_ky_thuat: cleanSpecs
       };
 
       let productId = isEditMode ? editProduct.ma_sanpham : null;
-
       if (isEditMode) {
-        await axios.put(`http://localhost:8000/sanpham/${productId}`, productData, config);
+        await axios.put(`${API_BASE}/sanpham/${productId}`, productData, config);
       } else {
-        const res = await axios.post('http://localhost:8000/sanpham', productData, config);
+        const res = await axios.post(`${API_BASE}/sanpham`, productData, config);
         productId = res.data.ma_sanpham;
       }
 
-      // Upload nhiều ảnh
+      // Upload ảnh mới song song (Promise.all)
       if (productId) {
         const newImagePreviews = imagePreviews.filter(preview => !preview.isExisting);
-        for (const preview of newImagePreviews) {
-          const imageData = new FormData();
-          imageData.append('file', preview.file);
-          const isMain = imagePreviews.indexOf(preview) === 0;
-          await axios.post(`http://localhost:8000/upload-anh/${productId}?is_main=${isMain}`, imageData, {
-            headers: { ...config.headers, 'Content-Type': 'multipart/form-data' }
-          });
-        }
+        await Promise.all(
+          newImagePreviews.map((preview, idx) => {
+            const imageData = new FormData();
+            imageData.append('file', preview.file);
+            // Ảnh đầu tiên trong toàn bộ danh sách là main
+            const isMain = imagePreviews.indexOf(preview) === 0;
+            return axios.post(`${API_BASE}/upload-anh/${productId}?is_main=${isMain}`, imageData, {
+              headers: { ...config.headers, 'Content-Type': 'multipart/form-data' }
+            });
+          })
+        );
       }
 
-      alert("🎉 Thành công! Dữ liệu đã được lưu.");
+      addToast(isEditMode ? 'Cập nhật sản phẩm thành công!' : 'Thêm sản phẩm mới thành công!', 'success');
       onProductAdded();
       if (onCancel) onCancel();
     } catch (error) {
       console.error(error);
-      alert("❌ Lỗi: " + (error.response?.data?.detail || "Không thể lưu sản phẩm"));
+      addToast('Lỗi: ' + (error.response?.data?.detail || 'Không thể lưu sản phẩm'), 'error');
     }
   };
 

@@ -185,7 +185,10 @@ const Dashboard = () => {
     };
 
     const processLowStock = (products) => {
-        return products.filter(p => (p.ton_kho || 0) <= LOW_STOCK_THRESHOLD && (p.is_active !== false)).sort((a, b) => (a.ton_kho || 0) - (b.ton_kho || 0));
+        return products
+            .filter(p => (p.ton_kho || 0) <= LOW_STOCK_THRESHOLD && p.is_active !== false)
+            .sort((a, b) => (a.ton_kho || 0) - (b.ton_kho || 0)) // stock ASC: 0 lên đầu
+            .slice(0, 4); // luôn tối đa 4
     };
 
     useEffect(() => { loadDashboard(); }, [buildRevenueChart]);
@@ -375,218 +378,203 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
                 {/* Top 5 sản phẩm bán chạy */}
-                <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/40 border border-white flex flex-col h-full transition-all duration-500 hover:shadow-2xl">
-                    <div className="flex items-center justify-between mb-8">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center text-xl shadow-inner group">
-                                <span className="group-hover:rotate-12 transition-transform duration-300">🏆</span>
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Top 5 bán chạy</h3>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Hiệu suất kinh doanh cao nhất</p>
-                            </div>
+                <div className="bg-white p-6 rounded-3xl shadow-xl shadow-slate-200/40 border border-white flex flex-col gap-4 transition-all duration-500 hover:shadow-2xl">
+                    {/* Header */}
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center text-base shadow-inner flex-shrink-0">🏆</div>
+                        <div>
+                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight leading-tight">Top 5 bán chạy</h3>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Hiệu suất kinh doanh cao nhất</p>
                         </div>
                     </div>
 
-                    {topProducts.length > 0 ? (
-                        <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar max-h-[480px]">
-                            <div className="space-y-3 pb-4">
+                    {topProducts.length > 0 ? (() => {
+                        const maxQty = topProducts[0]?.qty || 1;
+                        const rankMeta = [
+                            { label: '#1', bar: 'from-amber-400 to-yellow-500', color: 'text-amber-500 font-black' },
+                            { label: '#2', bar: 'from-slate-400 to-slate-500', color: 'text-slate-500 font-black' },
+                            { label: '#3', bar: 'from-orange-400 to-amber-500', color: 'text-orange-500 font-black' },
+                            { label: '#4', bar: 'from-blue-300 to-blue-400', color: 'text-blue-400 font-bold' },
+                            { label: '#5', bar: 'from-indigo-300 to-violet-400', color: 'text-indigo-400 font-bold' },
+                        ];
+                        return (
+                            <div className="space-y-1.5">
                                 {topProducts.map((product, index) => {
-                                    const rankColors = [
-                                        { bg: 'bg-blue-600', text: 'text-white', label: '01' },
-                                        { bg: 'bg-slate-800', text: 'text-white', label: '02' },
-                                        { bg: 'bg-slate-400', text: 'text-white', label: '03' },
-                                        { bg: 'bg-slate-100', text: 'text-slate-400', label: '04' },
-                                        { bg: 'bg-slate-100', text: 'text-slate-400', label: '05' }
-                                    ];
-
-                                    const rank = rankColors[index];
-
+                                    const meta = rankMeta[index];
+                                    const pct = Math.round((product.qty / maxQty) * 100);
                                     return (
-                                        <div key={product.id || index} className="group flex items-center gap-4 p-3 rounded-2xl hover:bg-slate-50 transition-all duration-300 border border-transparent hover:border-slate-100 relative overflow-hidden">
-                                            {/* Product Image - Smaller & Compact */}
-                                            <div className="w-16 h-16 rounded-xl bg-white border border-slate-100 p-1.5 flex-shrink-0 relative overflow-hidden shadow-sm">
-                                                <div className={`absolute top-0 left-0 z-20 px-1.5 py-0.5 rounded-br-lg text-[8px] font-black ${rank.bg} ${rank.text} shadow-sm uppercase tracking-tighter`}>
-                                                    #{rank.label}
-                                                </div>
+                                        <div key={product.id || index}
+                                            className="group flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-slate-50 transition-all duration-200 border border-transparent hover:border-slate-100">
+                                            <span className={`text-[11px] leading-none flex-shrink-0 w-6 text-center select-none tabular-nums ${meta.color}`}>{meta.label}</span>
+                                            <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 flex-shrink-0 overflow-hidden shadow-sm">
                                                 {product.image ? (
-                                                    <img
-                                                        src={`http://localhost:8000${product.image}`}
-                                                        alt={product.name}
-                                                        className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700 relative z-10"
-                                                    />
+                                                    <img src={`http://localhost:8000${product.image}`} alt={product.name}
+                                                        className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center text-slate-300 text-[8px] font-black">N/A</div>
                                                 )}
                                             </div>
-
-                                            {/* Info */}
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex justify-between items-start">
-                                                    <div className="min-w-0">
-                                                        <h4 className="text-sm font-black text-slate-800 truncate leading-tight mb-0.5 uppercase">
-                                                            {product.name}
-                                                        </h4>
-                                                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">#{product.code}</span>
+                                                <div className="flex items-center justify-between gap-2 mb-1">
+                                                    <span className="text-[12px] font-bold text-slate-800 truncate leading-tight max-w-[160px] block">{product.name}</span>
+                                                    <div className="flex items-baseline gap-1 flex-shrink-0">
+                                                        <span className="text-[12px] font-black text-slate-900">{product.qty}</span>
+                                                        <span className="text-[8px] font-bold text-blue-500 uppercase">sp</span>
+                                                        <span className="text-[9px] text-slate-400 font-bold ml-1">· {(product.revenue / 1000000).toFixed(1)}M</span>
                                                     </div>
-                                                    <div className="text-right flex-shrink-0">
-                                                        <div className="flex items-baseline justify-end gap-1">
-                                                            <span className="text-sm font-black text-slate-900">{product.qty}</span>
-                                                            <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest italic">Bán</span>
-                                                        </div>
-                                                        <div className="text-[9px] font-bold text-slate-400">
-                                                            {(product.revenue / 1000000).toFixed(1)}M <span className="text-[7px]">VND</span>
-                                                        </div>
-                                                    </div>
+                                                </div>
+                                                <div className="h-1 rounded-full bg-slate-100 overflow-hidden">
+                                                    <div className={`h-full rounded-full bg-gradient-to-r ${meta.bar} transition-all duration-700`}
+                                                        style={{ width: `${pct}%` }} />
                                                 </div>
                                             </div>
                                         </div>
                                     );
                                 })}
                             </div>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center py-20 opacity-30">
-                            <div className="text-5xl mb-4">🛒</div>
+                        );
+                    })() : (
+                        <div className="flex flex-col items-center justify-center py-10 opacity-30">
+                            <div className="text-4xl mb-3">🛒</div>
                             <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Chưa có dữ liệu bán hàng</p>
                         </div>
                     )}
+
+                    {/* ── Mini stat: Doanh thu hôm nay ── */}
+                    {(() => {
+                        const today = new Date().toISOString().split('T')[0];
+                        const todayRevenue = rawOrders
+                            .filter(o => {
+                                const d = new Date(o.ngay_dat || o.created_at).toISOString().split('T')[0];
+                                return d === today && (o.trangthai_thanhtoan || '').toLowerCase() === 'paid';
+                            })
+                            .reduce((s, o) => s + (o.tong_tien || 0), 0);
+                        const todayOrders = rawOrders.filter(o => {
+                            const d = new Date(o.ngay_dat || o.created_at).toISOString().split('T')[0];
+                            return d === today;
+                        }).length;
+                        return (
+                            <>
+                                <div className="h-px bg-slate-100" />
+                                <div className="flex items-center justify-between px-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-base">📅</span>
+                                        <div>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Doanh thu hôm nay</p>
+                                            <p className="text-[13px] font-black text-emerald-600">{todayRevenue.toLocaleString('vi-VN')} <span className="text-[9px] font-bold text-slate-400">VND</span></p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Đơn hàng</p>
+                                        <p className="text-[13px] font-black text-blue-600">{todayOrders} <span className="text-[9px] font-bold text-slate-400">đơn</span></p>
+                                    </div>
+                                </div>
+                            </>
+                        );
+                    })()}
                 </div>
 
-                <div className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/40 border-2 border-slate-200 flex flex-col h-full overflow-hidden transition-all duration-500 hover:shadow-2xl">
-                    <div className="flex items-center justify-between mb-8">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center text-xl shadow-inner animate-pulse">⚠️</div>
+                <div className="bg-white p-5 rounded-3xl shadow-xl shadow-slate-200/40 border border-white flex flex-col transition-all duration-500 hover:shadow-2xl">
+
+                    {/* ── Header ── */}
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center text-base shadow-inner animate-pulse flex-shrink-0">⚠️</div>
                             <div>
-                                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Sắp hết hàng</h3>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Mức cảnh báo: Tồn kho ≤ {LOW_STOCK_THRESHOLD}</p>
+                                <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight leading-tight">Cảnh báo tồn kho</h3>
+                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Tồn kho ≤ {LOW_STOCK_THRESHOLD} · ưu tiên hết hàng</p>
                             </div>
                         </div>
                         {lowStockProducts.length > 0 && (
-                            <div className="flex flex-col items-end">
-                                <span className="px-4 py-1.5 bg-rose-500 text-white text-[10px] font-black rounded-full shadow-lg shadow-rose-200 uppercase tracking-widest border border-rose-400">
-                                    {lowStockProducts.length} mặt hàng
-                                </span>
-                            </div>
+                            <span className="text-[10px] font-bold text-slate-400">
+                                {lowStockProducts.length} sản phẩm
+                            </span>
                         )}
                     </div>
 
-                    {/* LOW STOCK FILTERS */}
-                    <div className="flex flex-wrap gap-1 mb-4 bg-slate-100/50 p-1 rounded-xl w-fit">
-                        {[
-                            { id: 'warning', label: 'Cần chú ý', color: 'amber' },
-                            { id: 'almost', label: 'Sắp hết', color: 'orange' },
-                            { id: 'out', label: 'Hết hàng', color: 'rose' }
-                        ].map(f => {
-                            const isActive = lowStockFilter === f.id;
-                            const colors = {
-                                rose: isActive ? 'bg-rose-500 text-white shadow-rose-200' : 'text-slate-500 hover:bg-rose-50',
-                                orange: isActive ? 'bg-orange-500 text-white shadow-orange-200' : 'text-slate-500 hover:bg-orange-50',
-                                amber: isActive ? 'bg-amber-500 text-white shadow-amber-200' : 'text-slate-500 hover:bg-amber-50'
-                            };
-                            return (
-                                <button
-                                    key={f.id}
-                                    onClick={() => setLowStockFilter(f.id)}
-                                    className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-300 ${isActive ? 'shadow-md scale-105' : ''} ${colors[f.color]}`}
-                                >
-                                    {f.label}
-                                </button>
-                            );
-                        })}
-                    </div>
-
                     {lowStockProducts.length > 0 ? (() => {
-                        // Logic lọc theo filter
-                        let filtered = lowStockProducts;
-                        if (lowStockFilter === 'out') filtered = lowStockProducts.filter(p => (p.ton_kho || 0) === 0);
-                        else if (lowStockFilter === 'almost') filtered = lowStockProducts.filter(p => (p.ton_kho || 0) > 0 && (p.ton_kho || 0) <= 2);
-                        else if (lowStockFilter === 'warning') filtered = lowStockProducts.filter(p => (p.ton_kho || 0) > 2);
-
-                        const DISPLAY_LIMIT = 6;
-                        const displayed = filtered.slice(0, DISPLAY_LIMIT);
-                        const hiddenCount = filtered.length - displayed.length;
-
-                        let lastGroup = null;
-                        const getGroup = (stock) => {
-                            if (stock === 0) return { label: 'HẾT HÀNG', color: 'text-rose-500 bg-rose-50 border-rose-100' };
-                            if (stock <= 2) return { label: 'SẮP HẾT', color: 'text-orange-500 bg-orange-50 border-orange-100' };
-                            return { label: 'CẦN CHÚ Ý', color: 'text-amber-500 bg-amber-50 border-amber-100' };
+                        const stockBadge = (stock) => {
+                            if (stock === 0) return { label: 'Hết hàng', cls: 'text-white bg-red-500 border-red-500' };
+                            if (stock <= 3) return { label: 'Sắp hết', cls: 'text-white bg-orange-500 border-orange-500' };
+                            return { label: 'Cảnh báo', cls: 'text-amber-800 bg-amber-100 border-amber-300' };
                         };
 
                         return (
-                            <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                                <div className="space-y-2">
-                                    {displayed.map((p, i) => {
+                            <>
+                                {/* ── Table header ── */}
+                                <div className="grid grid-cols-[36px_1fr_auto] gap-3 px-3 mb-1">
+                                    <div />
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Sản phẩm</span>
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Tồn kho</span>
+                                </div>
+                                <div className="h-px bg-slate-100 mb-2" />
+
+                                {/* ── Rows (max 5 cố định, không scroll) ── */}
+                                <div className="space-y-1">
+                                    {lowStockProducts.map((p, i) => {
                                         const stock = p.ton_kho || 0;
-                                        const group = getGroup(stock);
-                                        const showGroupLabel = group.label !== lastGroup;
-                                        lastGroup = group.label;
-
-                                        let stockBadgeColor = 'text-amber-600 bg-amber-50 border-amber-200';
-                                        if (stock === 0) stockBadgeColor = 'text-rose-600 bg-rose-50 border-rose-200 animate-pulse';
-                                        else if (stock <= 2) stockBadgeColor = 'text-orange-600 bg-orange-50 border-orange-200';
-
+                                        const badge = stockBadge(stock);
+                                        const imgUrl = p.hinhanh?.length > 0
+                                            ? `http://localhost:8000${p.hinhanh.find(img => img.is_main)?.image_url || p.hinhanh[0].image_url}`
+                                            : null;
                                         return (
-                                            <div key={p.ma_sanpham || i}>
-                                                {showGroupLabel && (
-                                                    <div className={`flex items-center gap-2 mb-2 ${i > 0 ? 'mt-4' : 'mt-1'}`}>
-                                                        <span className={`px-2 py-0.5 rounded-md text-[8px] font-black border uppercase tracking-widest ${group.color}`}>
-                                                            {group.label}
-                                                        </span>
-                                                        <div className="flex-1 h-px bg-slate-100"></div>
+                                            <div key={p.ma_sanpham || i}
+                                                className="group grid grid-cols-[36px_1fr_auto] gap-3 items-center px-3 py-2 rounded-xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-100">
+                                                {/* Ảnh */}
+                                                <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-100 overflow-hidden flex-shrink-0 shadow-sm">
+                                                    {imgUrl ? (
+                                                        <img src={imgUrl} alt={p.ten_sanpham}
+                                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-slate-300 text-[8px] font-black">N/A</div>
+                                                    )}
+                                                </div>
+
+                                                {/* Tên + SKU + badge + mini progress */}
+                                                <div className="min-w-0">
+                                                    <p className="text-[12px] font-bold text-slate-700 truncate leading-tight group-hover:text-blue-600 transition-colors max-w-[160px]">
+                                                        {p.ten_sanpham}
+                                                    </p>
+                                                    <div className="flex items-center gap-1.5 mt-0.5 mb-1">
+                                                        <span className="text-[8px] text-slate-400 font-bold uppercase">{p.sanpham_code}</span>
+                                                        <span className={`px-1.5 py-px rounded text-[8px] font-black border ${badge.cls}`}>{badge.label}</span>
                                                     </div>
-                                                )}
-                                                <div className="group/item flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-100">
-                                                    <div className="relative w-10 h-10 rounded-lg bg-white border border-slate-100 flex-shrink-0 overflow-hidden shadow-sm">
-                                                        {p.hinhanh && p.hinhanh.length > 0 ? (
-                                                            <img
-                                                                src={`http://localhost:8000${p.hinhanh.find(img => img.is_main)?.image_url || p.hinhanh[0].image_url}`}
-                                                                alt={p.ten_sanpham}
-                                                                className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-500"
+                                                    {/* Mini progress: stock / threshold */}
+                                                    <div className="flex items-center gap-1.5">
+                                                        <div className="h-1 flex-1 rounded-full bg-slate-100 overflow-hidden">
+                                                            <div
+                                                                className={`h-full rounded-full transition-all duration-700 ${(p.ton_kho || 0) === 0 ? 'bg-red-500' :
+                                                                    (p.ton_kho || 0) <= 3 ? 'bg-orange-400' : 'bg-amber-400'
+                                                                    }`}
+                                                                style={{ width: `${Math.min(((p.ton_kho || 0) / LOW_STOCK_THRESHOLD) * 100, 100)}%` }}
                                                             />
-                                                        ) : (
-                                                            <div className="w-full h-full flex items-center justify-center bg-slate-50 text-slate-300 text-[10px] font-bold">N/A</div>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="flex-1 min-w-0">
-                                                        <h4 className="text-[13px] font-bold text-slate-700 truncate leading-tight group-hover/item:text-blue-600 transition-colors">
-                                                            {p.ten_sanpham}
-                                                        </h4>
-                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                            <span className="text-[9px] text-slate-400 font-bold uppercase">#{p.sanpham_code}</span>
-                                                            <a
-                                                                href={`/admin/config-hub?tab=products&search=${encodeURIComponent(p.sanpham_code || p.ten_sanpham)}`}
-                                                                className="opacity-0 group-hover/item:opacity-100 text-[9px] font-black text-blue-500 hover:underline transition-opacity"
-                                                            >
-                                                                Nhập hàng →
-                                                            </a>
                                                         </div>
-                                                    </div>
-
-                                                    <div className={`px-2 py-0.5 rounded-lg text-[11px] font-black border whitespace-nowrap shadow-sm ${stockBadgeColor}`}>
-                                                        Tồn kho: {stock}
+                                                        <span className="text-[8px] text-slate-400 font-bold whitespace-nowrap">{p.ton_kho || 0}/{LOW_STOCK_THRESHOLD}</span>
                                                     </div>
                                                 </div>
+
+                                                {/* Số tồn kho */}
+                                                <span className={`px-2.5 py-0.5 rounded-lg text-[11px] font-black border whitespace-nowrap shadow-sm ${badge.cls}`}>
+                                                    {stock}
+                                                </span>
                                             </div>
                                         );
                                     })}
-
-                                    {hiddenCount > 0 && (
-                                        <a
-                                            href="/admin/config-hub?tab=products"
-                                            className="block text-center py-2 mt-2 rounded-xl bg-slate-50 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:bg-blue-50 hover:text-blue-600 transition-colors border border-dashed border-slate-200"
-                                        >
-                                            + {hiddenCount} mặt hàng khác
-                                        </a>
-                                    )}
                                 </div>
-                            </div>
+
+                                <div className="h-px bg-slate-100 mt-3 mb-2" />
+                                <a
+                                    href="/admin/config-hub?tab=products"
+                                    className="flex items-center justify-between px-3 py-1.5 rounded-xl text-[10px] font-black text-slate-500 uppercase tracking-widest hover:bg-blue-50 hover:text-blue-600 transition-colors group/link"
+                                >
+                                    <span>Xem tất cả sản phẩm</span>
+                                    <span className="group-hover/link:translate-x-1 transition-transform duration-200">→</span>
+                                </a>
+                            </>
                         );
                     })() : (
-                        <div className="flex flex-col items-center justify-center py-16 gap-3 opacity-30">
-                            <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center text-3xl shadow-inner">✅</div>
+                        <div className="flex flex-col items-center justify-center py-14 gap-2 opacity-30">
+                            <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center text-2xl shadow-inner">✅</div>
                             <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest text-center">Kho hàng an toàn</p>
                         </div>
                     )}

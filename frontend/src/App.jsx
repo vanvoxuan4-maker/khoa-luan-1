@@ -95,15 +95,22 @@ import { Outlet } from 'react-router-dom';
 
 const URLNormalizer = () => {
   const location = useLocation();
-  const navigationType = useNavigationType();
+  const prevPathRef = React.useRef(location.pathname);
 
   useLayoutEffect(() => {
-    // Disable native scroll restoration and force scroll to top on every navigation
-    // This prevents the "jump to bottom" issue caused by dynamic content restoration
+    // Chỉ scroll lên đầu khi PATHNAME thực sự thay đổi (chuyển trang),
+    // KHÔNG cuộn khi chỉ thay đổi search params (lọc, sắp xếp)
+    const pathnameChanged = prevPathRef.current !== location.pathname;
+
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
     }
-    window.scrollTo(0, 0);
+
+    if (pathnameChanged) {
+      window.scrollTo(0, 0);
+      prevPathRef.current = location.pathname;
+    }
+
     const rawPath = window.location.pathname;
     const decodedPath = decodeURIComponent(rawPath);
     const trimmedPath = decodedPath.trim();

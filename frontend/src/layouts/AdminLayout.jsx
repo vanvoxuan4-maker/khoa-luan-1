@@ -47,10 +47,10 @@ const AdminLayout = ({ children }) => {
 
   // 👇 CẬP NHẬT: Gộp menu thành các hub tổng hợp
   const menuItems = [
-    { path: '/admin', icon: '📊', label: 'Báo Cáo,Thống Kê', id: 'dashboard' },
+    { path: '/admin', icon: '📊', label: 'Báo Cáo Thống Kê', id: 'dashboard' },
     { path: '/admin/config-hub', icon: '⚙️', label: 'Cấu Hình Sản Phẩm', id: 'config-hub' },
     { path: '/admin/order-hub', icon: '📦', label: 'Quản Lý Đơn Hàng', id: 'order-hub' },
-    { path: '/admin/users', icon: '👥', label: 'Hồ Sơ Khách Hàng', id: 'users' },
+    { path: '/admin/users', icon: '👥', label: 'Quản Lý Khách Hàng', id: 'users' },
   ];
 
   // 👇 CẬP NHẬT 2: Cập nhật tiêu đề

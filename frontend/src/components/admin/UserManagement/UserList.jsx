@@ -25,7 +25,13 @@ const UserList = () => {
       const res = await axios.get('http://localhost:8000/admin/users', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      setUsers(res.data);
+      // Ưu tiên ADMIN lên đầu
+      const sortedUsers = res.data.sort((a, b) => {
+        if (a.quyen === 'admin' && b.quyen !== 'admin') return -1;
+        if (a.quyen !== 'admin' && b.quyen === 'admin') return 1;
+        return 0;
+      });
+      setUsers(sortedUsers);
     } catch (err) {
       console.error("Lỗi tải danh sách user");
     } finally {

@@ -1,27 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const FilterSidebar = ({ onFilterChange, initialCategoryId }) => {
+const FilterSidebar = ({ onFilterChange, filters = {} }) => {
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
 
-    // Local state cho các input
-    const [selectedCategory, setSelectedCategory] = useState(initialCategoryId);
-    const [selectedBrand, setSelectedBrand] = useState(null);
-    const [priceRange, setPriceRange] = useState({ min: '', max: '' });
-    const [minRating, setMinRating] = useState(0);
+    // Local state cho các input - Initialize from filters prop with defaults
+    const [selectedCategory, setSelectedCategory] = useState(filters?.category_id || null);
+    const [selectedBrand, setSelectedBrand] = useState(filters?.brand_id || null);
+    const [priceRange, setPriceRange] = useState({
+        min: filters?.min_price || '',
+        max: filters?.max_price || ''
+    });
+    const [minRating, setMinRating] = useState(filters?.min_rating || 0);
 
-    // Đồng bộ selectedCategory khi initialCategoryId thay đổi từ bên ngoài
+    // Sync local state when filters prop (URL) changes
     useEffect(() => {
-        setSelectedCategory(initialCategoryId);
-    }, [initialCategoryId]);
+        setSelectedCategory(filters?.category_id || null);
+        setSelectedBrand(filters?.brand_id || null);
+        setPriceRange({
+            min: filters?.min_price || '',
+            max: filters?.max_price || ''
+        });
+        setMinRating(filters?.min_rating || 0);
+    }, [filters]);
 
-    // State cho Accordion (mặc định đóng hoặc mở tùy ý, ở đây ta để mở Category nếu có initial ID)
+    // State cho Accordion
     const [expandedSections, setExpandedSections] = useState({
-        category: !!initialCategoryId,
-        brand: false,
-        price: true,
-        rating: false
+        category: !!filters?.category_id,
+        brand: !!filters?.brand_id,
+        price: !!(filters?.min_price || filters?.max_price),
+        rating: !!filters?.min_rating
     });
 
     const toggleSection = (section) => {

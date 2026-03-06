@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import AdminAddressManager from './AdminAddressManager';
+import { useNotification } from '../../../context/NotificationContext';
 
 const TRANG_THAI_USER = {
     active: {
@@ -29,6 +30,9 @@ const AdminUserDetail = () => {
     const [updating, setUpdating] = useState(false);
     const [showAddressManager, setShowAddressManager] = useState(false);
     const [activeCard, setActiveCard] = useState('info'); // Mặc định chọn Card Thông tin
+    const [originalRole, setOriginalRole] = useState(null); // Lưu quyền gốc để so sánh
+
+    const { addToast, showConfirm } = useNotification();
     const token = localStorage.getItem('admin_access_token');
     const adminInfo = JSON.parse(localStorage.getItem('admin_info') || '{}');
     const isSelf = user?.ma_user === adminInfo?.ma_user;
@@ -39,6 +43,7 @@ const AdminUserDetail = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setUser(res.data);
+            setOriginalRole(res.data.quyen); // Lưu lại quyền ban đầu
             // Cập nhật Breadcrumb lên Layout cao nhất
             window.dispatchEvent(new CustomEvent('admin_breadcrumb_update', {
                 detail: `> ${res.data.hovaten || res.data.ten_user}`
@@ -61,6 +66,16 @@ const AdminUserDetail = () => {
 
     const handleUpdate = async (e) => {
         e.preventDefault();
+
+        // Kiểm tra nâng cấp lên ADMIN
+        if (user.quyen === 'admin' && originalRole !== 'admin') {
+            const confirmUpgrade = await showConfirm(
+                `Bạn có chắc chắn muốn nâng cấp tài khoản "${user.hovaten || user.ten_user}" lên ADMIN không?\n\nHành động này sẽ cấp toàn bộ quyền quản trị hệ thống cho người dùng này.`,
+                "Xác nhận nâng cấp quyền"
+            );
+            if (!confirmUpgrade) return;
+        }
+
         setUpdating(true);
         try {
             const payload = {
@@ -72,14 +87,14 @@ const AdminUserDetail = () => {
             await axios.put(`http://localhost:8000/admin/users/${id}`, payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
+
+            setOriginalRole(user.quyen); // Cập nhật lại originalRole sau khi lưu thành công
             fetchUser();
-            setUpdating(false); // Kết thúc loading trước
-            setTimeout(() => {
-                alert("✅ Cập nhật thông tin thành công!");
-            }, 100); // Đợi 100ms để UI render xong trạng thái mới
+            setUpdating(false);
+            addToast("Cập nhật thông tin khách hàng thành công!", "success");
         } catch (err) {
             setUpdating(false);
-            alert("❌ Lỗi cập nhật: " + (err.response?.data?.detail || "Lỗi Server"));
+            addToast("Lỗi cập nhật: " + (err.response?.data?.detail || "Lỗi Server"), "error");
         }
     };
 
@@ -130,7 +145,10 @@ const AdminUserDetail = () => {
                                             headers: { Authorization: `Bearer ${token}` }
                                         });
                                         setUser({ ...user, status: nextStatus });
-                                    } catch (err) { alert("Lỗi cập nhật trạng thái"); }
+                                        addToast(`Đã chuyển trạng thái sang ${TRANG_THAI_USER[nextStatus].label}`, "success");
+                                    } catch (err) {
+                                        addToast("Lỗi cập nhật trạng thái", "error");
+                                    }
                                 }}
                                 className={`appearance-none px-[14px] py-[6px] rounded-[20px] text-[13px] font-medium border transition-all outline-none ${isSelf || user.quyen === 'admin' ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:shadow-md focus:ring-4 focus:ring-blue-500/10'}`}
                                 style={{

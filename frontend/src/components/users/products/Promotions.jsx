@@ -1,10 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import FilterSidebar from './FilterSidebar';
 import Breadcrumb from '../layouts/Breadcrumb';
 
 const Promotions = () => {
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // Parse filters from URL
+    const categoryId = searchParams.get('category_id');
+    const brandId = searchParams.get('brand_id');
+    const minPrice = searchParams.get('min_price');
+    const maxPrice = searchParams.get('max_price');
+    const minRating = searchParams.get('min_rating');
+    const currentPage = parseInt(searchParams.get('page') || '1');
+
+    const filters = {
+        category_id: categoryId,
+        brand_id: brandId,
+        min_price: minPrice,
+        max_price: maxPrice,
+        min_rating: minRating
+    };
+
     const [vouchers, setVouchers] = useState([]);
     const [flashSaleProducts, setFlashSaleProducts] = useState([]);
     const [allDiscountedProducts, setAllDiscountedProducts] = useState([]);
@@ -12,15 +30,7 @@ const Promotions = () => {
     const [showAllVouchers, setShowAllVouchers] = useState(false);
     const [currentBanner, setCurrentBanner] = useState(0);
     const [isHoverslider, setIsHoverslider] = useState(false);
-    const [currentPage, setCurrentPage] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
-    const [filters, setFilters] = useState({
-        category_id: null,
-        brand_id: null,
-        min_price: null,
-        max_price: null,
-        min_rating: null
-    });
     const itemsPerPage = 12;
     const [shouldScrollToTop, setShouldScrollToTop] = useState(false);
 
@@ -84,13 +94,18 @@ const Promotions = () => {
 
     // Hàm nhận change từ Sidebar
     const handleFilterChange = (newFilters, isReset = false) => {
+        const nextParams = new URLSearchParams(searchParams);
         if (isReset) {
-            setFilters(newFilters);
+            ['category_id', 'brand_id', 'min_price', 'max_price', 'min_rating'].forEach(p => nextParams.delete(p));
         } else {
-            setFilters(prev => ({ ...prev, ...newFilters }));
+            Object.entries(newFilters).forEach(([key, value]) => {
+                if (value === null || value === '' || value === 0) nextParams.delete(key);
+                else nextParams.set(key, value);
+            });
         }
-        setCurrentPage(1); // Reset về trang 1 khi lọc
-        setShouldScrollToTop(true); // Đánh dấu cần cuộn sau khi load xong
+        nextParams.set('page', '1');
+        setSearchParams(nextParams);
+        setShouldScrollToTop(false); // Consistent with ProductList: don't scroll on filter
     };
 
     useEffect(() => {
@@ -144,7 +159,7 @@ const Promotions = () => {
             }
         };
         fetchData();
-    }, [filters, currentPage]);
+    }, [categoryId, brandId, minPrice, maxPrice, minRating, currentPage]);
 
     // Cuộn lên đầu sau khi dữ liệu đã load xong
     useEffect(() => {
@@ -509,7 +524,7 @@ const Promotions = () => {
                             <div className="w-full lg:w-1/4 shrink-0">
                                 <FilterSidebar
                                     onFilterChange={handleFilterChange}
-                                    initialCategoryId={filters.category_id}
+                                    filters={filters}
                                 />
                             </div>
 
@@ -563,8 +578,10 @@ const Promotions = () => {
                                                 <button
                                                     disabled={currentPage === 1}
                                                     onClick={() => {
-                                                        setCurrentPage(currentPage - 1);
-                                                        document.getElementById('flash-sale-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                                        const nextParams = new URLSearchParams(searchParams);
+                                                        nextParams.set('page', currentPage - 1);
+                                                        setSearchParams(nextParams);
+                                                        setShouldScrollToTop(true);
                                                     }}
                                                     className="w-12 h-12 rounded-2xl bg-white border-2 border-slate-100 text-slate-400 flex items-center justify-center hover:border-blue-600 hover:text-blue-600 disabled:opacity-20 transition-all shadow-sm active:scale-90"
                                                 >
@@ -578,8 +595,10 @@ const Promotions = () => {
                                                             <button
                                                                 key={pageNum}
                                                                 onClick={() => {
-                                                                    setCurrentPage(pageNum);
-                                                                    document.getElementById('flash-sale-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                                                    const nextParams = new URLSearchParams(searchParams);
+                                                                    nextParams.set('page', pageNum);
+                                                                    setSearchParams(nextParams);
+                                                                    setShouldScrollToTop(true);
                                                                 }}
                                                                 className={`min-w-[2.5rem] h-10 rounded-xl font-black transition-all flex items-center justify-center text-xs ${pageNum === currentPage
                                                                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-105'
@@ -595,8 +614,10 @@ const Promotions = () => {
                                                 <button
                                                     disabled={currentPage === Math.ceil(totalItems / itemsPerPage)}
                                                     onClick={() => {
-                                                        setCurrentPage(currentPage + 1);
-                                                        document.getElementById('flash-sale-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                                        const nextParams = new URLSearchParams(searchParams);
+                                                        nextParams.set('page', currentPage + 1);
+                                                        setSearchParams(nextParams);
+                                                        setShouldScrollToTop(true);
                                                     }}
                                                     className="w-12 h-12 rounded-2xl bg-white border-2 border-slate-100 text-slate-400 flex items-center justify-center hover:border-blue-600 hover:text-blue-600 disabled:opacity-20 transition-all shadow-sm active:scale-90"
                                                 >

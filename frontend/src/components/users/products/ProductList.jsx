@@ -10,46 +10,66 @@ import ProductCard from './ProductCard'; // Import ProductCard
 const ProductList = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const searchTerm = searchParams.get('search') || '';
-    // Debounce 500ms - only call API after user stops typing
     const debouncedSearch = useDebounce(searchTerm, 500);
-    const categoryFromUrl = searchParams.get('category');
 
-    // State cho bộ lọc (ngoài search term từ URL)
-    const [filters, setFilters] = useState({
-        category_id: categoryFromUrl ? parseInt(categoryFromUrl) : null,
-        brand_id: null,
-        min_price: null,
-        max_price: null,
-        min_rating: null
-    });
+    const categoryId = searchParams.get('category_id') ? parseInt(searchParams.get('category_id')) : null;
+    const brandId = searchParams.get('brand_id') ? parseInt(searchParams.get('brand_id')) : null;
+    const minPrice = searchParams.get('min_price') || null;
+    const maxPrice = searchParams.get('max_price') || null;
+    const minRating = searchParams.get('min_rating') ? parseInt(searchParams.get('min_rating')) : 0;
+    const sortBy = searchParams.get('sort') || 'newest';
+    const currentPage = searchParams.get('page') ? parseInt(searchParams.get('page')) : 1;
 
-    // State cho Sắp xếp (Sorting)
-    const [sortBy, setSortBy] = useState('newest');
+    // Derived filters object for API and Sidebar
+    const filters = {
+        category_id: categoryId,
+        brand_id: brandId,
+        min_price: minPrice,
+        max_price: maxPrice,
+        min_rating: minRating
+    };
 
-    // Cập nhật filters khi category trên URL thay đổi
-    useEffect(() => {
-        if (categoryFromUrl) {
-            setFilters(prev => ({ ...prev, category_id: parseInt(categoryFromUrl) }));
-        }
-    }, [categoryFromUrl]);
-
-    // States cho Phân trang
-    const [currentPage, setCurrentPage] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
-    const itemsPerPage = 12; // 3 cột x 4 hàng là đẹp nhất
+    const itemsPerPage = 12;
     const [shouldScrollToTop, setShouldScrollToTop] = useState(false);
 
-    // 4. Các hàm xử lý (Handlers)
+    // 4. Các hàm xử lý (Handlers) - Update URL instead of local state
     const handleFilterChange = (newFilters, isReset = false) => {
+        const nextParams = new URLSearchParams(searchParams);
+
         if (isReset) {
-            setFilters(newFilters);
+            // Remove all filter-related params
+            ['category_id', 'brand_id', 'min_price', 'max_price', 'min_rating'].forEach(p => nextParams.delete(p));
         } else {
-            setFilters(prev => ({ ...prev, ...newFilters }));
+            Object.entries(newFilters).forEach(([key, value]) => {
+                if (value === null || value === '' || value === 0) {
+                    nextParams.delete(key);
+                } else {
+                    nextParams.set(key, value);
+                }
+            });
         }
-        setCurrentPage(1);
-        setShouldScrollToTop(true); // Đánh dấu cần cuộn sau khi load xong
+
+        nextParams.set('page', '1'); // Reset to page 1 on filter change
+        setSearchParams(nextParams);
+        setShouldScrollToTop(false); // Do not scroll on filter
+    };
+
+    const handleSortChange = (newSort) => {
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.set('sort', newSort);
+        nextParams.set('page', '1');
+        setSearchParams(nextParams);
+        setShouldScrollToTop(false); // Do not scroll on sort
+    };
+
+    const handlePageChange = (newPage) => {
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.set('page', newPage);
+        setSearchParams(nextParams);
+        setShouldScrollToTop(true);
     };
 
     // Fetch dữ liệu mỗi khi search, filter hoặc page thay đổi
@@ -85,15 +105,26 @@ const ProductList = () => {
         };
 
         fetchItems();
-    }, [debouncedSearch, filters, sortBy, currentPage]);
+    }, [debouncedSearch, categoryId, brandId, minPrice, maxPrice, minRating, sortBy, currentPage]);
 
-    // Cuộn lên đầu sau khi dữ liệu đã load xong
+    // Logic thực hiện cuộn trang thông minh (Smart Scroll)
     useEffect(() => {
         if (!loading && shouldScrollToTop) {
             const resultsSection = document.getElementById('product-results');
             if (resultsSection) {
-                resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const rect = resultsSection.getBoundingClientRect();
+
+                // --- PHÂN TÍCH UX ---
+                // Chỉ thực hiện scroll nếu: 
+                // 1. Đỉnh của danh sách nằm ngoài tầm nhìn phía trên (người dùng đã cuộn xuống quá sâu)
+                // 2. Hoặc đỉnh của danh sách đang ở vị trí quá thấp (> 500px so với viewport)
+                const isOutOfView = rect.top < 0 || rect.top > 500;
+
+                if (isOutOfView) {
+                    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
             }
+            // Luôn reset flag sau khi đã kiểm tra (dù có scroll hay không)
             setShouldScrollToTop(false);
         }
     }, [loading, shouldScrollToTop]);
@@ -159,12 +190,12 @@ const ProductList = () => {
                         <div className="w-full lg:w-1/4 shrink-0">
                             <FilterSidebar
                                 onFilterChange={handleFilterChange}
-                                initialCategoryId={filters.category_id}
+                                filters={filters}
                             />
                         </div>
 
-                        {/* MAIN CONTENT Area - Stable Height */}
-                        <div className="flex-1 min-h-[1200px]">
+                        {/* MAIN CONTENT Area - Cần giữ chiều cao tối thiểu để tránh "nhảy" trang khi load */}
+                        <div className="flex-1 min-h-[1400px]">
                             {loading ? (
                                 <div className="p-20 text-center bg-white rounded-[3rem] border border-slate-50 shadow-sm">
                                     <div className="relative w-20 h-20 mx-auto mb-8">
@@ -202,11 +233,7 @@ const ProductList = () => {
                                             <div className="relative group">
                                                 <select
                                                     value={sortBy}
-                                                    onChange={(e) => {
-                                                        setSortBy(e.target.value);
-                                                        setCurrentPage(1);
-                                                        setShouldScrollToTop(true);
-                                                    }}
+                                                    onChange={(e) => handleSortChange(e.target.value)}
                                                     className="appearance-none bg-white border-2 border-slate-100 rounded-2xl px-6 py-3 pr-12 text-sm font-black text-slate-900 focus:outline-none focus:border-blue-600 transition-all cursor-pointer hover:border-slate-200 shadow-sm"
                                                 >
                                                     <option value="newest">Mới nhất</option>
@@ -232,10 +259,7 @@ const ProductList = () => {
                                     <div className="flex items-center justify-center gap-3 mt-24 mb-16">
                                         <button
                                             disabled={currentPage === 1}
-                                            onClick={() => {
-                                                setCurrentPage(currentPage - 1);
-                                                document.getElementById('product-results').scrollIntoView({ behavior: 'smooth' });
-                                            }}
+                                            onClick={() => handlePageChange(currentPage - 1)}
                                             className="w-14 h-14 rounded-2xl bg-white border-2 border-slate-100 text-slate-400 flex items-center justify-center hover:border-blue-600 hover:text-blue-600 disabled:opacity-20 transition-all shadow-sm active:scale-90"
                                         >
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" /></svg>
@@ -247,10 +271,7 @@ const ProductList = () => {
                                                 return (
                                                     <button
                                                         key={pageNum}
-                                                        onClick={() => {
-                                                            setCurrentPage(pageNum);
-                                                            document.getElementById('product-results').scrollIntoView({ behavior: 'smooth' });
-                                                        }}
+                                                        onClick={() => handlePageChange(pageNum)}
                                                         className={`min-w-[3.5rem] h-14 rounded-2xl font-black transition-all flex items-center justify-center ${pageNum === currentPage
                                                             ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 scale-105'
                                                             : 'text-slate-400 hover:text-blue-600 hover:bg-white'
@@ -264,10 +285,7 @@ const ProductList = () => {
 
                                         <button
                                             disabled={currentPage === Math.ceil(totalItems / itemsPerPage)}
-                                            onClick={() => {
-                                                setCurrentPage(currentPage + 1);
-                                                document.getElementById('product-results').scrollIntoView({ behavior: 'smooth' });
-                                            }}
+                                            onClick={() => handlePageChange(currentPage + 1)}
                                             className="w-14 h-14 rounded-2xl bg-white border-2 border-slate-100 text-slate-400 flex items-center justify-center hover:border-blue-600 hover:text-blue-600 disabled:opacity-20 transition-all shadow-sm active:scale-90"
                                         >
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
