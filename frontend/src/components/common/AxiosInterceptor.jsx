@@ -4,7 +4,7 @@ import { useNotification } from '../../context/NotificationContext';
 import { getBestToken } from '../../utils/auth';
 
 const AxiosInterceptor = () => {
-    const { showAlert } = useNotification();
+    const { showAlert, addToast } = useNotification();
     const isAlerting = useRef(false);
 
     useEffect(() => {
@@ -24,11 +24,10 @@ const AxiosInterceptor = () => {
         const responseInterceptor = axios.interceptors.response.use(
             (response) => response,
             async (error) => {
-                // Kiểm tra mã lỗi 401 hoặc 403
                 const status = error.response ? error.response.status : null;
                 const isLoginRequest = error.config?.url?.includes('/login');
 
-                // Chỉ xử lý nếu không phải là request đăng nhập (để Login.jsx tự xử lý riêng)
+                // --- 401 / 403: Hết hạn hoặc không có quyền ---
                 if ((status === 401 || status === 403) && !isAlerting.current && !isLoginRequest) {
                     isAlerting.current = true;
 
@@ -38,17 +37,12 @@ const AxiosInterceptor = () => {
 
                     const title = status === 401 ? "Hết hạn truy cập" : "Truy cập bị chặn";
 
-                    // Hiển thị thông báo cho người dùng
                     await showAlert(message, title, "error");
 
-                    // Xác định cần xóa session nào dựa trên URL hoặc context
                     const isAdminRequest = error.config?.url?.includes('/admin') || window.location.pathname.startsWith('/admin');
-
                     const tokenKey = isAdminRequest ? 'admin_access_token' : 'user_access_token';
 
-                    // Nếu token đã bị xóa bởi một request khác trước đó, không làm gì thêm
                     if (!localStorage.getItem(tokenKey) && isAlerting.current) {
-                        // Vẫn giữ isAlerting = true để chặn các request đang bay tới sau đó
                         return Promise.reject(error);
                     }
 
@@ -57,13 +51,25 @@ const AxiosInterceptor = () => {
                         : ['user_access_token', 'user_info', 'user_user_info'];
 
                     keysToRemove.forEach(key => localStorage.removeItem(key));
-
-                    // KHÔNG reset isAlerting.current = false ở đây 
-                    // Vì chúng ta chuẩn bị chuyển trang, giữ true để chặn mọi request lỗi khác 
-                    // phát sinh trong quá trình chuyển hướng.
-
-                    // Chuyển hướng về trang login đúng theo loại session
                     window.location.href = isAdminRequest ? '/admin/login' : '/login';
+                }
+
+                // --- 500: Lỗi server nội bộ ---
+                if (status === 500 && !isLoginRequest) {
+                    addToast(
+                        "Lỗi hệ thống! Vui lòng thử lại sau hoặc liên hệ quản trị viên.",
+                        'error',
+                        'Lỗi máy chủ'
+                    );
+                }
+
+                // --- Không có kết nối mạng / timeout (status = null) ---
+                if (!status && !isLoginRequest) {
+                    addToast(
+                        "Không thể kết nối đến máy chủ. Kiểm tra lại kết nối mạng của bạn.",
+                        'error',
+                        'Lỗi kết nối'
+                    );
                 }
 
                 return Promise.reject(error);
@@ -75,7 +81,7 @@ const AxiosInterceptor = () => {
             axios.interceptors.request.eject(requestInterceptor);
             axios.interceptors.response.eject(responseInterceptor);
         };
-    }, [showAlert]);
+    }, [showAlert, addToast]);
 
     return null; // Component này chỉ chạy logic ngầm
 };

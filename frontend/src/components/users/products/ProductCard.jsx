@@ -145,4 +145,13 @@ const ProductCard = ({
     );
 };
 
-export default ProductCard;
+export default React.memo(ProductCard, (prev, next) => {
+    // Chỉ re-render khi dữ liệu sản phẩm thực sự thay đổi
+    return (
+        prev.product.ma_sanpham === next.product.ma_sanpham &&
+        prev.product.gia === next.product.gia &&
+        prev.product.gia_tri_giam === next.product.gia_tri_giam &&
+        prev.product.ton_kho === next.product.ton_kho &&
+        prev.showAddToCart === next.showAddToCart
+    );
+});

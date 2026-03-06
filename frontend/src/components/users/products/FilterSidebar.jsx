@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useStaticData } from '../../../hooks/useStaticData';
 
 const FilterSidebar = ({ onFilterChange, filters = {} }) => {
-    const [categories, setCategories] = useState([]);
-    const [brands, setBrands] = useState([]);
+    // Dùng hook có cache — không gọi API lại mỗi lần mount
+    const { categories, brands } = useStaticData();
 
     // Local state cho các input - Initialize from filters prop with defaults
     const [selectedCategory, setSelectedCategory] = useState(filters?.category_id || null);
@@ -54,22 +54,6 @@ const FilterSidebar = ({ onFilterChange, filters = {} }) => {
         }
     };
 
-    // Load Categories & Brands
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [catRes, brandRes] = await Promise.all([
-                    axios.get('http://localhost:8000/danhmuc'),
-                    axios.get('http://localhost:8000/thuonghieu')
-                ]);
-                setCategories(catRes.data);
-                setBrands(brandRes.data);
-            } catch (err) {
-                console.error("Lỗi tải bộ lọc:", err);
-            }
-        };
-        fetchData();
-    }, []);
 
     // Gửi tín hiệu lên khi click "Áp dụng" hoặc thay đổi trực tiếp (tuỳ UX)
     // Ở đây ta làm nút "Lọc" cho Giá, còn Danh mục/Thương hiệu click là ăn luôn.

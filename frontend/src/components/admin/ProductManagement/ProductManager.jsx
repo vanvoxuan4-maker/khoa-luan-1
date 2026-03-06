@@ -4,6 +4,8 @@ import AddProduct from './Addproduct';
 import Pagination from '../../common/Pagination';
 import { getBrandStyle } from '../../../utils/formatUtils';
 import { useNotification } from '../../../context/NotificationContext';
+import { useStaticData } from '../../../hooks/useStaticData';
+import { invalidateStaticCache } from '../../../hooks/useStaticData';
 
 // ─── Helper: Clean product object before sending to Backend ───────────────────
 // Removes relational/computed fields that the API doesn't accept.
@@ -22,8 +24,6 @@ const ITEMS_PER_PAGE = 10;
 
 const ProductManager = ({ initialSearch = '' }) => {
   const [products, setProducts] = useState([]);
-  const [brands, setBrands] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [editingProduct, setEditingProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [filterCategory, setFilterCategory] = useState('all');
@@ -41,18 +41,14 @@ const ProductManager = ({ initialSearch = '' }) => {
   const isAdmin = user.quyen?.toLowerCase() === 'admin' || user.role?.toLowerCase() === 'admin' || user.is_superuser;
 
   const { addToast, showConfirm } = useNotification();
+  // Dùng hook có cache — không gọi API lại mỗi lần mount
+  const { brands, categories } = useStaticData();
 
-  // ─── Load tất cả dữ liệu cần thiết ────────────────────────────────────────
+  // ─── Chỉ load products — brands/categories đến từ useStaticData ─────────────
   const loadData = useCallback(async () => {
     try {
-      const [prodRes, brandRes, catRes] = await Promise.all([
-        axios.get(`${API_BASE}/sanpham?include_inactive=true`),
-        axios.get(`${API_BASE}/thuonghieu`),
-        axios.get(`${API_BASE}/danhmuc`)
-      ]);
+      const prodRes = await axios.get(`${API_BASE}/sanpham?include_inactive=true`);
       setProducts(prodRes.data);
-      setBrands(brandRes.data);
-      setCategories(catRes.data);
     } catch (err) {
       console.error('Lỗi tải dữ liệu:', err);
       addToast('Không thể tải danh sách sản phẩm!', 'error');

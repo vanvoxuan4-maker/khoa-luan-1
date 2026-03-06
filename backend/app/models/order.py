@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Float, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, Float, DateTime, Boolean, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base_class import Base
@@ -28,6 +28,14 @@ class PhuongThucPayment(str, enum.Enum):
 # =========================================================
 class DonHang(Base):
     __tablename__ = "donhang"
+
+    # Indexes tổng hợp cho các query phổ biến
+    __table_args__ = (
+        Index('ix_donhang_user', 'ma_user'),                    # Lấy đơn của user
+        Index('ix_donhang_status', 'trang_thai'),               # Lọc theo trạng thái
+        Index('ix_donhang_date', 'ngay_dat'),                   # Sắp xếp theo ngày
+        Index('ix_donhang_user_status', 'ma_user', 'trang_thai'), # Composite: đơn + trạng thái
+    )
 
     ma_don_hang = Column(Integer, primary_key=True, index=True)
     ma_user = Column(Integer, ForeignKey("users.ma_user"), nullable=False)

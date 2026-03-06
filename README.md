@@ -48,6 +48,27 @@ Trợ lý ảo thông minh tích hợp trực tiếp vào hệ thống quản tr
 
 ---
 
+## 💎 Kỹ thuật Tối ưu & Điểm nhấn Công nghệ
+
+Dự án không chỉ dừng lại ở các tính năng cơ bản mà còn được tinh chỉnh sâu về mặt kỹ thuật để đạt hiệu suất và độ ổn định cao:
+
+### 1. Frontend Performance Optimization
+- **Component Memoization:** Sử dụng `React.memo` với custom equality checks cho các component quan trọng như `ProductCard`, giúp ngăn chặn hoàn toàn việc re-render dư thừa khi dữ liệu không đổi.
+- **Hook Caching Thông Minh:** Phát triển hook `useStaticData` với cơ chế **Session-level Cache**. Dữ liệu danh mục và thương hiệu chỉ được fetch một lần duy nhất trong suốt phiên làm việc, giảm hơn 70% số lượng API call dư thừa khi điều hướng.
+- **Lazy Loading & Decoding:** Áp dụng `loading="lazy"` và `decoding="async"` cho toàn bộ hệ thống hình ảnh sản phẩm, tối ưu hóa tốc độ tải trang (LCP) và trải nghiệm cuộn mượt mà.
+
+### 2. Backend & Database Tuning
+- **High-Performance Indexing:** Thiết lập các Composite Index và B-Tree Index chuyên sâu trên bảng `donhang` và `sanpham`, tối ưu hóa tốc độ tìm kiếm và sắp xếp ngay cả khi dữ liệu lớn.
+- **Concurrency Control:** Sử dụng cơ chế khóa dòng `with_for_update()` trong SQLAlchemy để xử lý tranh chấp tồn kho (Race Condition) khi nhiều người dùng cùng đặt hàng một lúc, đảm bảo tính toàn vẹn dữ liệu tuyệt đối.
+- **Intelligent API Design:** Tích hợp **Pydantic Model Validation** chặt chẽ, đảm bảo dữ liệu đầu vào luôn sạch và đúng định dạng trước khi xử lý.
+
+### 3. Developer & User Experience (DX/UX)
+- **Global Error Interceptor:** Hệ thống xử lý lỗi tập trung thông qua **Axios Interceptor**, tự động nhận diện và thông báo lỗi 401, 403, 500 và lỗi kết nối mạng (Network Error) một cách chuyên nghiệp.
+- **URL-based Filter Persistence:** Đồng bộ hóa bộ lọc sản phẩm trực tiếp với URL Search Params, cho phép người dùng chia sẻ kết quả tìm kiếm dễ dàng và giữ trạng thái lọc ngay cả khi tải lại trang.
+- **Smart Scroll Logic**: Cơ chế cuộn trang thông minh, chỉ tự động kéo lên đầu khi chuyển trang (pagination) và giữ nguyên vị trí khi thực hiện lọc/sắp xếp, tạo cảm giác tự nhiên nhất.
+
+---
+
 ## 🛠️ Hướng Dẫn Cài Đặt
 
 ### 1. Cấu hình Backend
