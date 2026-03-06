@@ -1,6 +1,6 @@
 import React from 'react';
 
-const StatusTracker = ({ history }) => {
+const StatusTracker = ({ history, expectedDate, status }) => {
     if (!history || history.length === 0) {
         return (
             <div className="text-center py-10 text-gray-400 font-medium italic">
@@ -67,6 +67,35 @@ const StatusTracker = ({ history }) => {
 
         return (
             <div className="py-6 px-4">
+                {/* 🚚 Expected Delivery Banner */}
+                {expectedDate && !['delivered', 'cancelled', 'returned'].includes(status?.toLowerCase()) && (
+                    <div style={{
+                        margin: '0 0 28px',
+                        padding: '16px',
+                        background: '#f0f7ff',
+                        border: '1.5px solid #dbeafe',
+                        borderRadius: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '14px',
+                        boxShadow: '0 4px 12px rgba(37, 99, 235, 0.05)'
+                    }}>
+                        <div style={{
+                            width: '40px', height: '40px', background: '#fff',
+                            borderRadius: '12px', display: 'flex', alignItems: 'center',
+                            justifyContent: 'center', fontSize: '20px'
+                        }}>🚚</div>
+                        <div>
+                            <p style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#1e40af', lineHeight: '1.2' }}>
+                                Đơn hàng sẽ giao đến bạn đúng ngày dự kiến, nếu quá ngày sẽ có voucher giảm giá cho bạn
+                            </p>
+                            <p style={{ margin: '2px 0 0', fontSize: '13px', fontWeight: '500', color: '#3b82f6' }}>
+                                Ngày dự kiến: {new Date(expectedDate).toLocaleDateString('vi-VN')}
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 <div className="relative">
                     {/* Vertical Connection Path */}
                     <div className="absolute left-[1.5rem] sm:left-[9.5rem] top-12 bottom-12 w-1.5 bg-gray-100 rounded-full hidden sm:block shadow-inner translate-x-[-50%]">

@@ -167,9 +167,10 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
       });
       if (editProduct.hinhanh && editProduct.hinhanh.length > 0) {
         const previews = editProduct.hinhanh.map(img => ({
-          url: `http://localhost:8000${img.image_url}`,
+          url: `${API_BASE}${img.image_url}`,
           isExisting: true,
-          id: img.ma_anh
+          id: img.ma_anh,
+          isMain: img.is_main
         }));
         setImagePreviews(previews);
       } else {
@@ -211,15 +212,40 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
     }
 
     if (files.length > 0) {
-      const newPreviews = files.map(file => ({
+      const newPreviews = files.map((file, idx) => ({
         file,
         url: URL.createObjectURL(file),
-        isExisting: false
+        isExisting: false,
+        isMain: imagePreviews.length === 0 && idx === 0 // Tự động làm ảnh chính nếu là ảnh đầu tiên
       }));
       setImagePreviews(prev => [...prev, ...newPreviews]);
       e.target.value = null; // Reset input sau khi chọn
     }
   };
+
+  const handleSetMainImage = useCallback(async (index) => {
+    const selectedImage = imagePreviews[index];
+
+    // Nếu là ảnh đã tồn tại trên server, gọi API đổi ngay
+    if (selectedImage.isExisting && selectedImage.id) {
+      try {
+        const token = localStorage.getItem('admin_access_token');
+        await axios.put(`${API_BASE}/set-anh-chinh/${selectedImage.id}`, {}, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        addToast('Đã đổi ảnh đại diện thành công!', 'success');
+      } catch (error) {
+        addToast('Lỗi khi đổi ảnh chính: ' + (error.response?.data?.detail || error.message), 'error');
+        return;
+      }
+    }
+
+    // Cập nhật local state: Chỉ 1 cái được là True
+    setImagePreviews(prev => prev.map((img, i) => ({
+      ...img,
+      isMain: i === index
+    })));
+  }, [imagePreviews, addToast, API_BASE]);
 
   const handleRemoveImage = useCallback(async (index) => {
     const imageToRemove = imagePreviews[index];
@@ -291,11 +317,11 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
       if (productId) {
         const newImagePreviews = imagePreviews.filter(preview => !preview.isExisting);
         await Promise.all(
-          newImagePreviews.map((preview, idx) => {
+          newImagePreviews.map((preview) => {
             const imageData = new FormData();
             imageData.append('file', preview.file);
-            // Ảnh đầu tiên trong toàn bộ danh sách là main
-            const isMain = imagePreviews.indexOf(preview) === 0;
+            // Lấy flag isMain từ state
+            const isMain = preview.isMain;
             return axios.post(`${API_BASE}/upload-anh/${productId}?is_main=${isMain}`, imageData, {
               headers: { ...config.headers, 'Content-Type': 'multipart/form-data' }
             });
@@ -363,18 +389,27 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
                   <img src={preview.url} alt="Xe" className="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-110" />
 
                   {/* Overlay Controls - ONLY SHOW ON HOVER */}
-                  <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover/img:opacity-100 transition-all flex flex-col items-center justify-center gap-3 backdrop-blur-[2px] z-20">
-                    <button type="button" onClick={() => handleRemoveImage(index)} className="w-12 h-12 bg-red-500 hover:bg-red-600 rounded-2xl text-white flex items-center justify-center shadow-2xl hover:scale-110 transition-all duration-300">
-                      <span className="text-xl">🗑️</span>
+                  <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover/img:opacity-100 transition-all flex flex-col items-center justify-center gap-2 backdrop-blur-[2px] z-20">
+                    <button type="button" onClick={() => handleRemoveImage(index)} className="w-10 h-10 bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white rounded-xl flex items-center justify-center transition-all border border-red-500/30" title="Xóa ảnh">
+                      <span className="text-lg">🗑️</span>
                     </button>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-white/80">Xóa ảnh</span>
+                    {!preview.isMain && (
+                      <button type="button" onClick={() => handleSetMainImage(index)} className="w-10 h-10 bg-blue-500/20 hover:bg-blue-500 text-blue-400 hover:text-white rounded-xl flex items-center justify-center transition-all border border-blue-500/30" title="Đặt làm ảnh chính">
+                        <span className="text-lg">⭐</span>
+                      </button>
+                    )}
+                    <span className="text-[8px] font-black uppercase tracking-widest text-white/60">Quản lý ảnh</span>
                   </div>
 
                   {/* Badges */}
                   <div className="absolute top-2 left-2 flex flex-col gap-1">
                     <div className="px-2 py-0.5 bg-black/60 backdrop-blur-md rounded-lg text-[8px] font-black text-white border border-white/10 w-fit">#{index + 1}</div>
                   </div>
-                  {index === 0 && <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg text-[7px] font-black uppercase tracking-widest shadow-xl">Banner</div>}
+                  {preview.isMain && (
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg text-[7px] font-black uppercase tracking-widest shadow-xl flex items-center gap-1 border border-amber-400/50">
+                      <span>⭐</span> Đại diện
+                    </div>
+                  )}
                 </div>
               ))}
               {imagePreviews.length === 0 && (

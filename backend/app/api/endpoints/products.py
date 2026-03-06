@@ -522,6 +522,23 @@ def delete_image(ma_anh: int, db: Session = Depends(get_db), admin: User = Depen
     db.commit()
     return {"message": "Đã xóa ảnh thành công"}
 
+# API đặt ảnh chính
+@router.put("/set-anh-chinh/{ma_anh}")
+def set_main_image(ma_anh: int, db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
+    """Đặt một ảnh làm ảnh chính, các ảnh khác của sản phẩm đó sẽ thành ảnh phụ"""
+    image = db.query(Hinhanh).filter(Hinhanh.ma_anh == ma_anh).first()
+    if not image:
+        raise HTTPException(status_code=404, detail="Không tìm thấy ảnh")
+    
+    # 1. Reset tất cả ảnh của sản phẩm này về False
+    db.query(Hinhanh).filter(Hinhanh.ma_sanpham == image.ma_sanpham).update({"is_main": False})
+    
+    # 2. Đặt ảnh này làm True
+    image.is_main = True
+    db.commit()
+    
+    return {"message": "Đã đặt làm ảnh chính thành công"}
+
 
 
 # ==========================================

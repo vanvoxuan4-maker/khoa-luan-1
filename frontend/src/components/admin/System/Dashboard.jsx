@@ -1,10 +1,35 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import {
     PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
     AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar
 } from 'recharts';
 import StatBox from './StatBox';
+
+const QuickActionCard = ({ title, desc, icon, color, onClick }) => (
+    <button
+        onClick={onClick}
+        className="group relative flex items-center gap-5 p-6 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-white hover:border-slate-200 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl overflow-hidden"
+    >
+        <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-gradient-to-br ${color} opacity-[0.03] group-hover:opacity-10 rounded-full transition-all duration-500 group-hover:scale-150`} />
+
+        <div className={`w-14 h-14 bg-gradient-to-br ${color} text-white rounded-2xl flex items-center justify-center text-2xl shadow-lg group-hover:scale-110 transition-transform duration-500`}>
+            {icon}
+        </div>
+
+        <div className="text-left">
+            <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight group-hover:text-blue-600 transition-colors">{title}</h4>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{desc}</p>
+        </div>
+
+        <div className="ml-auto text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all duration-300">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="9 5l7 7-7 7" />
+            </svg>
+        </div>
+    </button>
+);
 
 const TIME_RANGES = [
     { label: '7 ngày', days: 7 },
@@ -28,6 +53,7 @@ const Dashboard = () => {
     const [timeRange, setTimeRange] = useState(7);
     const [loading, setLoading] = useState(true);
     const [rawOrders, setRawOrders] = useState([]);
+    const navigate = useNavigate();
 
     const buildRevenueChart = useCallback((orders, days) => {
         const result = [];
@@ -279,7 +305,39 @@ const Dashboard = () => {
                 />
             </div>
 
-            {/* ── ROW 2: CHARTS ── */}
+            {/* ── ROW 2: QUICK ACTIONS ── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <QuickActionCard
+                    title="Thêm Sản Phẩm"
+                    desc="Đăng sản phẩm mới lên kệ"
+                    icon="➕"
+                    color="from-blue-500 to-indigo-600"
+                    onClick={() => navigate('/admin/config-hub?tab=products&action=add')}
+                />
+                <QuickActionCard
+                    title="Quản Lý Đơn Hàng"
+                    desc="Kiểm tra & Duyệt đơn mới"
+                    icon="📦"
+                    color="from-amber-500 to-orange-600"
+                    onClick={() => navigate('/admin/order-hub')}
+                />
+                <QuickActionCard
+                    title="Mã Khuyến Mãi"
+                    desc="Tạo chiến dịch ưu đãi"
+                    icon="🏷️"
+                    color="from-emerald-500 to-teal-600"
+                    onClick={() => navigate('/admin/config-hub?tab=vouchers')}
+                />
+                <QuickActionCard
+                    title="Duyệt Đánh Giá"
+                    desc="Quản lý phản hồi khách"
+                    icon="⭐"
+                    color="from-rose-500 to-pink-600"
+                    onClick={() => navigate('/admin/order-hub?tab=reviews')}
+                />
+            </div>
+
+            {/* ── ROW 3: CHARTS ── */}
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
 
                 {/* Area Chart: Revenue vs Refund — chiếm 3 cột */}

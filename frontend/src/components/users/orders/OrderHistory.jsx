@@ -407,7 +407,11 @@ const OrderHistory = () => {
 
                         {/* Body */}
                         <div className="max-h-[60vh] overflow-y-auto custom-scrollbar p-4">
-                            <StatusTracker history={selectedOrder.lichsu_donhang} />
+                            <StatusTracker
+                                history={selectedOrder.lichsu_donhang}
+                                expectedDate={selectedOrder.ngay_giao_du_kien}
+                                status={selectedOrder.trang_thai}
+                            />
                         </div>
 
                         {/* Footer */}

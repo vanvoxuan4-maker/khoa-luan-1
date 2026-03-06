@@ -140,73 +140,82 @@ const ReviewList = () => {
               (r.viet_danhgia || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
               (r.user?.hovaten || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
               (r.sanpham?.ten_sanpham || '').toLowerCase().includes(searchTerm.toLowerCase())
-            ).map((r, index) => (
-              <tr key={r.ma_danhgia} className={`hover:bg-blue-50/40 transition-colors group divide-x divide-slate-50 ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}>
+            )
+              .sort((a, b) => {
+                // 1. Ưu tiên trạng thái 'pending' (Chờ duyệt) lên trên cùng
+                if (a.trang_thai === 'pending' && b.trang_thai !== 'pending') return -1;
+                if (a.trang_thai !== 'pending' && b.trang_thai === 'pending') return 1;
 
-                <td className="py-4 px-6 text-center align-middle font-bold text-gray-400 text-base">#{r.ma_danhgia}</td>
+                // 2. Nếu cùng trạng thái, ưu tiên điểm đánh giá cao hơn
+                return (b.diem_danhgia || 0) - (a.diem_danhgia || 0);
+              })
+              .map((r, index) => (
+                <tr key={r.ma_danhgia} className={`hover:bg-blue-50/40 transition-colors group divide-x divide-slate-50 ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}>
 
-                <td className="py-4 px-6 align-middle text-center">
-                  <div className="font-bold text-gray-800 text-sm mb-1 line-clamp-1 uppercase tracking-tighter" title={r.sanpham?.ten_sanpham}>
-                    {r.sanpham?.ten_sanpham || "Sản phẩm đã xóa"}
-                  </div>
-                  <div className="text-[11px] text-blue-600 font-black uppercase tracking-wider">
-                    👤 {r.user?.hovaten || "Khách ẩn danh"}
-                  </div>
-                  <div className="text-[10px] text-gray-400 mt-0.5 italic text-center">
-                    {r.ngay_lap ? new Date(r.ngay_lap).toLocaleDateString('vi-VN') : '---'}
-                  </div>
-                </td>
+                  <td className="py-4 px-6 text-center align-middle font-bold text-gray-400 text-base">#{r.ma_danhgia}</td>
 
-                <td className="py-4 px-6 text-center align-middle">
-                  <div className="flex justify-center gap-0.5">{renderStars(r.diem_danhgia)}</div>
-                </td>
+                  <td className="py-4 px-6 align-middle text-center">
+                    <div className="font-bold text-gray-800 text-sm mb-1 line-clamp-1 uppercase tracking-tighter" title={r.sanpham?.ten_sanpham}>
+                      {r.sanpham?.ten_sanpham || "Sản phẩm đã xóa"}
+                    </div>
+                    <div className="text-[11px] text-blue-600 font-black uppercase tracking-wider">
+                      👤 {r.user?.hovaten || "Khách ẩn danh"}
+                    </div>
+                    <div className="text-[10px] text-gray-400 mt-0.5 italic text-center">
+                      {r.ngay_lap ? new Date(r.ngay_lap).toLocaleDateString('vi-VN') : '---'}
+                    </div>
+                  </td>
 
-                <td className="py-4 px-6 align-middle text-center text-gray-600 text-sm italic leading-relaxed">
-                  "{r.viet_danhgia}"
-                </td>
+                  <td className="py-4 px-6 text-center align-middle">
+                    <div className="flex justify-center gap-0.5">{renderStars(r.diem_danhgia)}</div>
+                  </td>
 
-                <td className="py-4 px-6 text-center align-middle">
-                  <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase border shadow-sm inline-block whitespace-nowrap
+                  <td className="py-4 px-6 align-middle text-center text-gray-600 text-sm italic leading-relaxed">
+                    "{r.viet_danhgia}"
+                  </td>
+
+                  <td className="py-4 px-6 text-center align-middle">
+                    <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase border shadow-sm inline-block whitespace-nowrap
                     ${r.trang_thai === 'approved' ? 'bg-green-100 text-green-700 border-green-200' :
-                      r.trang_thai === 'pending' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
-                        'bg-red-100 text-red-700 border-red-200'}`}>
-                    {r.trang_thai === 'approved' ? '✅ Hiển thị' : r.trang_thai === 'pending' ? '⏳ Chờ duyệt' : '🔒 Đã ẩn'}
-                  </span>
-                </td>
+                        r.trang_thai === 'pending' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
+                          'bg-red-100 text-red-700 border-red-200'}`}>
+                      {r.trang_thai === 'approved' ? '✅ Hiển thị' : r.trang_thai === 'pending' ? '⏳ Chờ duyệt' : '🔒 Đã ẩn'}
+                    </span>
+                  </td>
 
-                <td className="py-4 px-6 text-center align-middle">
-                  <div className="flex justify-center gap-2">
-                    {r.trang_thai !== 'approved' && (
+                  <td className="py-4 px-6 text-center align-middle">
+                    <div className="flex justify-center gap-2">
+                      {r.trang_thai !== 'approved' && (
+                        <button
+                          onClick={() => handleStatusChange(r.ma_danhgia, 'approved')}
+                          className="w-9 h-9 rounded-xl bg-green-500 text-white shadow-[0_4px_12px_rgba(34,197,94,0.3)] hover:bg-green-600 hover:-translate-y-0.5 transition-all flex items-center justify-center font-bold"
+                          title="Duyệt"
+                        >
+                          ✓
+                        </button>
+                      )}
+
+                      {r.trang_thai !== 'rejected' && (
+                        <button
+                          onClick={() => handleStatusChange(r.ma_danhgia, 'rejected')}
+                          className="w-9 h-9 rounded-xl bg-orange-500 text-white shadow-[0_4px_12px_rgba(249,115,22,0.3)] hover:bg-orange-600 hover:-translate-y-0.5 transition-all flex items-center justify-center font-bold"
+                          title="Ẩn / Từ chối"
+                        >
+                          ✕
+                        </button>
+                      )}
+
                       <button
-                        onClick={() => handleStatusChange(r.ma_danhgia, 'approved')}
-                        className="w-9 h-9 rounded-xl bg-green-500 text-white shadow-[0_4px_12px_rgba(34,197,94,0.3)] hover:bg-green-600 hover:-translate-y-0.5 transition-all flex items-center justify-center font-bold"
-                        title="Duyệt"
+                        onClick={() => handleDelete(r.ma_danhgia)}
+                        className="w-9 h-9 rounded-xl bg-red-500 text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)] hover:bg-red-600 hover:-translate-y-0.5 transition-all flex items-center justify-center"
+                        title="Xóa vĩnh viễn"
                       >
-                        ✓
+                        🗑️
                       </button>
-                    )}
-
-                    {r.trang_thai !== 'rejected' && (
-                      <button
-                        onClick={() => handleStatusChange(r.ma_danhgia, 'rejected')}
-                        className="w-9 h-9 rounded-xl bg-orange-500 text-white shadow-[0_4px_12px_rgba(249,115,22,0.3)] hover:bg-orange-600 hover:-translate-y-0.5 transition-all flex items-center justify-center font-bold"
-                        title="Ẩn / Từ chối"
-                      >
-                        ✕
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => handleDelete(r.ma_danhgia)}
-                      className="w-9 h-9 rounded-xl bg-red-500 text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)] hover:bg-red-600 hover:-translate-y-0.5 transition-all flex items-center justify-center"
-                      title="Xóa vĩnh viễn"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                    </div>
+                  </td>
+                </tr>
+              ))}
             {reviews.length === 0 && (
               <tr>
                 <td colSpan="6" className="py-20 text-center text-slate-400 font-bold uppercase tracking-widest opacity-50">
