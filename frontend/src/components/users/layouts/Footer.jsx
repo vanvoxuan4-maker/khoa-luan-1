@@ -147,17 +147,27 @@ const Footer = () => {
                 </p>
 
                 {/* Social Icons */}
-                <div className="flex gap-3">
-                  {[
-                    { name: 'Facebook', img: '/images/internet/OIP (1).webp', hoverStyle: 'hover:bg-blue-600 hover:border-blue-500' },
-                    { name: 'Instagram', img: '/images/internet/OIP (2).webp', hoverStyle: 'hover:bg-gradient-to-tr hover:from-yellow-400 hover:via-red-500 hover:to-purple-600 hover:border-transparent' },
-                    { name: 'YouTube', img: '/images/internet/3610206.png', hoverStyle: 'hover:bg-red-600 hover:border-red-500' },
-                    { name: 'Zalo', img: '/images/internet/OIP (3).webp', hoverStyle: 'hover:bg-blue-500 hover:border-blue-400' }
-                  ].map(social => (
-                    <div key={social.name} title={social.name} className={`w-11 h-11 rounded-xl flex items-center justify-center bg-slate-800 border border-white/5 ${social.hoverStyle} transition-all cursor-pointer group overflow-hidden`}>
-                      <img src={social.img} alt={social.name} loading="lazy" className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300" />
-                    </div>
-                  ))}
+                <div className="mt-8">
+                  <h4 className="text-white font-black uppercase tracking-widest text-xs mb-5">Kết nối với chúng tôi</h4>
+                  <div className="flex gap-3">
+                    {[
+                      { name: 'Facebook', img: '/images/internet/OIP (1).webp', url: 'https://facebook.com', hoverStyle: 'hover:bg-blue-600 hover:border-blue-500' },
+                      { name: 'Instagram', img: '/images/internet/OIP (2).webp', url: 'https://instagram.com', hoverStyle: 'hover:bg-gradient-to-tr hover:from-yellow-400 hover:via-red-500 hover:to-purple-600 hover:border-transparent' },
+                      { name: 'Telegram', img: '/images/internet/OIP.webp', url: 'https://t.me/+84961178265', hoverStyle: 'hover:bg-[#0088cc] hover:border-[#0088cc]' },
+                      { name: 'Zalo', img: '/images/internet/OIP (3).webp', url: 'https://zalo.me/0961178265', hoverStyle: 'hover:bg-blue-500 hover:border-blue-400' }
+                    ].map(social => (
+                      <a
+                        key={social.name}
+                        href={social.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={social.name}
+                        className={`w-11 h-11 rounded-xl flex items-center justify-center bg-slate-800 border border-white/5 ${social.hoverStyle} transition-all cursor-pointer group overflow-hidden`}
+                      >
+                        <img src={social.img} alt={social.name} loading="lazy" className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300" />
+                      </a>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

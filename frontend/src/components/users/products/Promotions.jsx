@@ -60,6 +60,8 @@ const Promotions = () => {
     const promoBanners = [
         "/images/voucher/banner-ctkm-1-scaled.jpg",
         "/images/voucher/raptor-taka-banner-web-1958-x-745_2.jpg",
+        "/images/banner-tung-dong-xe-2025-02_2.jpg",
+        "/images/banner-tung-dong-xe-2025-04.jpg",
     ];
 
     useEffect(() => {
@@ -245,7 +247,8 @@ const Promotions = () => {
                 }
             `}</style>
                 {/* 1. HERO BANNER - AUTOMATIC SLIDER */}
-                <section className="relative h-[350px] md:h-[550px] flex items-end justify-center overflow-hidden mb-20 group">
+                <section className="relative h-[320px] md:h-[480px] flex items-end justify-center overflow-hidden mb-20 group rounded-none md:rounded-none">
+                    {/* Slides */}
                     {promoBanners.map((src, index) => (
                         <div
                             key={src}
@@ -259,20 +262,65 @@ const Promotions = () => {
                                     animation: index === currentBanner ? 'slowZoom 20s infinite alternate ease-in-out' : 'none'
                                 }}
                             />
-                            {/* Overlay gradient */}
-                            <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-white via-white/20 to-transparent"></div>
                         </div>
                     ))}
 
+                    {/* Overlay: bottom fade sang trắng để hoà với nền trang */}
+                    <div className="absolute inset-0 z-20 pointer-events-none">
+                        {/* Top: overlay tối nhẹ */}
+                        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/30 to-transparent" />
+                        {/* Bottom: fade về trắng */}
+                        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-white via-white/30 to-transparent" />
+                    </div>
+
+                    {/* Badge top-left */}
+                    <div className="absolute top-5 left-5 md:top-8 md:left-10 z-30">
+                        <span className="inline-flex items-center gap-2 bg-blue-600 text-white text-xs md:text-sm font-black uppercase tracking-widest px-5 py-2 rounded-full shadow-lg shadow-blue-500/40">
+                            🔥 ƯU ĐÃI HOT
+                        </span>
+                    </div>
+
+                    {/* Prev / Next buttons */}
+                    <button
+                        onClick={() => setCurrentBanner(prev => (prev - 1 + promoBanners.length) % promoBanners.length)}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 z-30 w-11 h-11 md:w-13 md:h-13 bg-white/20 hover:bg-white/60 backdrop-blur-md border border-white/40 text-white hover:text-blue-600 rounded-full flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 shadow-xl"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <button
+                        onClick={() => setCurrentBanner(prev => (prev + 1) % promoBanners.length)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 z-30 w-11 h-11 md:w-13 md:h-13 bg-white/20 hover:bg-white/60 backdrop-blur-md border border-white/40 text-white hover:text-blue-600 rounded-full flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 shadow-xl"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
+
+                    {/* Dots indicator */}
+                    <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
+                        {promoBanners.map((_, i) => (
+                            <button
+                                key={i}
+                                onClick={() => setCurrentBanner(i)}
+                                className={`rounded-full transition-all duration-400 ${i === currentBanner
+                                    ? 'w-8 h-2.5 bg-blue-600 shadow-lg shadow-blue-500/50'
+                                    : 'w-2.5 h-2.5 bg-white/60 hover:bg-white'
+                                    }`}
+                            />
+                        ))}
+                    </div>
+
                     {/* CSS for custom animation */}
                     <style>{`
-                    @keyframes slowZoom {
-                        from { transform: scale(1); }
-                        to { transform: scale(1.15); }
-                    }
-                `}</style>
-
+                        @keyframes slowZoom {
+                            from { transform: scale(1); }
+                            to { transform: scale(1.12); }
+                        }
+                    `}</style>
                 </section>
+
 
                 <div className="container mx-auto px-4">
                     {/* 1.5 HIGHEST DISCOUNT SLIDER SECTION (NEW) */}
@@ -636,22 +684,28 @@ const Promotions = () => {
                     </section>
 
                     {/* 4. TRUST BADGES SECTION */}
-                    <section className="bg-slate-900 rounded-[3rem] p-12 lg:p-20 text-center relative overflow-hidden group">
-                        {/* Immersive Graphics */}
-                        <div className="absolute top-0 left-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] -ml-20 -mt-20"></div>
-                        <div className="absolute bottom-0 right-0 w-64 h-64 bg-purple-600/10 rounded-full blur-[100px] -mr-20 -mb-20"></div>
+                    <section className="bg-white border-2 border-blue-100 rounded-[3rem] p-12 lg:p-20 text-center relative overflow-hidden">
+                        {/* Decorative orbs */}
+                        <div className="absolute top-0 left-0 w-72 h-72 bg-blue-100/60 rounded-full blur-[100px] -ml-20 -mt-20 pointer-events-none"></div>
+                        <div className="absolute bottom-0 right-0 w-72 h-72 bg-blue-50/80 rounded-full blur-[100px] -mr-20 -mb-20 pointer-events-none"></div>
 
-                        <h2 className="text-3xl lg:text-5xl font-black text-white mb-12 uppercase tracking-tight relative z-10">Cam kết Giá trị Vượt trội</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative z-10">
+                        <h2 className="text-3xl lg:text-5xl font-black mb-2 uppercase tracking-tight relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-blue-500">
+                            Cam kết Giá trị Vượt trội
+                        </h2>
+                        <p className="text-slate-400 font-medium mb-12 relative z-10">Chúng tôi luôn đặt khách hàng lên hàng đầu</p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 relative z-10">
                             {[
-                                { icon: "🛡️", title: "UY TÍN 100%", desc: "Sản phẩm chính hãng với đầy đủ giấy tờ nhập khẩu." },
-                                { icon: "🔄", title: "BẢO TRÌ TRỌN ĐỜI", desc: "Hỗ trợ kỹ thuật và bảo trì định kỳ cho mọi khách hàng." },
-                                { icon: "📞", title: "HỖ TRỢ 24/7", desc: "Đội ngũ chuyên gia luôn sẵn sàng tư vấn và giải đáp." }
+                                { icon: "🛡️", title: "UY TÍN 100%", desc: "Sản phẩm chính hãng với đầy đủ giấy tờ nhập khẩu.", color: "from-blue-500 to-blue-600" },
+                                { icon: "🔄", title: "BẢO TRÌ TRỌN ĐỜI", desc: "Hỗ trợ kỹ thuật và bảo trì định kỳ cho mọi khách hàng.", color: "from-blue-400 to-blue-500" },
+                                { icon: "📞", title: "HỖ TRỢ 24/7", desc: "Đội ngũ chuyên gia luôn sẵn sàng tư vấn và giải đáp.", color: "from-blue-600 to-blue-700" }
                             ].map((item, i) => (
-                                <div key={i} className="flex flex-col items-center group/item hover:scale-105 transition-transform duration-500">
-                                    <span className="text-5xl mb-6 shadow-2xl">{item.icon}</span>
-                                    <h3 className="text-white font-black text-lg mb-2 uppercase tracking-widest">{item.title}</h3>
-                                    <p className="text-slate-400 font-medium text-sm leading-relaxed px-4">{item.desc}</p>
+                                <div key={i} className="flex flex-col items-center group hover:scale-105 transition-all duration-500 border-2 border-transparent hover:border-blue-400 rounded-3xl p-6 hover:shadow-lg hover:shadow-blue-100">
+                                    <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${item.color} flex items-center justify-center text-4xl mb-6 shadow-xl shadow-blue-200`}>
+                                        {item.icon}
+                                    </div>
+                                    <h3 className="text-blue-700 font-black text-base mb-2 uppercase tracking-widest">{item.title}</h3>
+                                    <p className="text-slate-500 font-medium text-sm leading-relaxed px-4">{item.desc}</p>
                                 </div>
                             ))}
                         </div>

@@ -40,6 +40,8 @@ const BannerSlider = () => {
     const [currentIndex, setCurrentIndex] = useState(1);
     const [isTransitioning, setIsTransitioning] = useState(true);
     const containerRef = useRef(null);
+    // isAnimating: khóa click trong thời gian transition để tránh index vượt bounds
+    const isAnimating = useRef(false);
 
     useEffect(() => {
         if (currentIndex === displayBanners.length - 1) {
@@ -60,28 +62,37 @@ const BannerSlider = () => {
 
     useEffect(() => {
         if (!isTransitioning) {
-            const timer = setTimeout(() => setIsTransitioning(true), 50);
+            const timer = setTimeout(() => {
+                setIsTransitioning(true);
+                isAnimating.current = false; // mở khóa sau khi jump xong
+            }, 50);
             return () => clearTimeout(timer);
         }
     }, [isTransitioning]);
 
     useEffect(() => {
         const interval = setInterval(() => {
-            if (isTransitioning) {
+            if (isTransitioning && !isAnimating.current) {
+                isAnimating.current = true;
                 setCurrentIndex(prev => prev + 1);
+                setTimeout(() => { isAnimating.current = false; }, 1100);
             }
         }, 6000);
         return () => clearInterval(interval);
     }, [isTransitioning, currentIndex]);
 
     const nextSlide = () => {
-        if (!isTransitioning) return;
+        if (isAnimating.current) return;
+        isAnimating.current = true;
         setCurrentIndex(prev => prev + 1);
+        setTimeout(() => { isAnimating.current = false; }, 1100);
     };
 
     const prevSlide = () => {
-        if (!isTransitioning) return;
+        if (isAnimating.current) return;
+        isAnimating.current = true;
         setCurrentIndex(prev => prev - 1);
+        setTimeout(() => { isAnimating.current = false; }, 1100);
     };
 
     return (
