@@ -117,6 +117,7 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
   ];
 
   const [specs, setSpecs] = useState(isEditMode ? [{ ten: '', gia_tri: '' }] : defaultSpecs); // Thông số kỹ thuật
+  const [isTechOpen, setIsTechOpen] = useState(false);
 
   // Chỉ fetch brands/categories nếu parent không cung cấp qua props
   useEffect(() => {
@@ -484,45 +485,71 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
 
               {/* Specs Grid */}
               <div className="mt-8 pt-8 border-t border-slate-800 px-1">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-500">Thông số lắp ráp</h3>
-                  <button
-                    type="button"
-                    onClick={() => setSpecs([...specs, { ten: '', gia_tri: '' }])}
-                    className="text-[10px] font-black uppercase tracking-widest text-orange-500 hover:text-orange-400 transition-colors"
-                  >
-                    + Thêm thông số
-                  </button>
+                <div
+                  className="flex items-center justify-between mb-6 cursor-pointer group/spec-header select-none"
+                  onClick={() => setIsTechOpen(!isTechOpen)}
+                >
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 group-hover/spec-header:text-orange-500 transition-colors flex items-center gap-2">
+                      Thông số lắp ráp
+                    </h3>
+                    <span className={`text-[10px] transition-transform duration-300 ${isTechOpen ? 'rotate-180 text-orange-500' : 'text-slate-500'}`}>
+                      ▼
+                    </span>
+                  </div>
+
+                  {isTechOpen && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSpecs([...specs, { ten: '', gia_tri: '' }]);
+                      }}
+                      className="text-[10px] font-black uppercase tracking-widest text-orange-500 hover:text-orange-400 transition-colors bg-orange-500/10 px-3 py-1 rounded-md"
+                    >
+                      + Thêm dòng mới
+                    </button>
+                  )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                  {specs.map((spec, index) => (
-                    <div key={index} className="flex flex-col gap-1 group/spec">
-                      <div className="flex items-center justify-between">
+
+                {isTechOpen ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 animate-fade-in-down origin-top">
+                    {specs.map((spec, index) => (
+                      <div key={index} className="flex flex-col gap-1 group/spec">
+                        <div className="flex items-center justify-between">
+                          <input
+                            className="w-full bg-transparent border-none text-[10px] font-black text-slate-500 uppercase tracking-widest p-0 focus:ring-0 placeholder:text-slate-700"
+                            placeholder="TÊN THÔNG SỐ"
+                            value={spec.ten}
+                            onChange={(e) => {
+                              const n = [...specs];
+                              n[index].ten = e.target.value.toUpperCase();
+                              setSpecs(n);
+                            }}
+                          />
+                          <button type="button" onClick={() => setSpecs(specs.filter((_, i) => i !== index))} className="text-slate-700 hover:text-red-500 opacity-0 group-hover/spec:opacity-100 transition-all text-xs">✕</button>
+                        </div>
                         <input
-                          className="w-full bg-transparent border-none text-[10px] font-black text-slate-500 uppercase tracking-widest p-0 focus:ring-0 placeholder:text-slate-700"
-                          placeholder="TÊN THÔNG SỐ"
-                          value={spec.ten}
+                          className="w-full bg-transparent border-b border-slate-800 py-1 text-sm font-medium text-slate-300 focus:border-orange-500/50 outline-none transition-all placeholder:text-slate-800"
+                          placeholder="Giá trị chi tiết..."
+                          value={spec.gia_tri}
                           onChange={(e) => {
                             const n = [...specs];
-                            n[index].ten = e.target.value.toUpperCase();
+                            n[index].gia_tri = e.target.value;
                             setSpecs(n);
                           }}
                         />
-                        <button type="button" onClick={() => setSpecs(specs.filter((_, i) => i !== index))} className="text-slate-700 hover:text-red-500 opacity-0 group-hover/spec:opacity-100 transition-all text-xs">✕</button>
                       </div>
-                      <input
-                        className="w-full bg-transparent border-b border-slate-800 py-1 text-sm font-medium text-slate-300 focus:border-orange-500/50 outline-none transition-all placeholder:text-slate-800"
-                        placeholder="Giá trị chi tiết..."
-                        value={spec.gia_tri}
-                        onChange={(e) => {
-                          const n = [...specs];
-                          n[index].gia_tri = e.target.value;
-                          setSpecs(n);
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => setIsTechOpen(true)}
+                    className="py-4 bg-[#0b1120] border border-dashed border-slate-800 rounded-lg flex items-center justify-center cursor-pointer hover:border-orange-500/50 transition-all"
+                  >
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Nhấn để nhập Chi tiết phụ tùng ({specs.length} mục)</span>
+                  </div>
+                )}
               </div>
             </div>
 

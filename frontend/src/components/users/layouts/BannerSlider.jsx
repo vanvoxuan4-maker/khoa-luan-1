@@ -25,9 +25,9 @@ const BannerSlider = () => {
             subtitle: "Vượt giới hạn cùng công nghệ khung Carbon"
         },
         {
-            src: "/images/Gemini_Generated_Image_uxr15guxr15guxr1.png",
-            title: "Phong Cách Sống Mới",
-            subtitle: "Xe đạp gấp tiện lợi cho phố thị hiện đại"
+            src: "/images/vinbike.png",
+            title: "Phong Cách thiên nhiên",
+            subtitle: "VINBIKE – Vững bước hành trình Việt."
         }
     ];
 
