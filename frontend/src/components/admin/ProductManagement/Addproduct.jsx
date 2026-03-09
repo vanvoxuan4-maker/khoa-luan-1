@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { useNotification } from '../../../context/NotificationContext';
 
@@ -23,25 +23,20 @@ const CinemaSelect = ({ label, options, value, onChange, placeholder, icon }) =>
 
   return (
     <div className="relative" ref={containerRef}>
-      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 block px-1">{label}</label>
+      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block px-1">{label}</label>
       <div
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full px-6 py-3 bg-[#0f172a] border ${isOpen ? 'border-purple-500 shadow-lg shadow-purple-500/20' : 'border-slate-600'} rounded-full font-black text-white cursor-pointer transition-all flex items-center justify-between group active:scale-[0.98]`}
+        className={`w-full h-11 px-4 bg-[#0b1120] border ${isOpen ? 'border-orange-500 shadow-lg shadow-orange-500/20' : 'border-slate-800'} rounded-lg font-bold text-white cursor-pointer transition-all flex items-center justify-between group active:scale-[0.98] text-sm`}
       >
-        <span className="uppercase tracking-widest truncate">
+        <span className="truncate uppercase tracking-wider">
           {selectedOption ? selectedOption.label : placeholder}
         </span>
-        <span className={`transition-transform duration-300 ${isOpen ? 'rotate-180 text-purple-400' : 'text-slate-500'}`}>▼</span>
+        <span className={`transition-transform duration-300 ${isOpen ? 'rotate-180 text-orange-500' : 'text-slate-500'}`}>▼</span>
       </div>
 
       {isOpen && (
-        <div className="absolute top-[calc(100%+8px)] left-0 w-full bg-[#0f172a] border border-slate-600 rounded-2xl shadow-4xl z-[100] overflow-hidden animate-fade-in-down origin-top custom-scrollbar-dark max-h-[250px] overflow-y-auto">
+        <div className="absolute top-[calc(100%+8px)] left-0 w-full bg-[#111827] border border-slate-800 rounded-xl shadow-2xl z-[100] overflow-hidden animate-fade-in-down origin-top custom-scrollbar-dark max-h-[250px] overflow-y-auto">
           <div className="py-2">
-            <div
-              className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 bg-white/5"
-            >
-              Chọn {label.toLowerCase()}
-            </div>
             {options.map((opt) => (
               <div
                 key={opt.value}
@@ -49,14 +44,14 @@ const CinemaSelect = ({ label, options, value, onChange, placeholder, icon }) =>
                   onChange(opt.value);
                   setIsOpen(false);
                 }}
-                className={`px-6 py-3 text-sm font-black uppercase tracking-widest cursor-pointer transition-all border-b border-white/[0.02] last:border-none
-                  ${value === opt.value ? 'bg-white/10 text-purple-400 border-l-4 border-l-purple-500' : 'text-slate-300 hover:bg-white/5 hover:text-white hover:pl-8'}`}
+                className={`px-4 py-2.5 text-xs font-bold uppercase tracking-widest cursor-pointer transition-all border-b border-white/[0.02] last:border-none
+                  ${value === opt.value ? 'bg-orange-500/10 text-orange-500 border-l-2 border-l-orange-500' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
               >
                 {opt.label}
               </div>
             ))}
             {options.length === 0 && (
-              <div className="px-6 py-8 text-center text-xs font-bold text-slate-600 uppercase tracking-widest italic opacity-50">
+              <div className="px-4 py-8 text-center text-[10px] font-bold text-slate-600 uppercase tracking-widest italic opacity-50">
                 Không có dữ liệu
               </div>
             )}
@@ -360,327 +355,356 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
   };
 
 
+  const finalPrice = useMemo(() => {
+    const p = typeof formData.gia === 'string' ? parseFloat(formData.gia.replace(/\./g, '').replace(/,/g, '')) : formData.gia;
+    const d = parseFloat(formData.gia_tri_giam) || 0;
+    return p - (p * d / 100);
+  }, [formData.gia, formData.gia_tri_giam]);
+
   return (
-    <div className="bg-[#0f172a] rounded-[2.5rem] shadow-4xl border border-slate-700 overflow-hidden transition-all animate-fade-in-down relative group">
-      {/* HEADER SECTION */}
-      <div className="bg-white/[0.02] px-8 py-5 border-b border-white/5 flex justify-between items-center relative z-10">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-[#1e293b] border border-slate-700 rounded-2xl flex items-center justify-center text-2xl shadow-inner">
-            {isEditMode ? '📝' : '🚲'}
-          </div>
-          <div>
-            <h2 className={`text-xl font-black tracking-tightest uppercase ${galaxyTextClass}`}>
-              {isEditMode ? 'Cập nhật sản phẩm' : 'Thêm sản phẩm mới'}
-            </h2>
-            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-0.5 ml-0.5">
-              {isEditMode ? `Mã: ${editProduct.sanpham_code}` : 'ADMIN CONTROL CENTER'}
-            </p>
-          </div>
+    <div className="min-h-screen bg-[#0b1120] text-slate-200 font-sans pb-24 relative">
+      {/* HEADER */}
+      <div className="max-w-[1400px] mx-auto px-6 py-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+            <span className="text-orange-500">🚲</span>
+            {isEditMode ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}
+          </h1>
+          <p className="text-slate-400 text-sm mt-1">
+            {isEditMode ? `Đang chỉnh sửa mã: ${editProduct.sanpham_code}` : 'Quản lý kho hàng và thông tin xe đạp của bạn'}
+          </p>
         </div>
         <button
           type="button"
           onClick={onCancel}
-          className="w-12 h-12 rounded-2xl bg-[#334155] hover:bg-red-500/20 text-white hover:text-red-500 transition-all flex items-center justify-center border border-slate-600"
+          className="p-2 hover:bg-white/5 rounded-lg transition-colors text-slate-400 hover:text-white"
         >
-          <span className="text-xl">✕</span>
+          <span className="text-2xl">✕</span>
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-8 space-y-8 relative z-10">
-        {/* 📋 1. PRODUCT INFO */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          <div className="lg:col-span-2 space-y-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="md:col-span-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 block px-1">Tên Sản Phẩm <span className="text-red-500">*</span></label>
-                <input
-                  className="w-full px-6 py-3.5 bg-[#1e293b] border border-slate-600 rounded-2xl font-black text-white text-base outline-none focus:border-purple-500 transition-all placeholder:text-slate-600"
-                  value={formData.ten_sanpham}
-                  onChange={(e) => setFormData({ ...formData, ten_sanpham: e.target.value })}
-                  required
-                  placeholder="Nhập tên..."
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 block px-1">Mã Xe <span className="text-red-500">*</span></label>
-                <div className="relative group/code-input">
-                  <input
-                    className="w-full px-6 py-3.5 bg-[#1e293b] border border-slate-600 rounded-2xl font-black text-white text-base outline-none transition-all placeholder:text-slate-600 pr-14"
-                    value={formData.sanpham_code}
-                    onChange={(e) => setFormData({ ...formData, sanpham_code: (e.target.value || '').toUpperCase() })}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={fetchGeneratedCode}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-slate-700 hover:bg-blue-600 text-white rounded-xl flex items-center justify-center transition-all shadow-lg border border-slate-600 hover:border-blue-400"
-                    title="Tạo mã ngẫu nhiên mới"
-                  >
-                    <span className="text-lg">🔄</span>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 block px-1">Số Lượng Kho <span className="text-red-500">*</span></label>
-                <input
-                  type="number"
-                  className="w-full px-6 py-4 bg-[#1e293b] border border-slate-600 rounded-2xl font-black text-white text-lg outline-none focus:border-green-500 transition-all font-mono"
-                  value={formData.ton_kho}
-                  onChange={(e) => setFormData({ ...formData, ton_kho: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 block px-1">Size Bánh (Inch)</label>
-                <input
-                  type="number"
-                  className="w-full px-6 py-4 bg-[#1e293b] border border-slate-600 rounded-2xl font-black text-white text-lg outline-none focus:border-blue-500 transition-all font-mono"
-                  value={formData.size_banh_xe}
-                  onChange={(e) => setFormData({ ...formData, size_banh_xe: e.target.value })}
-                  placeholder="Ví dụ: 24, 26, 29..."
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 block px-1">Loại Khung</label>
-                <input
-                  className="w-full px-6 py-4 bg-[#1e293b] border border-slate-600 rounded-2xl font-black text-white text-lg outline-none focus:border-blue-500 transition-all uppercase placeholder:text-slate-700"
-                  value={formData.size_khung}
-                  onChange={(e) => setFormData({ ...formData, size_khung: e.target.value })}
-                  placeholder="Ví dụ: XS, S, M, L..."
-                />
-              </div>
-
-              <CinemaSelect
-                label="Thương Hiệu"
-                placeholder="Chọn thương hiệu"
-                options={brands.map(b => ({ value: b.ma_thuonghieu, label: b.ten_thuonghieu }))}
-                value={formData.ma_thuonghieu}
-                onChange={(val) => setFormData({ ...formData, ma_thuonghieu: val })}
-              />
-
-              <CinemaSelect
-                label="Danh Mục"
-                placeholder="Chọn danh mục"
-                options={categories.map(c => ({ value: c.ma_danhmuc, label: c.ten_danhmuc }))}
-                value={formData.ma_danhmuc}
-                onChange={(val) => setFormData({ ...formData, ma_danhmuc: val })}
-              />
-
-              <div className="md:col-span-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 block px-1">
-                  Bảng Màu (Cách nhau bằng dấu phẩy) <span className="text-indigo-400/50 italic text-[10px] ml-2">VÍ DỤ: ĐỎ, XANH DƯƠNG, ĐEN NHÁM</span>
-                </label>
-                <div className="relative group/color">
-                  <div className="absolute left-6 top-1/2 -translate-y-1/2 text-xl group-focus-within/color:scale-125 transition-transform duration-300">🎨</div>
-                  <input
-                    className="w-full pl-16 pr-6 py-4 bg-[#1e293b] border border-slate-600 rounded-2xl font-black text-white text-base outline-none focus:border-indigo-500 transition-all placeholder:text-slate-700 uppercase tracking-widest"
-                    value={formData.mau}
-                    onChange={(e) => setFormData({ ...formData, mau: e.target.value })}
-                    placeholder="NHẬP CÁC MÀU CỦA SẢN PHẨM..."
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="p-8 bg-[#1e293b]/50 border border-slate-700/50 rounded-[2.5rem] shadow-2xl relative overflow-hidden group/specs">
-              <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/5">
-                <div className="flex items-center gap-4">
-                  <span className="text-2xl text-purple-400">🛠️</span>
-                  <span className={`text-[12px] uppercase font-black uppercase tracking-widest ${galaxyTextClass}`}>Thông số kỹ thuật</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSpecs([...specs, { ten: '', gia_tri: '' }])}
-                  className="px-5 py-2 bg-purple-500/10 hover:bg-purple-500 text-purple-400 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-purple-500/30"
-                >
-                  + Thêm dòng
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar-dark">
-                {specs.map((spec, index) => (
-                  <div key={index} className="flex gap-4 p-4 bg-black/20 rounded-2xl border border-white/[0.02] hover:border-white/10 transition-all group/spec">
-                    <div className="w-10 h-10 shrink-0 bg-white/5 rounded-xl flex items-center justify-center font-black text-slate-600 text-[10px] group-hover/spec:text-purple-400 transition-colors shadow-inner">#{(index + 1).toString().padStart(2, '0')}</div>
-                    <div className="flex-1 space-y-1">
-                      <input className="w-full bg-transparent border-none text-[10px] font-black text-indigo-400 uppercase tracking-widest p-0 focus:ring-0 placeholder:text-slate-800" placeholder="TÊN THÔNG SỐ" value={spec.ten} onChange={(e) => { const n = [...specs]; n[index].ten = e.target.value.toUpperCase(); setSpecs(n); }} />
-                      <input className="w-full bg-transparent border-none text-sm font-bold text-slate-300 p-0 focus:ring-0 placeholder:text-slate-700" placeholder="GIÁ TRỊ CHI TIẾT" value={spec.gia_tri} onChange={(e) => { const n = [...specs]; n[index].gia_tri = e.target.value; setSpecs(n); }} />
-                    </div>
-                    <button type="button" onClick={() => setSpecs(specs.filter((_, i) => i !== index))} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-700 hover:text-red-500 opacity-0 group-hover/spec:opacity-100 transition-all">✕</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-10">
-            <div className="p-8 bg-gradient-to-br from-indigo-900 to-indigo-950 rounded-[2.5rem] border border-indigo-500/20 shadow-2xl">
+      <form onSubmit={handleSubmit} className="max-w-[1400px] mx-auto px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-10 gap-8">
+          {/* LEFT COLUMN (70%) */}
+          <div className="lg:col-span-7 space-y-8">
+            {/* Basic Info Card */}
+            <div className="bg-[#111827] border border-slate-800 rounded-xl p-6 shadow-xl shadow-black/20">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-orange-500 mb-6 flex items-center gap-2">
+                📦 Thông tin cơ bản
+              </h2>
               <div className="space-y-6">
                 <div>
-                  <label className="text-xs font-bold text-indigo-300 uppercase tracking-widest mb-3 block">Giá Niêm Yết (VND)</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      className="w-full bg-black/40 border border-indigo-500/30 p-5 rounded-2xl text-3xl font-black outline-none focus:bg-black/60 transition-all placeholder:text-indigo-900 shadow-inner text-blue-400"
-                      value={formData.gia}
-                      onChange={(e) => setFormData({ ...formData, gia: e.target.value })}
-                      required
-                      placeholder="0"
-                    />
-                    <span className="absolute right-6 top-1/2 -translate-y-1/2 text-blue-400/20 font-black">VND</span>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-red-300 uppercase tracking-widest mb-3 block">Khuyến Mãi (%)</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      className="w-full bg-white/10 border border-white/10 p-5 rounded-2xl text-3xl font-black outline-none focus:bg-white/20 transition-all text-red-400"
-                      value={formData.gia_tri_giam}
-                      onChange={(e) => setFormData({ ...formData, gia_tri_giam: e.target.value })}
-                    />
-                    <span className="absolute right-6 top-1/2 -translate-y-1/2 text-red-400/20 font-black">% OFF</span>
-                  </div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Tên Sản Phẩm <span className="text-orange-500">*</span></label>
+                  <input
+                    className="w-full h-11 px-4 bg-[#0b1120] border border-slate-800 rounded-lg text-white outline-none focus:border-orange-500 transition-all placeholder:text-slate-600"
+                    value={formData.ten_sanpham}
+                    onChange={(e) => setFormData({ ...formData, ten_sanpham: e.target.value })}
+                    required
+                    placeholder="Ví dụ: Trek Domane SL 6..."
+                  />
                 </div>
 
-                <div className="pt-6 border-t border-white/10 mt-2">
-                  <div className="flex items-center justify-between bg-black/20 p-4 rounded-2xl border border-white/5 group/toggle">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover/toggle:text-indigo-400 transition-colors">Trạng thái bán</span>
-                      <span className={`text-[9px] font-bold uppercase mt-1 ${formData.is_active ? 'text-emerald-400' : 'text-slate-500'}`}>
-                        {formData.is_active ? '● Đang hiển thị' : '○ Đang ẩn'}
-                      </span>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="md:col-span-1">
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Mã Sản Phẩm <span className="text-orange-500">*</span></label>
+                    <div className="relative">
                       <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        checked={formData.is_active}
-                        onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                        className="w-full h-11 px-4 bg-[#0b1120] border border-slate-800 rounded-lg text-white outline-none focus:border-orange-500 transition-all uppercase"
+                        value={formData.sanpham_code}
+                        onChange={(e) => setFormData({ ...formData, sanpham_code: (e.target.value || '').toUpperCase() })}
+                        required
                       />
-                      <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-emerald-500 peer-checked:to-teal-500 shadow-inner"></div>
-                    </label>
+                      <button
+                        type="button"
+                        onClick={fetchGeneratedCode}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-500 hover:text-orange-500 transition-colors"
+                        title="Tạo mã ngẫu nhiên"
+                      >
+                        🔄
+                      </button>
+                    </div>
+                  </div>
+                  <div className="md:col-span-1">
+                    <CinemaSelect
+                      label="Danh Mục"
+                      placeholder="Chọn danh mục"
+                      options={categories.map(c => ({ value: c.ma_danhmuc, label: c.ten_danhmuc }))}
+                      value={formData.ma_danhmuc}
+                      onChange={(val) => setFormData({ ...formData, ma_danhmuc: val })}
+                    />
+                  </div>
+                  <div className="md:col-span-1">
+                    <CinemaSelect
+                      label="Thương Hiệu"
+                      placeholder="Chọn thương hiệu"
+                      options={brands.map(b => ({ value: b.ma_thuonghieu, label: b.ten_thuonghieu }))}
+                      value={formData.ma_thuonghieu}
+                      onChange={(val) => setFormData({ ...formData, ma_thuonghieu: val })}
+                    />
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="p-8 bg-[#1e293b] border border-slate-700/50 rounded-[2.5rem] text-white flex flex-col h-[400px] shadow-2xl">
-              <div className="flex items-center gap-4 mb-6">
-                <span className="text-2xl text-blue-400">🖋️</span>
-                <span className={`text-[12px] uppercase tracking-widest font-black ${galaxyTextClass}`}>Mô tả tuyệt phẩm</span>
+            {/* Bicycle Attributes Card */}
+            <div className="bg-[#111827] border border-slate-800 rounded-xl p-6 shadow-xl shadow-black/20">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-orange-500 mb-6 flex items-center gap-2">
+                🚲 Đặc tính kỹ thuật
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Size Bánh (Inch)</label>
+                  <input
+                    type="number"
+                    className="w-full h-11 px-4 bg-[#0b1120] border border-slate-800 rounded-lg text-white outline-none focus:border-orange-500 transition-all"
+                    value={formData.size_banh_xe}
+                    onChange={(e) => setFormData({ ...formData, size_banh_xe: e.target.value })}
+                    placeholder="24, 26, 29..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Loại Khung</label>
+                  <input
+                    className="w-full h-11 px-4 bg-[#0b1120] border border-slate-800 rounded-lg text-white outline-none focus:border-orange-500 transition-all uppercase"
+                    value={formData.size_khung}
+                    onChange={(e) => setFormData({ ...formData, size_khung: e.target.value })}
+                    placeholder="XS, S, M, L..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Bảng Màu</label>
+                  <input
+                    className="w-full h-11 px-4 bg-[#0b1120] border border-slate-800 rounded-lg text-white outline-none focus:border-orange-500 transition-all uppercase"
+                    value={formData.mau}
+                    onChange={(e) => setFormData({ ...formData, mau: e.target.value })}
+                    placeholder="Đỏ, Đen, Xanh..."
+                  />
+                </div>
               </div>
+
+              {/* Specs Grid */}
+              <div className="mt-8 pt-8 border-t border-slate-800 px-1">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-500">Thông số lắp ráp</h3>
+                  <button
+                    type="button"
+                    onClick={() => setSpecs([...specs, { ten: '', gia_tri: '' }])}
+                    className="text-[10px] font-black uppercase tracking-widest text-orange-500 hover:text-orange-400 transition-colors"
+                  >
+                    + Thêm thông số
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                  {specs.map((spec, index) => (
+                    <div key={index} className="flex flex-col gap-1 group/spec">
+                      <div className="flex items-center justify-between">
+                        <input
+                          className="w-full bg-transparent border-none text-[10px] font-black text-slate-500 uppercase tracking-widest p-0 focus:ring-0 placeholder:text-slate-700"
+                          placeholder="TÊN THÔNG SỐ"
+                          value={spec.ten}
+                          onChange={(e) => {
+                            const n = [...specs];
+                            n[index].ten = e.target.value.toUpperCase();
+                            setSpecs(n);
+                          }}
+                        />
+                        <button type="button" onClick={() => setSpecs(specs.filter((_, i) => i !== index))} className="text-slate-700 hover:text-red-500 opacity-0 group-hover/spec:opacity-100 transition-all text-xs">✕</button>
+                      </div>
+                      <input
+                        className="w-full bg-transparent border-b border-slate-800 py-1 text-sm font-medium text-slate-300 focus:border-orange-500/50 outline-none transition-all placeholder:text-slate-800"
+                        placeholder="Giá trị chi tiết..."
+                        value={spec.gia_tri}
+                        onChange={(e) => {
+                          const n = [...specs];
+                          n[index].gia_tri = e.target.value;
+                          setSpecs(n);
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Description Card */}
+            <div className="bg-[#111827] border border-slate-800 rounded-xl p-6 shadow-xl shadow-black/20">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-orange-500 mb-6 flex items-center gap-2">
+                🖋️ Mô tả sản phẩm
+              </h2>
               <textarea
-                className="flex-1 bg-transparent border-none resize-none text-slate-400 text-sm font-medium leading-relaxed outline-none custom-scrollbar-dark placeholder:text-slate-700"
-                placeholder="Viết mô tả xe... (Dùng **chữ** để in đậm)"
+                className="w-full min-h-[160px] bg-[#0b1120] border border-slate-800 rounded-lg p-4 text-slate-300 text-sm leading-relaxed outline-none focus:border-orange-500 transition-all placeholder:text-slate-700"
+                placeholder="Mô tả các đặc điểm nổi bật và trải nghiệm lái xe..."
                 value={formData.mo_ta}
                 onChange={(e) => setFormData({ ...formData, mo_ta: e.target.value })}
               />
-              <div className="mt-4 pt-4 border-t border-white/5 opacity-10">
-                <p className="text-[8px] font-black uppercase tracking-widest text-center italic">Professional Admin Editorial Content</p>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN (30%) */}
+          <div className="lg:col-span-3 space-y-8">
+            {/* Pricing Card */}
+            <div className="bg-[#111827] border border-slate-800 rounded-xl p-6 shadow-xl shadow-black/20">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-orange-500 mb-6 flex items-center gap-2">
+                💰 Giá bán
+              </h2>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Giá Niêm Yết (VND)</label>
+                  <input
+                    type="text"
+                    className="w-full h-11 px-4 bg-[#0b1120] border border-slate-800 rounded-lg text-white font-bold outline-none focus:border-orange-500 transition-all text-lg"
+                    value={formData.gia}
+                    onChange={(e) => setFormData({ ...formData, gia: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Giảm Giá (%)</label>
+                  <input
+                    type="number"
+                    className="w-full h-11 px-4 bg-[#0b1120] border border-slate-800 rounded-lg text-white font-bold outline-none focus:border-orange-500 transition-all"
+                    value={formData.gia_tri_giam}
+                    onChange={(e) => setFormData({ ...formData, gia_tri_giam: e.target.value })}
+                  />
+                </div>
+                <div className="pt-4 border-t border-slate-800">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Giá cuối cùng</span>
+                    <span className="text-[10px] px-2 py-0.5 bg-orange-500/10 text-orange-500 rounded font-bold">SALE</span>
+                  </div>
+                  <div className="text-2xl font-black text-orange-500">
+                    {finalPrice.toLocaleString('vi-VN')} <span className="text-sm font-bold">VND</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Status & Inventory Card */}
+            <div className="bg-[#111827] border border-slate-800 rounded-xl p-6 shadow-xl shadow-black/20">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-orange-500 mb-6 flex items-center gap-2">
+                ⚙️ Trạng thái & Kho
+              </h2>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Số Lượng Tồn Kho</label>
+                  <input
+                    type="number"
+                    className="w-full h-11 px-4 bg-[#0b1120] border border-slate-800 rounded-lg text-white font-bold outline-none focus:border-orange-500 transition-all"
+                    value={formData.ton_kho}
+                    onChange={(e) => setFormData({ ...formData, ton_kho: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="pt-4 flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Hiển thị sản phẩm</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={formData.is_active}
+                      onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                    />
+                    <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500 shadow-inner"></div>
+                  </label>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* 📸 2. IMAGE UPLOAD SECTION */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-10 pt-12 border-t border-white/5">
-          <div className="lg:col-span-1">
-            <label htmlFor="imageInput" className="cursor-pointer bg-[#1e293b] border border-slate-600 rounded-3xl p-6 flex flex-col items-center justify-center gap-3 hover:border-purple-500/50 transition-all group h-48 shadow-2xl">
-              <div className="w-14 h-14 bg-[#0f172a] border border-slate-700 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform shadow-3xl">📸</div>
-              <div className="text-center">
-                <span className={`text-[10px] uppercase tracking-tighter block mb-1 ${galaxyTextClass}`}>Thêm ảnh mới</span>
-                <span className="text-[8px] text-slate-600 font-bold uppercase tracking-widest opacity-60">JPG, PNG, WEBP</span>
-              </div>
-            </label>
-            <input id="imageInput" type="file" className="hidden" onChange={handleImageChange} accept="image/*" multiple />
-          </div>
+        {/* BOTTOM SECTION: IMAGE UPLOAD */}
+        <div className="mt-8 mb-12 bg-[#111827] border border-slate-800 rounded-xl p-8 shadow-xl shadow-black/20">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-orange-500 mb-8 flex items-center gap-2">
+            📸 Hình ảnh sản phẩm
+          </h2>
 
-          <div className="lg:col-span-3">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 block ml-1">
-              Thư viện ảnh ({imagePreviews.length}/10)
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
-              {imagePreviews.map((preview, index) => (
-                <div key={index} className="relative aspect-square rounded-2.5xl border border-slate-700 bg-slate-900/50 overflow-hidden group/img shadow-2xl flex flex-col">
-                  <img src={preview.url} alt="Xe" className="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-110" />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="md:col-span-1">
+              <label htmlFor="imageInput" className="cursor-pointer h-full min-h-[160px] border-2 border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center gap-3 hover:border-orange-500/50 hover:bg-orange-500/5 transition-all group">
+                <div className="text-3xl grayscale group-hover:grayscale-0 transition-all">🖼️</div>
+                <div className="text-center">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-orange-500">Tải ảnh lên</span>
+                  <p className="text-[8px] text-slate-600 font-bold uppercase mt-1">PNG, JPG, WEBP</p>
+                </div>
+              </label>
+              <input id="imageInput" type="file" className="hidden" onChange={handleImageChange} accept="image/*" multiple />
+            </div>
 
-                  {/* Overlay Controls - ONLY SHOW ON HOVER */}
-                  <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover/img:opacity-100 transition-all flex flex-col items-center justify-center gap-2 backdrop-blur-[2px] z-20">
-                    <button type="button" onClick={() => handleRemoveImage(index)} className="w-8 h-8 bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white rounded-xl flex items-center justify-center transition-all border border-red-500/30" title="Xóa ảnh">
-                      <span className="text-sm">🗑️</span>
-                    </button>
-                    {!preview.isMain && (
-                      <button type="button" onClick={() => handleSetMainImage(index)} className="w-8 h-8 bg-blue-500/20 hover:bg-blue-500 text-blue-400 hover:text-white rounded-xl flex items-center justify-center transition-all border border-blue-500/30" title="Đặt làm ảnh chính">
-                        <span className="text-sm">⭐</span>
-                      </button>
-                    )}
+            <div className="md:col-span-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {imagePreviews.map((preview, index) => (
+                  <div key={index} className={`relative aspect-square rounded-xl overflow-hidden border ${preview.isMain ? 'border-orange-500 shadow-lg shadow-orange-500/20' : 'border-slate-800'} bg-[#0b1120] group/img`}>
+                    <img src={preview.url} alt="Xe" className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110" />
 
-                    {/* 👇 CHỌN MÀU CHO ẢNH (MỚI) */}
-                    <select
-                      className="w-24 bg-slate-800 text-[10px] font-black text-white border border-slate-600 rounded-lg px-1 py-1 outline-none focus:border-purple-500 uppercase tracking-tighter cursor-pointer"
-                      value={preview.mau || ''}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => {
-                        const newPreviews = [...imagePreviews];
-                        newPreviews[index].mau = e.target.value;
-                        setImagePreviews(newPreviews);
-                      }}
-                    >
-                      <option value="">-- MÀU --</option>
-                      {formData.mau.split(',').map(c => c.trim()).filter(c => c).map(color => (
-                        <option key={color} value={color}>{color.toUpperCase()}</option>
-                      ))}
-                    </select>
+                    {/* Hover Actions */}
+                    <div className="absolute inset-0 bg-slate-900/80 opacity-0 group-hover/img:opacity-100 transition-all flex flex-col items-center justify-center gap-2 z-20 backdrop-blur-sm">
+                      <button type="button" onClick={() => handleRemoveImage(index)} className="w-8 h-8 rounded-lg bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all text-xs">🗑️</button>
+                      {!preview.isMain && (
+                        <button type="button" onClick={() => handleSetMainImage(index)} className="w-8 h-8 rounded-lg bg-orange-500/20 text-orange-500 hover:bg-orange-500 hover:text-white transition-all text-xs">⭐</button>
+                      )}
 
-                    <span className="text-[7px] font-black uppercase tracking-widest text-white/60">Quản lý ảnh</span>
-                  </div>
-
-                  {/* Badges */}
-                  <div className="absolute top-2 left-2 flex flex-col gap-1">
-                    <div className="px-2 py-0.5 bg-black/60 backdrop-blur-md rounded-lg text-[8px] font-black text-white border border-white/10 w-fit">#{index + 1}</div>
-                    {/* Hiển thị label màu nếu đã chọn */}
-                    {preview.mau && (
-                      <div className="px-2 py-0.5 bg-purple-600/80 backdrop-blur-md rounded-lg text-[7px] font-black text-white border border-purple-400/50 w-fit uppercase">
-                        {preview.mau}
-                      </div>
-                    )}
-                  </div>
-                  {preview.isMain && (
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg text-[7px] font-black uppercase tracking-widest shadow-xl flex items-center gap-1 border border-amber-400/50">
-                      <span>⭐</span> Đại diện
+                      <select
+                        className="w-20 bg-slate-800 text-[8px] font-black text-white border border-slate-700 rounded px-1 py-1 outline-none uppercase"
+                        value={preview.mau || ''}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          const newPreviews = [...imagePreviews];
+                          newPreviews[index].mau = e.target.value;
+                          setImagePreviews(newPreviews);
+                        }}
+                      >
+                        <option value="">MÀU</option>
+                        {formData.mau.split(',').map(c => c.trim()).filter(c => c).map(color => (
+                          <option key={color} value={color}>{color.toUpperCase()}</option>
+                        ))}
+                      </select>
                     </div>
-                  )}
-                </div>
-              ))}
-              {imagePreviews.length === 0 && (
-                <div className="col-span-full h-32 border-2 border-dashed border-slate-800 rounded-3xl flex flex-col items-center justify-center text-slate-700 gap-2">
-                  <span className="text-3xl opacity-10">🖼️</span>
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em] opacity-30 italic">Chưa có ảnh nào được tải lên</span>
-                </div>
-              )}
+
+                    {/* Badges */}
+                    <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+                      {preview.isMain && (
+                        <span className="px-2 py-0.5 bg-orange-500 text-white text-[7px] font-black uppercase rounded shadow-lg">CHÍNH</span>
+                      )}
+                      {preview.mau && (
+                        <span className="px-2 py-0.5 bg-slate-900 border border-slate-700 text-white text-[7px] font-black uppercase rounded shadow-lg">{preview.mau}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {imagePreviews.length === 0 && (
+                  <div className="col-span-full h-40 flex flex-col items-center justify-center text-slate-600 opacity-20 italic">
+                    <span className="text-4xl">🚲</span>
+                    <p className="text-[10px] font-black uppercase tracking-widest mt-2">Chưa có ảnh xe đạp</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* 🚀 ACTION BUTTONS */}
-        <div className="flex gap-4 pt-4 border-t border-white/5">
-          <button type="submit" className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-purple-500/20 transition-all hover:scale-[1.01] active:scale-95">
-            {isEditMode ? 'Lưu Thay Đổi' : 'Xác Nhận Thêm'}
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-8 bg-[#334155] hover:bg-slate-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all border border-slate-600"
-          >
-            Hủy
-          </button>
+        {/* STICKY BOTTOM ACTION BAR */}
+        <div className="fixed bottom-0 left-0 right-0 bg-[#0b1120]/80 backdrop-blur-xl border-t border-slate-800 py-4 px-6 z-50">
+          <div className="max-w-[1400px] mx-auto flex justify-end items-center gap-4">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mr-auto hidden sm:block">
+              {isEditMode ? 'Đang chỉnh sửa sản phẩm hiện có' : 'Tạo mới sản phẩm xe đạp'}
+            </span>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors"
+            >
+              Hủy bỏ
+            </button>
+            <button
+              type="submit"
+              className="px-8 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-xs font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all active:scale-95"
+            >
+              {isEditMode ? 'Lưu sản phẩm' : 'Đăng sản phẩm'}
+            </button>
+          </div>
         </div>
       </form>
-    </div >
+    </div>
   );
 };
 
