@@ -39,7 +39,7 @@ class Sanpham(Base):
     gia = Column(Float, nullable=False)
     
     kieu_giam_gia = Column(
-        PG_ENUM(KieuGiamGia, name='kieu_giam_gia', create_type=False),
+        PG_ENUM(KieuGiamGia, name='kieu_giam_gia', create_type=True),
         default=KieuGiamGia.percentage
     )
     

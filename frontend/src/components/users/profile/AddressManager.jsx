@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import { useNotification } from '../../../context/NotificationContext';
 
 /* ─── Data ─── */
@@ -252,7 +253,7 @@ const AddressManager = () => {
     const fetchAll = async () => {
         setLoading(true);
         try {
-            const res = await axios.get('http://localhost:8000/addresses/', { headers: hdr });
+            const res = await axios.get(`${API_BASE_URL}/addresses/`, { headers: hdr });
             // Sort chỉ lần đầu load
             setAddresses(res.data.sort((a, b) => b.is_mac_dinh - a.is_mac_dinh));
         } catch { addToast('Không thể tải danh sách địa chỉ', 'error'); }
@@ -275,10 +276,10 @@ const AddressManager = () => {
         e.preventDefault();
         try {
             if (editing) {
-                await axios.put(`http://localhost:8000/addresses/${editing.ma_dia_chi}`, form, { headers: hdr });
+                await axios.put(`${API_BASE_URL}/addresses/${editing.ma_dia_chi}`, form, { headers: hdr });
                 addToast('Cập nhật địa chỉ thành công', 'success');
             } else {
-                await axios.post('http://localhost:8000/addresses/', form, { headers: hdr });
+                await axios.post(`${API_BASE_URL}/addresses/`, form, { headers: hdr });
                 addToast('Thêm địa chỉ mới thành công', 'success');
             }
             setShowModal(false);
@@ -289,7 +290,7 @@ const AddressManager = () => {
     const handleDelete = async (id) => {
         if (!window.confirm('Bạn có chắc chắn muốn xóa địa chỉ này?')) return;
         try {
-            await axios.delete(`http://localhost:8000/addresses/${id}`, { headers: hdr });
+            await axios.delete(`${API_BASE_URL}/addresses/${id}`, { headers: hdr });
             addToast('Đã xóa địa chỉ', 'success');
             // Xóa khỏi state ngay lập tức, không reload
             setAddresses(prev => prev.filter(a => a.ma_dia_chi !== id));
@@ -299,7 +300,7 @@ const AddressManager = () => {
     // ✨ KEY UX: Cập nhật badge IN-PLACE không reorder, không reload trang
     const handleSetDefault = async (id) => {
         try {
-            await axios.patch(`http://localhost:8000/addresses/${id}/default`, {}, { headers: hdr });
+            await axios.patch(`${API_BASE_URL}/addresses/${id}/default`, {}, { headers: hdr });
             addToast('Đã đặt làm địa chỉ mặc định!', 'success');
             // Chỉ cập nhật flag trong state — KHÔNG sort lại, KHÔNG re-fetch
             setAddresses(prev => prev.map(a => ({ ...a, is_mac_dinh: a.ma_dia_chi === id })));

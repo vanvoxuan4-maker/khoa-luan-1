@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 
 const Footer = () => {
   const [email, setEmail] = useState('');
@@ -11,7 +12,7 @@ const Footer = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/admin/categories');
+        const response = await axios.get(`${API_BASE_URL}/danhmuc`);
         setCategories(response.data || []);
       } catch (error) {
         console.error('Error loading categories:', error);
@@ -179,7 +180,7 @@ const Footer = () => {
                 {categories.map(category => (
                   <li key={category.ma_danhmuc}>
                     <Link
-                      to={`/products?category=${category.ma_danhmuc}`}
+                      to={`/products?category_id=${category.ma_danhmuc}`}
                       className="hover:text-blue-400 hover:translate-x-1 transition-all inline-block"
                     >
                       → {category.ten_danhmuc}

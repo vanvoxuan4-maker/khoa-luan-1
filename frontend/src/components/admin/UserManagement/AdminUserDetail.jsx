@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import AdminAddressManager from './AdminAddressManager';
 import { useNotification } from '../../../context/NotificationContext';
 
@@ -39,7 +40,7 @@ const AdminUserDetail = () => {
 
     const fetchUser = async () => {
         try {
-            const res = await axios.get(`http://localhost:8000/admin/users/${id}`, {
+            const res = await axios.get(`${API_BASE_URL}/admin/users/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setUser(res.data);
@@ -84,7 +85,7 @@ const AdminUserDetail = () => {
                 sdt: user.sdt,
                 quyen: user.quyen
             };
-            await axios.put(`http://localhost:8000/admin/users/${id}`, payload, {
+            await axios.put(`${API_BASE_URL}/admin/users/${id}`, payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -141,7 +142,7 @@ const AdminUserDetail = () => {
                                 onChange={async (e) => {
                                     const nextStatus = e.target.value;
                                     try {
-                                        await axios.put(`http://localhost:8000/admin/users/${id}/status?status=${nextStatus}`, null, {
+                                        await axios.put(`${API_BASE_URL}/admin/users/${id}/status?status=${nextStatus}`, null, {
                                             headers: { Authorization: `Bearer ${token}` }
                                         });
                                         setUser({ ...user, status: nextStatus });

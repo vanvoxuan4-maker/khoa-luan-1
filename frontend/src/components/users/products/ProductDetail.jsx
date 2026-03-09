@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import ProductReviews from './ProductReviews';
 import { useNotification } from '../../../context/NotificationContext';
 import { useWishlist } from '../../../context/WishlistContext';
@@ -32,7 +33,7 @@ const ProductDetail = () => {
 
     // Helper: Xử lý đường dẫn ảnh thumbnails
     const getThumbUrl = (url) => {
-        return url.startsWith('http') ? url : `http://localhost:8000${url}`;
+        return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
     };
 
     useEffect(() => {
@@ -41,7 +42,7 @@ const ProductDetail = () => {
 
         const fetchProduct = async () => {
             try {
-                const res = await axios.get(`http://localhost:8000/sanpham/${id}`);
+                const res = await axios.get(`${API_BASE_URL}/sanpham/${id}`);
                 setProduct(res.data);
 
                 // Xử lý màu sắc và phân nhóm ảnh dựa trên THỨ TỰ (Logic yêu cầu)
@@ -89,7 +90,7 @@ const ProductDetail = () => {
             if (!product || !product.ma_danhmuc) return;
 
             try {
-                const res = await axios.get('http://localhost:8000/sanpham', {
+                const res = await axios.get(`${API_BASE_URL}/sanpham`, {
                     params: {
                         category_id: product.ma_danhmuc,
                         limit: 6
@@ -124,7 +125,7 @@ const ProductDetail = () => {
             if (product.hinhanh && product.hinhanh.length > 0) {
                 const mainImg = product.hinhanh.find(img => img.is_main);
                 defaultImg = mainImg ? mainImg.image_url : product.hinhanh[0].image_url;
-                if (defaultImg && !defaultImg.startsWith('http')) defaultImg = `http://localhost:8000${defaultImg}`;
+                if (defaultImg && !defaultImg.startsWith('http')) defaultImg = `${API_BASE_URL}${defaultImg}`;
             }
             setSelectedImage(defaultImg || "https://via.placeholder.com/500?text=No+Image");
         }
@@ -678,7 +679,7 @@ const ProductDetail = () => {
                                         if (prod.hinhanh && prod.hinhanh.length > 0) {
                                             const mainImg = prod.hinhanh.find(img => img.is_main);
                                             const imgPath = mainImg ? mainImg.image_url : prod.hinhanh[0].image_url;
-                                            return imgPath.startsWith('http') ? imgPath : `http://localhost:8000${imgPath}`;
+                                            return imgPath.startsWith('http') ? imgPath : `${API_BASE_URL}${imgPath}`;
                                         }
                                         return prod.image_url || 'https://via.placeholder.com/400x300?text=Bike+Store';
                                     };

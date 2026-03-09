@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import { useNavigate } from 'react-router-dom';
 
 const PaymentManager = () => {
@@ -14,7 +15,7 @@ const PaymentManager = () => {
     setRefreshing(true);
     try {
       const token = localStorage.getItem('admin_access_token');
-      const res = await axios.get('http://localhost:8000/payment/all', {
+      const res = await axios.get(`${API_BASE_URL}/payment/all`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPayments(res.data);

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import axios from 'axios';
+import API_BASE_URL from '../utils/apiConfig';
 import { useState, useEffect } from 'react';
 import AdminChat from '../components/admin/System/AdminChat';
 import '../components/admin/System/App.css';
@@ -27,7 +28,7 @@ const AdminLayout = ({ children }) => {
     try {
       const token = localStorage.getItem('admin_access_token');
       if (token) {
-        await axios.post('http://localhost:8000/logout', {}, {
+        await axios.post(`${API_BASE_URL}/logout`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }

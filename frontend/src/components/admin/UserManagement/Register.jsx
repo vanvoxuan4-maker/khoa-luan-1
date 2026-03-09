@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import AnimatedLogo from '../../common/AnimatedLogo';
 
 const sanitizeUsername = (val) => {
@@ -94,7 +95,7 @@ const Register = ({ onBackToLogin }) => {
     setIsLoading(true);
     try {
       const { confirmPassword, ...dataToSend } = formData;
-      await axios.post('http://localhost:8000/register', dataToSend);
+      await axios.post(`${API_BASE_URL}/register`, dataToSend);
 
       setNotification({
         type: 'success',

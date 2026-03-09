@@ -24,11 +24,13 @@ def upgrade() -> None:
     op.alter_column('chitietdonhang', 'gia_mua',
                existing_type=sa.NUMERIC(precision=10, scale=2),
                type_=sa.Float(),
-               existing_nullable=False)
+               existing_nullable=False,
+               postgresql_using='gia_mua::float')
     op.alter_column('chitietdonhang', 'thanh_tien',
                existing_type=sa.NUMERIC(precision=10, scale=2),
                type_=sa.Float(),
-               nullable=True)
+               nullable=True,
+               postgresql_using='thanh_tien::float')
     op.alter_column('chitietdonhang', 'ten_sanpham',
                existing_type=sa.VARCHAR(length=150),
                type_=sa.String(length=255),
@@ -45,7 +47,8 @@ def upgrade() -> None:
     op.alter_column('chitietgiohang', 'gia_hien_tai',
                existing_type=sa.NUMERIC(precision=10, scale=2),
                type_=sa.Float(),
-               existing_nullable=False)
+               existing_nullable=False,
+               postgresql_using='gia_hien_tai::float')
     op.create_index(op.f('ix_chitietgiohang_ma_ctgh'), 'chitietgiohang', ['ma_ctgh'], unique=False)
     op.drop_index(op.f('idx_danhgia_sanpham'), table_name='danhgia')
     op.drop_index(op.f('idx_danhgia_trangthai'), table_name='danhgia')
@@ -59,7 +62,8 @@ def upgrade() -> None:
     op.alter_column('donhang', 'tong_tien',
                existing_type=sa.NUMERIC(precision=10, scale=2),
                type_=sa.Float(),
-               existing_nullable=False)
+               existing_nullable=False,
+               postgresql_using='tong_tien::float')
     op.drop_index(op.f('idx_donhang_ma_khuyenmai'), table_name='donhang')
     op.drop_index(op.f('idx_donhang_ngay'), table_name='donhang')
     op.drop_index(op.f('idx_donhang_trangthai'), table_name='donhang')
@@ -84,17 +88,20 @@ def upgrade() -> None:
     op.alter_column('sanpham', 'gia',
                existing_type=sa.NUMERIC(precision=10, scale=2),
                type_=sa.Float(),
-               existing_nullable=False)
+               existing_nullable=False,
+               postgresql_using='gia::float')
     op.alter_column('sanpham', 'gia_tri_giam',
                existing_type=sa.NUMERIC(precision=10, scale=2),
                type_=sa.Float(),
                existing_nullable=True,
-               existing_server_default=sa.text('0'))
+               existing_server_default=sa.text('0'),
+               postgresql_using='gia_tri_giam::float')
     op.alter_column('sanpham', 'diem_danh_gia',
                existing_type=sa.NUMERIC(precision=3, scale=2),
                type_=sa.Float(),
                existing_nullable=True,
-               existing_server_default=sa.text('0'))
+               existing_server_default=sa.text('0'),
+               postgresql_using='diem_danh_gia::float')
     op.alter_column('sanpham', 'ngay_lap',
                existing_type=postgresql.TIMESTAMP(),
                type_=sa.DateTime(timezone=True),

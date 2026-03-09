@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 
 const AdminChat = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -23,7 +24,7 @@ const AdminChat = () => {
 
   const fetchHistory = async () => {
     try {
-      const res = await axios.get('http://localhost:8000/admin/chat-history', {
+      const res = await axios.get(`${API_BASE_URL}/admin/chat-history`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setMessages(res.data);
@@ -40,7 +41,7 @@ const AdminChat = () => {
     setIsLoading(true);
 
     try {
-      const res = await axios.post('http://localhost:8000/admin/chat',
+      const res = await axios.post(`${API_BASE_URL}/admin/chat`,
         { message: userMsg.message },
         { headers: { Authorization: `Bearer ${token}` } }
       );

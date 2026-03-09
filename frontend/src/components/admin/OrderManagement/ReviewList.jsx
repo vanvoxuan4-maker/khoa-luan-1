@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 
 const ReviewList = () => {
   const [reviews, setReviews] = useState([]);
@@ -12,7 +13,7 @@ const ReviewList = () => {
   const fetchReviews = async () => {
     setRefreshing(true);
     try {
-      const res = await axios.get('http://localhost:8000/admin/reviews', {
+      const res = await axios.get(`${API_BASE_URL}/admin/reviews`, {
         headers: { 'Authorization': `Bearer ${token}` },
         params: {
           status: filterStatus || undefined,
@@ -31,7 +32,7 @@ const ReviewList = () => {
 
   const handleStatusChange = async (id, newStatus) => {
     try {
-      await axios.put(`http://localhost:8000/admin/reviews/${id}/status`,
+      await axios.put(`${API_BASE_URL}/admin/reviews/${id}/status`,
         { status: newStatus },
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
@@ -45,7 +46,7 @@ const ReviewList = () => {
   const handleDelete = async (id) => {
     if (window.confirm("⚠️ Bạn có chắc muốn XÓA vĩnh viễn đánh giá này?")) {
       try {
-        await axios.delete(`http://localhost:8000/admin/reviews/${id}`, {
+        await axios.delete(`${API_BASE_URL}/admin/reviews/${id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         setReviews(prev => prev.filter(r => r.ma_danhgia !== id));

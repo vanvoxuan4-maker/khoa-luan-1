@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import { Link, useSearchParams } from 'react-router-dom';
 import FilterSidebar from './FilterSidebar';
 import Breadcrumb from '../layouts/Breadcrumb';
@@ -116,7 +117,7 @@ const Promotions = () => {
             try {
                 // 1. Fetch Vouchers (tải 1 lần)
                 if (vouchers.length === 0) {
-                    const voucherRes = await axios.get('http://localhost:8000/vouchers/public');
+                    const voucherRes = await axios.get(`${API_BASE_URL}/vouchers/public`);
                     const activeVouchers = voucherRes.data.filter(v => {
                         const expiry = v.ngay_ketthuc ? new Date(v.ngay_ketthuc) : null;
                         if (expiry) expiry.setHours(23, 59, 59, 999);
@@ -128,7 +129,7 @@ const Promotions = () => {
                 }
 
                 // 2. Fetch Flash Sale Products (Slider - top 8)
-                const sliderRes = await axios.get('http://localhost:8000/sanpham', {
+                const sliderRes = await axios.get(`${API_BASE_URL}/sanpham`, {
                     params: { limit: 8, discounted_only: true, sort_by: 'discount_desc' }
                 });
                 setFlashSaleProducts(sliderRes.data);
@@ -147,8 +148,8 @@ const Promotions = () => {
                 );
 
                 const [prodRes, countRes] = await Promise.all([
-                    axios.get('http://localhost:8000/sanpham', { params: cleanParams }),
-                    axios.get('http://localhost:8000/sanpham/count', { params: { discounted_only: true, ...filters } })
+                    axios.get(`${API_BASE_URL}/sanpham`, { params: cleanParams }),
+                    axios.get(`${API_BASE_URL}/sanpham/count`, { params: { discounted_only: true, ...filters } })
                 ]);
 
                 setAllDiscountedProducts(prodRes.data);
@@ -204,7 +205,7 @@ const Promotions = () => {
         if (p.hinhanh && p.hinhanh.length > 0) {
             const mainImg = p.hinhanh.find(img => img.is_main);
             const imgPath = mainImg ? mainImg.image_url : p.hinhanh[0].image_url;
-            return imgPath.startsWith('http') ? imgPath : `http://localhost:8000${imgPath}`;
+            return imgPath.startsWith('http') ? imgPath : `${API_BASE_URL}${imgPath}`;
         }
         return p.image_url || "https://via.placeholder.com/400x300?text=Bike+Store";
     };

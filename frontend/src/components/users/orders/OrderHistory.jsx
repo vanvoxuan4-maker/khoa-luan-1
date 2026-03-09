@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import { Link, useNavigate } from 'react-router-dom';
 import { initiateVNPayPayment } from './VNPayPayment';
 import { useNotification } from '../../../context/NotificationContext';
@@ -16,7 +17,7 @@ const OrderHistory = () => {
     const fetchOrders = async () => {
         const token = localStorage.getItem('user_access_token');
         try {
-            const res = await axios.get('http://localhost:8000/orders/my-orders', {
+            const res = await axios.get(`${API_BASE_URL}/orders/my-orders`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setOrders(res.data);
@@ -43,7 +44,7 @@ const OrderHistory = () => {
 
         const token = localStorage.getItem('user_access_token');
         try {
-            await axios.delete(`http://localhost:8000/orders/my-orders/${orderId}`, {
+            await axios.delete(`${API_BASE_URL}/orders/my-orders/${orderId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             addToast(
@@ -226,7 +227,7 @@ const OrderHistory = () => {
                                                             <div className="w-20 h-20 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 flex-shrink-0 flex items-center justify-center group-hover:border-blue-200 transition-colors">
                                                                 {item.hinh_anh ? (
                                                                     <img
-                                                                        src={item.hinh_anh.startsWith('http') ? item.hinh_anh : `http://localhost:8000${item.hinh_anh}`}
+                                                                        src={item.hinh_anh.startsWith('http') ? item.hinh_anh : `${API_BASE_URL}${item.hinh_anh}`}
                                                                         alt={item.ten_sanpham}
                                                                         className="w-full h-full object-contain mix-blend-multiply"
                                                                     />

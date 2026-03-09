@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 
 const VNPayPayment = () => {
     const navigate = useNavigate();
@@ -26,7 +27,7 @@ const VNPayPayment = () => {
             for (let [key, value] of searchParams.entries()) {
                 params[key] = value;
             }
-            const response = await axios.get('http://localhost:8000/vnpay/payment-return', {
+            const response = await axios.get(`${API_BASE_URL}/vnpay/payment-return`, {
                 params: params
             });
             setPaymentResult(response.data);
@@ -46,7 +47,7 @@ const VNPayPayment = () => {
     const createPayment = async (orderId) => {
         try {
             setLoading(true);
-            const response = await axios.post('http://localhost:8000/vnpay/create-payment', {
+            const response = await axios.post(`${API_BASE_URL}/vnpay/create-payment`, {
                 ma_don_hang: orderId
             });
 
@@ -144,7 +145,7 @@ export default VNPayPayment;
 // Export các hàm initiate để sử dụng ở component khác
 export const initiateVNPayPayment = async (orderId) => {
     try {
-        const response = await axios.post('http://localhost:8000/vnpay/create-payment', {
+        const response = await axios.post(`${API_BASE_URL}/vnpay/create-payment`, {
             ma_don_hang: orderId
         });
         window.location.href = response.data.payment_url;

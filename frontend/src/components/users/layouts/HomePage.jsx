@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import { Link } from 'react-router-dom';
 import BannerSlider from './BannerSlider';
 import TopSellingSection from './TopSellingSection';
@@ -54,8 +55,8 @@ const HomePage = () => {
             setLoading(true);
             setError(null);
             const [productRes, catRes] = await Promise.all([
-                axios.get('http://localhost:8000/sanpham?limit=100'),
-                axios.get('http://localhost:8000/danhmuc')
+                axios.get(`${API_BASE_URL}/sanpham?limit=100`),
+                axios.get(`${API_BASE_URL}/danhmuc`)
             ]);
             setAllProducts(productRes.data);
             setCategories(catRes.data);
@@ -138,13 +139,13 @@ const HomePage = () => {
                                 <div className="flex animate-marquee-slow hover-pause relative z-10 pt-4">
                                     {/* Duplicate categories for seamless marquee */}
                                     {[...categories, ...categories, ...categories, ...categories].length > 0 ? [...categories, ...categories, ...categories, ...categories].map((cat, idx) => (
-                                        <Link to={`/products?category=${cat.ma_danhmuc}`} key={idx} className="group flex flex-col items-center gap-4 min-w-[150px] mx-6">
+                                        <Link to={`/products?category_id=${cat.ma_danhmuc}`} key={idx} className="group flex flex-col items-center gap-4 min-w-[150px] mx-6">
                                             <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center p-3 ring-1 ring-slate-100 group-hover:ring-blue-400 group-hover:bg-blue-50/30 transition-all duration-700 shadow-sm group-hover:shadow-xl group-hover:shadow-blue-500/10 overflow-hidden relative">
                                                 <div className="absolute inset-0 bg-gradient-to-tr from-blue-100/0 via-white/50 to-blue-200/0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
 
                                                 {cat.hinh_anh ? (
                                                     <img
-                                                        src={cat.hinh_anh.startsWith('http') ? cat.hinh_anh : `http://localhost:8000${cat.hinh_anh}`}
+                                                        src={cat.hinh_anh.startsWith('http') ? cat.hinh_anh : `${API_BASE_URL}${cat.hinh_anh}`}
                                                         alt={cat.ten_danhmuc}
                                                         loading="lazy"
                                                         className="w-full h-full object-contain relative z-10 group-hover:scale-110 transition-transform duration-700"

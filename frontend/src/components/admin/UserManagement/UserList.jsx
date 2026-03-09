@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 
 // Status dictionary
 const TRANG_THAI_USER = {
@@ -22,7 +23,7 @@ const UserList = () => {
   const fetchUsers = async () => {
     setRefreshing(true);
     try {
-      const res = await axios.get('http://localhost:8000/admin/users', {
+      const res = await axios.get(`${API_BASE_URL}/admin/users`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       // Ưu tiên ADMIN lên đầu
@@ -44,7 +45,7 @@ const UserList = () => {
   const handleStatusChange = async (id, newStatus) => {
     if (window.confirm(`Xác nhận thay đổi trạng thái tài khoản sang: ${TRANG_THAI_USER[newStatus]?.label}?`)) {
       try {
-        await axios.put(`http://localhost:8000/admin/users/${id}/status?status=${newStatus}`, {}, {
+        await axios.put(`${API_BASE_URL}/admin/users/${id}/status?status=${newStatus}`, {}, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         fetchUsers();
@@ -58,7 +59,7 @@ const UserList = () => {
   const handleDelete = async (id) => {
     if (window.confirm(`⚠️ Bạn có chắc muốn XÓA vĩnh viễn tài khoản #${id}?`)) {
       try {
-        await axios.delete(`http://localhost:8000/admin/users/${id}`, {
+        await axios.delete(`${API_BASE_URL}/admin/users/${id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         fetchUsers();

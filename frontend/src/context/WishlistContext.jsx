@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../utils/apiConfig';
 import { getBestToken } from '../utils/auth';
 import { useNotification } from './NotificationContext';
 
@@ -18,7 +19,7 @@ export const WishlistProvider = ({ children }) => {
         }
         setLoading(true);
         try {
-            const res = await axios.get('http://localhost:8000/wishlist/me');
+            const res = await axios.get(`${API_BASE_URL}/wishlist/me`);
             setWishlistItems(res.data);
         } catch (err) {
             console.error("Lỗi tải Wishlist:", err);
@@ -44,7 +45,7 @@ export const WishlistProvider = ({ children }) => {
         }
 
         try {
-            const res = await axios.post('http://localhost:8000/wishlist/toggle',
+            const res = await axios.post(`${API_BASE_URL}/wishlist/toggle`,
                 { ma_sanpham: productId }
             );
 
@@ -70,7 +71,7 @@ export const WishlistProvider = ({ children }) => {
         if (!token) return;
 
         try {
-            await axios.delete('http://localhost:8000/wishlist/clear');
+            await axios.delete(`${API_BASE_URL}/wishlist/clear`);
             setWishlistItems([]);
             addToast("Đã xóa toàn bộ danh sách yêu thích", "info", "Thành công");
         } catch (err) {

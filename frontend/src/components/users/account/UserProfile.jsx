@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useNotification } from '../../../context/NotificationContext';
 import AddressManager from '../profile/AddressManager';
@@ -79,7 +80,7 @@ const UserProfile = () => {
             const token = localStorage.getItem('user_access_token');
             if (!token) return;
             try {
-                const res = await axios.get('http://localhost:8000/users/me', {
+                const res = await axios.get(`${API_BASE_URL}/users/me`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setUser(res.data);
@@ -103,7 +104,7 @@ const UserProfile = () => {
         setUpdating(true);
         try {
             const token = localStorage.getItem('user_access_token');
-            const res = await axios.put('http://localhost:8000/users/me', profileData, {
+            const res = await axios.put(`${API_BASE_URL}/users/me`, profileData, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setUser(res.data);
@@ -125,7 +126,7 @@ const UserProfile = () => {
         setChangingPass(true);
         try {
             const token = localStorage.getItem('user_access_token');
-            await axios.put('http://localhost:8000/users/me/password', {
+            await axios.put(`${API_BASE_URL}/users/me/password`, {
                 old_password: passData.old_password,
                 new_password: passData.new_password
             }, {

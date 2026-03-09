@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 
 const VoucherManager = () => {
   const [vouchers, setVouchers] = useState([]);
@@ -16,7 +17,7 @@ const VoucherManager = () => {
 
   const fetchVouchers = async () => {
     try {
-      const res = await axios.get('http://localhost:8000/admin/vouchers', { headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.get(`${API_BASE_URL}/admin/vouchers`, { headers: { Authorization: `Bearer ${token}` } });
       setVouchers(res.data);
     } catch (err) { console.error("Lỗi tải voucher"); }
   };
@@ -30,7 +31,7 @@ const VoucherManager = () => {
       ngay_ketthuc: formData.ngay_ketthuc ? formData.ngay_ketthuc : null
     };
     try {
-      await axios.post('http://localhost:8000/admin/vouchers', payload, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.post(`${API_BASE_URL}/admin/vouchers`, payload, { headers: { Authorization: `Bearer ${token}` } });
       alert("✅ Tạo mã thành công!");
       setFormData({ ma_giamgia: '', kieu_giamgia: 'percentage', giatrigiam: '', don_toithieu: 0, solandung: 100, ngay_ketthuc: '' });
       setIsAdding(false);
@@ -47,7 +48,7 @@ const VoucherManager = () => {
         ...renewalData,
         solandung: parseInt(renewalData.solandung) || 0
       };
-      await axios.put(`http://localhost:8000/admin/vouchers/${id}`, payload, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.put(`${API_BASE_URL}/admin/vouchers/${id}`, payload, { headers: { Authorization: `Bearer ${token}` } });
       alert("✅ Gia hạn và mở lại thành công!");
       setEditingVoucher(null);
       await fetchVouchers(); // Đợi fetch xong để re-render
@@ -59,7 +60,7 @@ const VoucherManager = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Bạn có chắc muốn xóa mã này?")) {
       try {
-        await axios.delete(`http://localhost:8000/admin/vouchers/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+        await axios.delete(`${API_BASE_URL}/admin/vouchers/${id}`, { headers: { Authorization: `Bearer ${token}` } });
         fetchVouchers();
       } catch (err) { alert("Lỗi khi xóa"); }
     }

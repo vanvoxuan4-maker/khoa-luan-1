@@ -18,7 +18,7 @@ import asyncio
 def init_db_structure():
     try:
         with engine.connect() as conn:
-            sql_path = "app/init_db.sql" 
+            sql_path = "app/db/sql/init_db.sql" 
             if os.path.exists(sql_path):
                 with open(sql_path, "r", encoding="utf-8") as f:
                     conn.execute(text(f.read()))

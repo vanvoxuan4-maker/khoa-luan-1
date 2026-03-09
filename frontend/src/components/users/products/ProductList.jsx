@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import { Link, useSearchParams } from 'react-router-dom';
 import Breadcrumb from '../layouts/Breadcrumb';
 import useDebounce from '../../../hooks/useDebounce';
@@ -91,8 +92,8 @@ const ProductList = () => {
                 );
 
                 const [prodRes, countRes] = await Promise.all([
-                    axios.get('http://localhost:8000/sanpham', { params: cleanParams }),
-                    axios.get('http://localhost:8000/sanpham/count', { params: { search: debouncedSearch, ...filters } })
+                    axios.get(`${API_BASE_URL}/sanpham`, { params: cleanParams }),
+                    axios.get(`${API_BASE_URL}/sanpham/count`, { params: { search: debouncedSearch, ...filters } })
                 ]);
 
                 setProducts(prodRes.data);

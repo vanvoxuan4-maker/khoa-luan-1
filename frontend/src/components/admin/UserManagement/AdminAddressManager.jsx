@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 
 const VIETNAM_PROVINCES = [
     "An Giang", "Bắc Ninh", "Cà Mau", "Cao Bằng", "TP. Cần Thơ", "TP. Đà Nẵng",
@@ -48,7 +49,7 @@ const AdminAddressManager = ({ user, onClose }) => {
     const fetchAddresses = async (quiet = false) => {
         if (!quiet) setLoading(true);
         try {
-            const res = await axios.get(`http://localhost:8000/admin/users/${user.ma_user}/addresses`, {
+            const res = await axios.get(`${API_BASE_URL}/admin/users/${user.ma_user}/addresses`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setAddresses(res.data);
@@ -87,11 +88,11 @@ const AdminAddressManager = ({ user, onClose }) => {
         e.preventDefault();
         try {
             if (editingAddress) {
-                await axios.put(`http://localhost:8000/admin/addresses/${editingAddress.ma_dia_chi}`, formData, {
+                await axios.put(`${API_BASE_URL}/admin/addresses/${editingAddress.ma_dia_chi}`, formData, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
             } else {
-                await axios.post(`http://localhost:8000/admin/users/${user.ma_user}/addresses`, formData, {
+                await axios.post(`${API_BASE_URL}/admin/users/${user.ma_user}/addresses`, formData, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
             }
@@ -106,7 +107,7 @@ const AdminAddressManager = ({ user, onClose }) => {
     const handleDelete = async (ma_dia_chi) => {
         if (!window.confirm('Bạn có chắc chắn muốn xóa địa chỉ này của khách hàng?')) return;
         try {
-            await axios.delete(`http://localhost:8000/admin/addresses/${ma_dia_chi}`, {
+            await axios.delete(`${API_BASE_URL}/admin/addresses/${ma_dia_chi}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             fetchAddresses();
@@ -124,7 +125,7 @@ const AdminAddressManager = ({ user, onClose }) => {
         })));
 
         try {
-            await axios.patch(`http://localhost:8000/admin/addresses/${ma_dia_chi}/default`, {}, {
+            await axios.patch(`${API_BASE_URL}/admin/addresses/${ma_dia_chi}/default`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             fetchAddresses(true); // Tải lại ngầm để đồng bộ

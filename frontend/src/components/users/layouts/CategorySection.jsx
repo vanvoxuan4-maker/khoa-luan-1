@@ -40,7 +40,7 @@ const CategorySection = ({ title, products, categoryId }) => {
                     </div>
 
                     <Link
-                        to={`/products?category=${categoryId}`}
+                        to={`/products?category_id=${categoryId}`}
                         className="group flex items-center gap-2 border-2 border-blue-600 text-blue-600 px-6 py-2 rounded-full font-black text-xs md:text-sm uppercase tracking-wider hover:bg-blue-600 hover:text-white hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300 transform hover:-translate-y-0.5"
                     >
                         Xem tất cả

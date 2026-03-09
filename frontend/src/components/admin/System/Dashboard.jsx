@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import { useNavigate } from 'react-router-dom';
 import {
     PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
@@ -99,10 +100,10 @@ const Dashboard = () => {
             const headers = { Authorization: `Bearer ${token}` };
 
             const [ordersRes, usersRes, productsRes, paymentsRes] = await Promise.all([
-                axios.get('http://localhost:8000/orders/all', { headers }),
-                axios.get('http://localhost:8000/admin/users', { headers }),
-                axios.get('http://localhost:8000/sanpham'),
-                axios.get('http://localhost:8000/payment/all', { headers })
+                axios.get(`${API_BASE_URL}/orders/all`, { headers }),
+                axios.get(`${API_BASE_URL}/admin/users`, { headers }),
+                axios.get(`${API_BASE_URL}/sanpham`),
+                axios.get(`${API_BASE_URL}/payment/all`, { headers })
             ]);
 
             const orders = ordersRes.data;
@@ -506,7 +507,7 @@ const Dashboard = () => {
                                                 <span className={`text-[11px] leading-none flex-shrink-0 w-6 text-center select-none tabular-nums ${meta.color}`}>{meta.label}</span>
                                                 <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 flex-shrink-0 overflow-hidden shadow-sm">
                                                     {product.image ? (
-                                                        <img src={`http://localhost:8000${product.image}`} alt={product.name}
+                                                        <img src={`${API_BASE_URL}${product.image}`} alt={product.name}
                                                             className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
                                                     ) : (
                                                         <div className="w-full h-full flex items-center justify-center text-slate-300 text-[8px] font-black">N/A</div>
@@ -613,7 +614,7 @@ const Dashboard = () => {
                                             const stock = p.ton_kho || 0;
                                             const badge = stockBadge(stock);
                                             const imgUrl = p.hinhanh?.length > 0
-                                                ? `http://localhost:8000${p.hinhanh.find(img => img.is_main)?.image_url || p.hinhanh[0].image_url}`
+                                                ? `${API_BASE_URL}${p.hinhanh.find(img => img.is_main)?.image_url || p.hinhanh[0].image_url}`
                                                 : null;
                                             return (
                                                 <div key={p.ma_sanpham || i}

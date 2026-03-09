@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import API_BASE_URL from '../../../utils/apiConfig';
 import { useWishlist } from '../../../context/WishlistContext';
 import { useCart } from '../../../context/CartContext';
 import { useNotification } from '../../../context/NotificationContext';
@@ -21,7 +22,7 @@ const ProductCard = ({
         if (p.hinhanh && p.hinhanh.length > 0) {
             const mainImg = p.hinhanh.find(img => img.is_main);
             const imgPath = mainImg ? mainImg.image_url : p.hinhanh[0].image_url;
-            return imgPath.startsWith('http') ? imgPath : `http://localhost:8000${imgPath}`;
+            return imgPath.startsWith('http') ? imgPath : `${API_BASE_URL}${imgPath}`;
         }
         return p.image_url || "https://via.placeholder.com/300?text=Bike+Store";
     };

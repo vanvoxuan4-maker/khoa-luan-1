@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, NavLink, Link } from 'react-router-dom';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import { useWishlist } from '../../../context/WishlistContext';
 import { useCart } from '../../../context/CartContext';
 import { getBestToken } from '../../../utils/auth';
@@ -25,7 +26,7 @@ const Navbar = () => {
 
     if (token) {
       // Logic xác thực tập trung: Gọi API check me
-      axios.get('http://localhost:8000/users/me')
+      axios.get(`${API_BASE_URL}/users/me`)
         .then(res => {
           setIsLoggedIn(true);
           const name = res.data.hovaten || res.data.ten_user || 'Thành viên';
@@ -54,7 +55,7 @@ const Navbar = () => {
   const handleLogout = async () => {
     setShowLogoutConfirm(false);
     try {
-      await axios.post('http://localhost:8000/logout');
+      await axios.post(`${API_BASE_URL}/logout`);
     } catch (error) {
       console.error('Error logging out:', error);
     } finally {

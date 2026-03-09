@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import { useNavigate } from 'react-router-dom';
 
 const AdminAudit = () => {
@@ -38,7 +39,7 @@ const AdminAudit = () => {
         e.stopPropagation(); // Không mở modal khi click xóa
         if (!window.confirm('Bạn có chắc muốn xóa bản ghi này không?')) return;
         try {
-            await axios.delete(`http://localhost:8000/audit/logs/${logId}`, {
+            await axios.delete(`${API_BASE_URL}/audit/logs/${logId}`, {
                 headers: { Authorization: `Bearer ${getToken()}` }
             });
             fetchAuditLogs();
@@ -52,7 +53,7 @@ const AdminAudit = () => {
         if (!window.confirm('Xóa TẤT CẢ lịch sử hoạt động của bạn? Hành động này không thể hoàn tác!')) return;
         setDeleting(true);
         try {
-            const res = await axios.delete('http://localhost:8000/audit/logs/clear', {
+            const res = await axios.delete(`${API_BASE_URL}/audit/logs/clear`, {
                 headers: { Authorization: `Bearer ${getToken()}` }
             });
             alert(res.data.message);
@@ -82,7 +83,7 @@ const AdminAudit = () => {
                 ...(debouncedFilters.date_to && { date_to: debouncedFilters.date_to })
             });
 
-            const res = await axios.get(`http://localhost:8000/audit/my-logs?${params}`, {
+            const res = await axios.get(`${API_BASE_URL}/audit/my-logs?${params}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setAuditLogs(res.data);

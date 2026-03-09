@@ -1,5 +1,6 @@
 ﻿import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import { useLocation } from 'react-router-dom';
 import OrderDetailModal from './OrderDetailModal';
 
@@ -84,7 +85,7 @@ const OrderManager = ({ highlightOrderId }) => {
   const fetchOrders = async () => {
     setRefreshing(true);
     try {
-      const res = await axios.get('http://localhost:8000/orders/all', { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await axios.get(`${API_BASE_URL}/orders/all`, { headers: { 'Authorization': `Bearer ${token}` } });
       setOrders(res.data);
     } catch (err) {
       console.error("❌ Lỗi tải đơn hàng:", err);
@@ -95,14 +96,14 @@ const OrderManager = ({ highlightOrderId }) => {
 
   const fetchProducts = async () => {
     try {
-      const res = await axios.get('http://localhost:8000/sanpham');
+      const res = await axios.get(`${API_BASE_URL}/sanpham`);
       setProducts(res.data);
     } catch (err) { console.error("Lỗi tải sản phẩm:", err); }
   };
 
   const updateStatus = async (id, newStatus) => {
     try {
-      const url = `http://localhost:8000/orders/${id}/status?trang_thai_moi=${newStatus}`;
+      const url = `${API_BASE_URL}/orders/${id}/status?trang_thai_moi=${newStatus}`;
       await axios.put(url, {}, { headers: { 'Authorization': `Bearer ${token}` } });
       fetchOrders();
     } catch (err) { alert("❌ Lỗi cập nhật đơn hàng"); }
@@ -115,7 +116,7 @@ const OrderManager = ({ highlightOrderId }) => {
 
     if (window.confirm(`Bạn muốn: ${actionLabel}?`)) {
       try {
-        await axios.put(`http://localhost:8000/orders/${id}/payment_status?status=${nextStatus}`, {}, { headers: { 'Authorization': `Bearer ${token}` } });
+        await axios.put(`${API_BASE_URL}/orders/${id}/payment_status?status=${nextStatus}`, {}, { headers: { 'Authorization': `Bearer ${token}` } });
         fetchOrders();
       } catch (err) { console.error(err); alert("❌ Lỗi cập nhật thanh toán!"); }
     }
@@ -127,7 +128,7 @@ const OrderManager = ({ highlightOrderId }) => {
     );
     if (confirmed) {
       try {
-        await axios.put(`http://localhost:8000/orders/${id}/payment_status?status=refunded`, {}, { headers: { 'Authorization': `Bearer ${token}` } });
+        await axios.put(`${API_BASE_URL}/orders/${id}/payment_status?status=refunded`, {}, { headers: { 'Authorization': `Bearer ${token}` } });
         alert(`✅ Đã xử lý hoàn tiền cho đơn #${id}`);
         fetchOrders();
       } catch (err) {
@@ -140,7 +141,7 @@ const OrderManager = ({ highlightOrderId }) => {
   const handleDeleteOrder = async (orderId) => {
     if (window.confirm("⚠️ CẢNH BÁO: Bạn có chắc chắn muốn xóa VĨNH VIỄN đơn hàng này không? Hành động này không thể hoàn tác!")) {
       try {
-        await axios.delete(`http://localhost:8000/orders/${orderId}`, {
+        await axios.delete(`${API_BASE_URL}/orders/${orderId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         alert("✅ Đã xóa đơn hàng thành công!");

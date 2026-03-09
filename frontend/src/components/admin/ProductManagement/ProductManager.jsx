@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import AddProduct from './Addproduct';
 import Pagination from '../../common/Pagination';
 import { getBrandStyle } from '../../../utils/formatUtils';
@@ -19,7 +20,7 @@ export const cleanProductPayload = (product) => {
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const API_BASE = 'http://localhost:8000';
+const API_BASE = API_BASE_URL;
 const ITEMS_PER_PAGE = 10;
 
 const ProductManager = ({ initialSearch = '' }) => {

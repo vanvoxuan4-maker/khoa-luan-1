@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../utils/apiConfig';
 import { getBestToken } from '../utils/auth';
 import { useNotification } from './NotificationContext';
 
@@ -20,7 +21,7 @@ export const CartProvider = ({ children }) => {
 
         setLoading(true);
         try {
-            const res = await axios.get('http://localhost:8000/cart/');
+            const res = await axios.get(`${API_BASE_URL}/cart/`);
             setCart(res.data);
         } catch (err) {
             console.error("Lỗi tải giỏ hàng:", err);
@@ -37,7 +38,7 @@ export const CartProvider = ({ children }) => {
         if (!token) return false;
 
         try {
-            await axios.post('http://localhost:8000/cart/add', {
+            await axios.post(`${API_BASE_URL}/cart/add`, {
                 ma_sanpham: productId,
                 so_luong: quantity,
                 mau_sac: color
@@ -55,7 +56,7 @@ export const CartProvider = ({ children }) => {
         if (!token) return;
 
         try {
-            let url = `http://localhost:8000/cart/${productId}?so_luong_moi=${newQty}`;
+            let url = `${API_BASE_URL}/cart/${productId}?so_luong_moi=${newQty}`;
             if (color) url += `&mau_sac=${encodeURIComponent(color)}`;
             await axios.put(url, null);
             await fetchCart();
@@ -70,7 +71,7 @@ export const CartProvider = ({ children }) => {
         if (!token) return;
 
         try {
-            let url = `http://localhost:8000/cart/${productId}`;
+            let url = `${API_BASE_URL}/cart/${productId}`;
             if (color) url += `?mau_sac=${encodeURIComponent(color)}`;
             await axios.delete(url);
             await fetchCart();
@@ -85,7 +86,7 @@ export const CartProvider = ({ children }) => {
         if (!token) return;
 
         try {
-            await axios.delete(`http://localhost:8000/cart/`);
+            await axios.delete(`${API_BASE_URL}/cart/`);
             setCart({ items: [] });
         } catch (err) {
             console.error("Lỗi dọn giỏ hàng:", err);

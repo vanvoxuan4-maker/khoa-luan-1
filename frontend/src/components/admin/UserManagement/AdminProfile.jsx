@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../../../context/NotificationContext';
 
@@ -34,7 +35,7 @@ const AdminProfile = () => {
     const fetchAdminInfo = async () => {
         const token = localStorage.getItem('admin_access_token');
         try {
-            const res = await axios.get('http://localhost:8000/users/me', {
+            const res = await axios.get(`${API_BASE_URL}/users/me`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setAdmin(res.data);
@@ -54,7 +55,7 @@ const AdminProfile = () => {
         e.preventDefault();
         const token = localStorage.getItem('admin_access_token');
         try {
-            await axios.put('http://localhost:8000/users/me', formData, {
+            await axios.put(`${API_BASE_URL}/users/me`, formData, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             addToast('Thông tin đã được cập nhật thành công ✨', 'success');
@@ -73,7 +74,7 @@ const AdminProfile = () => {
 
         const token = localStorage.getItem('admin_access_token');
         try {
-            await axios.put('http://localhost:8000/users/me/password', {
+            await axios.put(`${API_BASE_URL}/users/me/password`, {
                 old_password: passwordData.old_password,
                 new_password: passwordData.new_password
             }, {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import { useNavigate } from 'react-router-dom';
 
 const FloatingInput = ({ label, icon, value, onChange, type = 'text', placeholder, rightElement, autoComplete }) => (
@@ -40,7 +41,7 @@ const Login = ({ onSwitchToRegister, onSwitchToForgot }) => {
             formData.append('username', email);
             formData.append('password', password);
 
-            const res = await axios.post('http://localhost:8000/login', formData);
+            const res = await axios.post(`${API_BASE_URL}/login`, formData);
             const serverUser = res.data.user || res.data.user_info || {};
             let finalRole = (serverUser.is_superuser || String(serverUser.quyen || '').toUpperCase() === 'ADMIN') ? 'admin' : 'user';
 

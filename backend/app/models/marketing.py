@@ -38,7 +38,7 @@ class Makhuyenmai(Base):
     
     # ✅ Dùng Enum cho khuyến mãi
     kieu_giamgia = Column(
-        PG_ENUM(KieuGiamGia, name='kieu_giam_gia', create_type=False),
+        PG_ENUM(KieuGiamGia, name='kieu_giam_gia', create_type=True),
         nullable=False
     )
     

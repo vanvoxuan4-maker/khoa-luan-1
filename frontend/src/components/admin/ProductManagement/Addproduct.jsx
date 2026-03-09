@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import { useNotification } from '../../../context/NotificationContext';
 
 // Class màu Galaxy
@@ -65,7 +66,7 @@ const CinemaSelect = ({ label, options, value, onChange, placeholder, icon }) =>
 const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands = [], categories: propCategories = [] }) => {
   const isEditMode = editProduct && editProduct.ma_sanpham;
   const { addToast } = useNotification();
-  const API_BASE = 'http://localhost:8000';
+  const API_BASE = API_BASE_URL;
 
   // State danh sách - dùng props nếu có, sinon fetch
   const [brands, setBrands] = useState(propBrands);

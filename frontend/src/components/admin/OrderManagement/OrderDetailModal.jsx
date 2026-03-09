@@ -1,6 +1,7 @@
 import React from 'react';
 import { TRANG_THAI_VIET, PAYMENT_STATUS_MAP } from './OrderManager';
 import OrderPrint from './OrderPrint';
+import API_BASE_URL from '../../../utils/apiConfig';
 
 const OrderDetailModal = ({ order, products, onClose }) => {
     if (!order) return null;
@@ -17,7 +18,7 @@ const OrderDetailModal = ({ order, products, onClose }) => {
         if (product && product.hinhanh && product.hinhanh.length > 0) {
             const img = product.hinhanh[0];
             const url = img.image_url || img;
-            return url.startsWith('http') ? url : `http://localhost:8000${url}`;
+            return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
         }
         return null;
     };
@@ -228,7 +229,7 @@ const OrderDetailModal = ({ order, products, onClose }) => {
                                 <tbody className="divide-y divide-white/5">
                                     {itemsOnly.map((item, idx) => {
                                         const imageUrl = item.hinh_anh
-                                            ? (item.hinh_anh.startsWith('http') ? item.hinh_anh : `http://localhost:8000${item.hinh_anh}`)
+                                            ? (item.hinh_anh.startsWith('http') ? item.hinh_anh : `${API_BASE_URL}${item.hinh_anh}`)
                                             : findImage(item.ma_sanpham);
                                         return (
                                             <tr key={idx} className={`group transition-colors ${idx % 2 === 1 ? 'bg-white/[0.02]' : ''} hover:bg-indigo-500/5`}>

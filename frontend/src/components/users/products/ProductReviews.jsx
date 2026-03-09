@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 
 const ProductReviews = ({ productId }) => {
     const [reviews, setReviews] = useState([]);
@@ -19,7 +20,7 @@ const ProductReviews = ({ productId }) => {
 
     const fetchReviews = async () => {
         try {
-            const res = await axios.get(`http://localhost:8000/reviews/product/${productId}`);
+            const res = await axios.get(`${API_BASE_URL}/reviews/product/${productId}`);
             setReviews(res.data);
         } catch (err) {
             console.error("Lỗi tải đánh giá:", err);
@@ -41,7 +42,7 @@ const ProductReviews = ({ productId }) => {
         setMsg(null);
 
         try {
-            await axios.post('http://localhost:8000/reviews/create', {
+            await axios.post(`${API_BASE_URL}/reviews/create`, {
                 ma_sanpham: productId,
                 ...newReview
             }, {

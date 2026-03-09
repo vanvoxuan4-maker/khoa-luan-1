@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import { useNavigate } from 'react-router-dom';
 import { initiateVNPayPayment } from './VNPayPayment';
 import { useNotification } from '../../../context/NotificationContext';
@@ -113,14 +114,14 @@ const Checkout = () => {
             const token = localStorage.getItem('user_access_token');
             if (!token) { navigate('/login'); return; }
             try {
-                const cartRes = await axios.get('http://localhost:8000/cart/', { headers: { Authorization: `Bearer ${token}` } });
+                const cartRes = await axios.get(`${API_BASE_URL}/cart/`, { headers: { Authorization: `Bearer ${token}` } });
                 if (cartRes.data.items.length === 0) { alert("Giỏ hàng trống!"); navigate('/products'); }
                 setCart(cartRes.data);
-                const userRes = await axios.get('http://localhost:8000/users/me', { headers: { Authorization: `Bearer ${token}` } });
+                const userRes = await axios.get(`${API_BASE_URL}/users/me`, { headers: { Authorization: `Bearer ${token}` } });
                 const u = userRes.data;
 
                 // Fetch addresses
-                const addrRes = await axios.get('http://localhost:8000/addresses/', { headers: { Authorization: `Bearer ${token}` } });
+                const addrRes = await axios.get(`${API_BASE_URL}/addresses/`, { headers: { Authorization: `Bearer ${token}` } });
                 const userAddresses = addrRes.data;
                 setAddresses(userAddresses);
 
@@ -138,7 +139,7 @@ const Checkout = () => {
                     setFormData(prev => ({ ...prev, ten_nguoi_nhan: u.hovaten || '', sdt_nguoi_nhan: u.sdt || '', dia_chi_giao: '' }));
                 }
                 try {
-                    const pendingRes = await axios.get('http://localhost:8000/orders/pending-order', { headers: { Authorization: `Bearer ${token}` } });
+                    const pendingRes = await axios.get(`${API_BASE_URL}/orders/pending-order`, { headers: { Authorization: `Bearer ${token}` } });
                     if (pendingRes.data.has_pending) {
                         addToast(`Bạn có đơn hàng chưa thanh toán (${pendingRes.data.total?.toLocaleString('vi-VN')} VND). Hệ thống sẽ cập nhật đơn này khi bạn thanh toán.`, "info");
                     }
@@ -154,7 +155,7 @@ const Checkout = () => {
         setVoucherLoading(true); setVoucherError('');
         const token = localStorage.getItem('user_access_token');
         try {
-            const res = await axios.post('http://localhost:8000/vouchers/validate', { ma_giamgia: voucherCode.toUpperCase(), tong_tien: checkoutTotal }, { headers: { Authorization: `Bearer ${token}` } });
+            const res = await axios.post(`${API_BASE_URL}/vouchers/validate`, { ma_giamgia: voucherCode.toUpperCase(), tong_tien: checkoutTotal }, { headers: { Authorization: `Bearer ${token}` } });
             if (res.data.valid) {
                 setVoucherApplied(res.data);
                 setFormData(prev => ({ ...prev, ma_giamgia: voucherCode.toUpperCase() }));
@@ -191,7 +192,7 @@ const Checkout = () => {
         e.preventDefault();
         const token = localStorage.getItem('user_access_token');
         try {
-            const res = await axios.post('http://localhost:8000/addresses/', newAddr, {
+            const res = await axios.post(`${API_BASE_URL}/addresses/`, newAddr, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const createdAddr = res.data;
@@ -247,7 +248,7 @@ const Checkout = () => {
                 ...formData,
                 selected_item_ids: selectedItemIds ? [...selectedItemIds] : null
             };
-            const orderRes = await axios.post('http://localhost:8000/orders/checkout', payload, { headers: { Authorization: `Bearer ${token}` } });
+            const orderRes = await axios.post(`${API_BASE_URL}/orders/checkout`, payload, { headers: { Authorization: `Bearer ${token}` } });
             const orderId = orderRes.data.order_id;
             // Xóa selected_cart_items khỏi sessionStorage sau khi đặt hàng thành công
             sessionStorage.removeItem('selected_cart_items');
@@ -439,7 +440,7 @@ const Checkout = () => {
                                 <div key={item.ma_CTGH} className="flex gap-3 px-5 py-3 items-center">
                                     <div className="w-14 h-14 bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl flex-shrink-0 overflow-hidden border border-slate-100">
                                         <img
-                                            src={item.hinh_anh && !item.hinh_anh.startsWith('http') ? `http://localhost:8000${item.hinh_anh}` : (item.hinh_anh || "https://via.placeholder.com/80")}
+                                            src={item.hinh_anh && !item.hinh_anh.startsWith('http') ? `${API_BASE_URL}${item.hinh_anh}` : (item.hinh_anh || "https://via.placeholder.com/80")}
                                             alt={item.ten_sanpham}
                                             className="w-full h-full object-contain mix-blend-multiply"
                                         />

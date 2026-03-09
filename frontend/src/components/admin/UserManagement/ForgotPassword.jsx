@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 
 const FloatingInput = ({ label, icon, value, onChange, type = 'text', placeholder, rightElement, autoComplete }) => (
     <div className="relative group/field">
@@ -46,7 +47,7 @@ const ForgotPassword = ({ onBackToLogin }) => {
 
         setIsResetting(true);
         try {
-            const res = await axios.post('http://localhost:8000/reset-password', {
+            const res = await axios.post(`${API_BASE_URL}/reset-password`, {
                 email: email,
                 new_password: newPassword
             });

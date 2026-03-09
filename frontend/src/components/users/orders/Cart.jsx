@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 import { Link, useNavigate } from 'react-router-dom';
 import { useNotification } from '../../../context/NotificationContext';
 import { useCart } from '../../../context/CartContext';
@@ -196,7 +197,7 @@ const Cart = () => {
                                     <div className="w-24 h-24 bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl overflow-hidden flex-shrink-0 border border-slate-100">
                                         <img
                                             src={item.hinh_anh && !item.hinh_anh.startsWith('http')
-                                                ? `http://localhost:8000${item.hinh_anh}`
+                                                ? `${API_BASE_URL}${item.hinh_anh}`
                                                 : (item.hinh_anh || "https://via.placeholder.com/150")}
                                             alt={item.ten_sanpham}
                                             className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500"

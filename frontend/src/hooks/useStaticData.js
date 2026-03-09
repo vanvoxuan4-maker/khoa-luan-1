@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../utils/apiConfig';
 
 // Module-level cache — tồn tại trong suốt session của trình duyệt
 // Giúp tránh gọi API lại khi user điều hướng giữa các trang
@@ -51,8 +52,8 @@ export function useStaticData() {
         const fetchAll = async () => {
             try {
                 const [catRes, brandRes] = await Promise.all([
-                    axios.get('http://localhost:8000/danhmuc'),
-                    axios.get('http://localhost:8000/thuonghieu'),
+                    axios.get(`${API_BASE_URL}/danhmuc`),
+                    axios.get(`${API_BASE_URL}/thuonghieu`),
                 ]);
 
                 staticCache.categories = catRes.data;

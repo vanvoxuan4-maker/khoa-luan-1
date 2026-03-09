@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../../utils/apiConfig';
 
 // --- STYLE & CONFIG ---
 const galaxyTextClass = "bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent font-black";
@@ -9,7 +10,7 @@ const galaxyTextClass = "bg-gradient-to-r from-blue-400 via-purple-400 to-pink-4
 const getImageUrl = (url) => {
   if (!url) return '';
   if (url.startsWith('http') || url.startsWith('blob:')) return url;
-  return `http://localhost:8000${url.startsWith('/') ? '' : '/'}${url}`;
+  return `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
 const ManagerList = ({ title, icon, data, type, onEdit, onDelete, onToggleActive }) => (
@@ -60,8 +61,8 @@ const ManagerList = ({ title, icon, data, type, onEdit, onDelete, onToggleActive
               <button
                 onClick={() => onToggleActive(type, item)}
                 className={`px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-tighter transition-all ${item.is_active
-                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200'
-                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200 border border-slate-200'
+                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200'
+                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200 border border-slate-200'
                   }`}
               >
                 {item.is_active ? '✅ HIỆN' : '🚫 ẨN'}
@@ -175,8 +176,8 @@ const CategoryBrandManager = () => {
   const fetchData = async () => {
     try {
       const [resCat, resBrand] = await Promise.all([
-        axios.get('http://localhost:8000/admin/categories', { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get('http://localhost:8000/admin/brands', { headers: { Authorization: `Bearer ${token}` } })
+        axios.get(`${API_BASE_URL}/admin/categories`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_BASE_URL}/admin/brands`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
       setCategories(resCat.data || []);
       setBrands(resBrand.data || []);
@@ -214,9 +215,9 @@ const CategoryBrandManager = () => {
         : { ten_thuonghieu: formData.name, mo_ta: formData.desc, logo: formData.image, is_active: formData.is_active };
 
       if (editingId) {
-        await axios.put(`http://localhost:8000${endpoint}/${editingId}`, payload, { headers: { Authorization: `Bearer ${token}` } });
+        await axios.put(`${API_BASE_URL}${endpoint}/${editingId}`, payload, { headers: { Authorization: `Bearer ${token}` } });
       } else {
-        await axios.post(`http://localhost:8000${endpoint}`, payload, { headers: { Authorization: `Bearer ${token}` } });
+        await axios.post(`${API_BASE_URL}${endpoint}`, payload, { headers: { Authorization: `Bearer ${token}` } });
       }
 
       alert("✅ Thành công!");
@@ -231,7 +232,7 @@ const CategoryBrandManager = () => {
     if (window.confirm("⚠️ Bạn có chắc chắn muốn xóa mục này?")) {
       try {
         const endpoint = type === 'category' ? `/admin/categories/${id}` : `/admin/brands/${id}`;
-        await axios.delete(`http://localhost:8000${endpoint}`, { headers: { Authorization: `Bearer ${token}` } });
+        await axios.delete(`${API_BASE_URL}${endpoint}`, { headers: { Authorization: `Bearer ${token}` } });
         fetchData();
       } catch (err) { alert("❌ Không thể xóa (Có thể mục này đang chứa sản phẩm)"); }
     }
@@ -247,7 +248,7 @@ const CategoryBrandManager = () => {
         ? { ten_danhmuc: item.ten_danhmuc, mo_ta: item.mo_ta, hinh_anh: item.hinh_anh, is_active: !item.is_active }
         : { ten_thuonghieu: item.ten_thuonghieu, mo_ta: item.mo_ta, logo: item.logo, is_active: !item.is_active };
 
-      await axios.put(`http://localhost:8000${endpoint}`, payload, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.put(`${API_BASE_URL}${endpoint}`, payload, { headers: { Authorization: `Bearer ${token}` } });
       fetchData();
     } catch (err) {
       alert("❌ Lỗi chuyển đổi trạng thái");
