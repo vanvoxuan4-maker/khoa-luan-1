@@ -151,6 +151,19 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
     fetchData();
   }, [isEditMode, propBrands, propCategories]);
 
+  // Hàm tạo mã ngẫu nhiên từ Backend
+  const fetchGeneratedCode = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/generate-code`);
+      if (res.data && res.data.code) {
+        setFormData(prev => ({ ...prev, sanpham_code: res.data.code }));
+      }
+    } catch (err) {
+      console.error('Lỗi tạo mã sản phẩm:', err);
+      // Không báo lỗi toast ở đây để tránh làm phiền nếu tự động gọi
+    }
+  }, [API_BASE]);
+
   // 👇 2. Điền dữ liệu khi bấm Sửa
   useEffect(() => {
     if (isEditMode) {
@@ -170,7 +183,8 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
           url: `${API_BASE}${img.image_url}`,
           isExisting: true,
           id: img.ma_anh,
-          isMain: img.is_main
+          isMain: img.is_main,
+          mau: img.mau || ''
         }));
         setImagePreviews(previews);
       } else {
@@ -313,18 +327,25 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
         productId = res.data.ma_sanpham;
       }
 
-      // Upload ảnh mới song song (Promise.all)
+      // Xử lý lưu thông tin ảnh (Cả ảnh mới và ảnh cũ)
       if (productId) {
-        const newImagePreviews = imagePreviews.filter(preview => !preview.isExisting);
         await Promise.all(
-          newImagePreviews.map((preview) => {
-            const imageData = new FormData();
-            imageData.append('file', preview.file);
-            // Lấy flag isMain từ state
+          imagePreviews.map((preview) => {
             const isMain = preview.isMain;
-            return axios.post(`${API_BASE}/upload-anh/${productId}?is_main=${isMain}`, imageData, {
-              headers: { ...config.headers, 'Content-Type': 'multipart/form-data' }
-            });
+            const encodedMau = preview.mau ? encodeURIComponent(preview.mau) : '';
+
+            if (preview.isExisting) {
+              // Cập nhật thông tin (màu) cho ảnh đã tồn tại
+              return axios.put(`${API_BASE}/update-anh/${preview.id}?mau=${encodedMau}`, {}, config);
+            } else {
+              // Upload ảnh mới
+              const imageData = new FormData();
+              imageData.append('file', preview.file);
+              const mauParam = encodedMau ? `&mau=${encodedMau}` : '';
+              return axios.post(`${API_BASE}/upload-anh/${productId}?is_main=${isMain}${mauParam}`, imageData, {
+                headers: { ...config.headers, 'Content-Type': 'multipart/form-data' }
+              });
+            }
           })
         );
       }
@@ -366,64 +387,8 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
       </div>
 
       <form onSubmit={handleSubmit} className="p-8 space-y-8 relative z-10">
-        {/* 📸 1. IMAGE UPLOAD SECTION */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
-          <div className="lg:col-span-1">
-            <label htmlFor="imageInput" className="cursor-pointer bg-[#1e293b] border border-slate-600 rounded-3xl p-6 flex flex-col items-center justify-center gap-3 hover:border-purple-500/50 transition-all group h-48 shadow-2xl">
-              <div className="w-14 h-14 bg-[#0f172a] border border-slate-700 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform shadow-3xl">📸</div>
-              <div className="text-center">
-                <span className={`text-[10px] uppercase tracking-tighter block mb-1 ${galaxyTextClass}`}>Thêm ảnh mới</span>
-                <span className="text-[8px] text-slate-600 font-bold uppercase tracking-widest opacity-60">JPG, PNG, WEBP</span>
-              </div>
-            </label>
-            <input id="imageInput" type="file" className="hidden" onChange={handleImageChange} accept="image/*" multiple />
-          </div>
-
-          <div className="lg:col-span-3">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 block ml-1">
-              Thư viện ảnh ({imagePreviews.length}/10)
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
-              {imagePreviews.map((preview, index) => (
-                <div key={index} className="relative aspect-square rounded-2.5xl border border-slate-700 bg-slate-900/50 overflow-hidden group/img shadow-2xl flex flex-col">
-                  <img src={preview.url} alt="Xe" className="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-110" />
-
-                  {/* Overlay Controls - ONLY SHOW ON HOVER */}
-                  <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover/img:opacity-100 transition-all flex flex-col items-center justify-center gap-2 backdrop-blur-[2px] z-20">
-                    <button type="button" onClick={() => handleRemoveImage(index)} className="w-10 h-10 bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white rounded-xl flex items-center justify-center transition-all border border-red-500/30" title="Xóa ảnh">
-                      <span className="text-lg">🗑️</span>
-                    </button>
-                    {!preview.isMain && (
-                      <button type="button" onClick={() => handleSetMainImage(index)} className="w-10 h-10 bg-blue-500/20 hover:bg-blue-500 text-blue-400 hover:text-white rounded-xl flex items-center justify-center transition-all border border-blue-500/30" title="Đặt làm ảnh chính">
-                        <span className="text-lg">⭐</span>
-                      </button>
-                    )}
-                    <span className="text-[8px] font-black uppercase tracking-widest text-white/60">Quản lý ảnh</span>
-                  </div>
-
-                  {/* Badges */}
-                  <div className="absolute top-2 left-2 flex flex-col gap-1">
-                    <div className="px-2 py-0.5 bg-black/60 backdrop-blur-md rounded-lg text-[8px] font-black text-white border border-white/10 w-fit">#{index + 1}</div>
-                  </div>
-                  {preview.isMain && (
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg text-[7px] font-black uppercase tracking-widest shadow-xl flex items-center gap-1 border border-amber-400/50">
-                      <span>⭐</span> Đại diện
-                    </div>
-                  )}
-                </div>
-              ))}
-              {imagePreviews.length === 0 && (
-                <div className="col-span-full h-32 border-2 border-dashed border-slate-800 rounded-3xl flex flex-col items-center justify-center text-slate-700 gap-2">
-                  <span className="text-3xl opacity-10">🖼️</span>
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em] opacity-30 italic">Chưa có ảnh nào được tải lên</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* 📋 2. PRODUCT INFO */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 pt-12 border-t border-white/5">
+        {/* 📋 1. PRODUCT INFO */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-10">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="md:col-span-2">
@@ -439,12 +404,22 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
 
               <div>
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 block px-1">Mã Xe <span className="text-red-500">*</span></label>
-                <input
-                  className="w-full px-6 py-3.5 bg-[#1e293b] border border-slate-600 rounded-2xl font-black text-white text-base outline-none transition-all placeholder:text-slate-600"
-                  value={formData.sanpham_code}
-                  onChange={(e) => setFormData({ ...formData, sanpham_code: (e.target.value || '').toUpperCase() })}
-                  required
-                />
+                <div className="relative group/code-input">
+                  <input
+                    className="w-full px-6 py-3.5 bg-[#1e293b] border border-slate-600 rounded-2xl font-black text-white text-base outline-none transition-all placeholder:text-slate-600 pr-14"
+                    value={formData.sanpham_code}
+                    onChange={(e) => setFormData({ ...formData, sanpham_code: (e.target.value || '').toUpperCase() })}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={fetchGeneratedCode}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-slate-700 hover:bg-blue-600 text-white rounded-xl flex items-center justify-center transition-all shadow-lg border border-slate-600 hover:border-blue-400"
+                    title="Tạo mã ngẫu nhiên mới"
+                  >
+                    <span className="text-lg">🔄</span>
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -570,19 +545,25 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
                     <span className="absolute right-6 top-1/2 -translate-y-1/2 text-red-400/20 font-black">% OFF</span>
                   </div>
                 </div>
-                <div className="pt-4 border-t border-white/5">
-                  <label className="flex items-center cursor-pointer group/toggle">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={formData.is_active}
-                      onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    />
-                    <div className="w-14 h-7 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-emerald-500 peer-checked:to-teal-500 shadow-inner"></div>
-                    <span className="ml-4 text-xs font-black uppercase tracking-[0.2em] text-slate-400 group-hover/toggle:text-emerald-400 transition-colors">
-                      {formData.is_active ? 'Sản phẩm đang bán' : 'Sản phẩm đang ẩn'}
-                    </span>
-                  </label>
+
+                <div className="pt-6 border-t border-white/10 mt-2">
+                  <div className="flex items-center justify-between bg-black/20 p-4 rounded-2xl border border-white/5 group/toggle">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover/toggle:text-indigo-400 transition-colors">Trạng thái bán</span>
+                      <span className={`text-[9px] font-bold uppercase mt-1 ${formData.is_active ? 'text-emerald-400' : 'text-slate-500'}`}>
+                        {formData.is_active ? '● Đang hiển thị' : '○ Đang ẩn'}
+                      </span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={formData.is_active}
+                        onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                      />
+                      <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-emerald-500 peer-checked:to-teal-500 shadow-inner"></div>
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
@@ -601,6 +582,86 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
               <div className="mt-4 pt-4 border-t border-white/5 opacity-10">
                 <p className="text-[8px] font-black uppercase tracking-widest text-center italic">Professional Admin Editorial Content</p>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 📸 2. IMAGE UPLOAD SECTION */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-10 pt-12 border-t border-white/5">
+          <div className="lg:col-span-1">
+            <label htmlFor="imageInput" className="cursor-pointer bg-[#1e293b] border border-slate-600 rounded-3xl p-6 flex flex-col items-center justify-center gap-3 hover:border-purple-500/50 transition-all group h-48 shadow-2xl">
+              <div className="w-14 h-14 bg-[#0f172a] border border-slate-700 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform shadow-3xl">📸</div>
+              <div className="text-center">
+                <span className={`text-[10px] uppercase tracking-tighter block mb-1 ${galaxyTextClass}`}>Thêm ảnh mới</span>
+                <span className="text-[8px] text-slate-600 font-bold uppercase tracking-widest opacity-60">JPG, PNG, WEBP</span>
+              </div>
+            </label>
+            <input id="imageInput" type="file" className="hidden" onChange={handleImageChange} accept="image/*" multiple />
+          </div>
+
+          <div className="lg:col-span-3">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 block ml-1">
+              Thư viện ảnh ({imagePreviews.length}/10)
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
+              {imagePreviews.map((preview, index) => (
+                <div key={index} className="relative aspect-square rounded-2.5xl border border-slate-700 bg-slate-900/50 overflow-hidden group/img shadow-2xl flex flex-col">
+                  <img src={preview.url} alt="Xe" className="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-110" />
+
+                  {/* Overlay Controls - ONLY SHOW ON HOVER */}
+                  <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover/img:opacity-100 transition-all flex flex-col items-center justify-center gap-2 backdrop-blur-[2px] z-20">
+                    <button type="button" onClick={() => handleRemoveImage(index)} className="w-8 h-8 bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white rounded-xl flex items-center justify-center transition-all border border-red-500/30" title="Xóa ảnh">
+                      <span className="text-sm">🗑️</span>
+                    </button>
+                    {!preview.isMain && (
+                      <button type="button" onClick={() => handleSetMainImage(index)} className="w-8 h-8 bg-blue-500/20 hover:bg-blue-500 text-blue-400 hover:text-white rounded-xl flex items-center justify-center transition-all border border-blue-500/30" title="Đặt làm ảnh chính">
+                        <span className="text-sm">⭐</span>
+                      </button>
+                    )}
+
+                    {/* 👇 CHỌN MÀU CHO ẢNH (MỚI) */}
+                    <select
+                      className="w-24 bg-slate-800 text-[10px] font-black text-white border border-slate-600 rounded-lg px-1 py-1 outline-none focus:border-purple-500 uppercase tracking-tighter cursor-pointer"
+                      value={preview.mau || ''}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => {
+                        const newPreviews = [...imagePreviews];
+                        newPreviews[index].mau = e.target.value;
+                        setImagePreviews(newPreviews);
+                      }}
+                    >
+                      <option value="">-- MÀU --</option>
+                      {formData.mau.split(',').map(c => c.trim()).filter(c => c).map(color => (
+                        <option key={color} value={color}>{color.toUpperCase()}</option>
+                      ))}
+                    </select>
+
+                    <span className="text-[7px] font-black uppercase tracking-widest text-white/60">Quản lý ảnh</span>
+                  </div>
+
+                  {/* Badges */}
+                  <div className="absolute top-2 left-2 flex flex-col gap-1">
+                    <div className="px-2 py-0.5 bg-black/60 backdrop-blur-md rounded-lg text-[8px] font-black text-white border border-white/10 w-fit">#{index + 1}</div>
+                    {/* Hiển thị label màu nếu đã chọn */}
+                    {preview.mau && (
+                      <div className="px-2 py-0.5 bg-purple-600/80 backdrop-blur-md rounded-lg text-[7px] font-black text-white border border-purple-400/50 w-fit uppercase">
+                        {preview.mau}
+                      </div>
+                    )}
+                  </div>
+                  {preview.isMain && (
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg text-[7px] font-black uppercase tracking-widest shadow-xl flex items-center gap-1 border border-amber-400/50">
+                      <span>⭐</span> Đại diện
+                    </div>
+                  )}
+                </div>
+              ))}
+              {imagePreviews.length === 0 && (
+                <div className="col-span-full h-32 border-2 border-dashed border-slate-800 rounded-3xl flex flex-col items-center justify-center text-slate-700 gap-2">
+                  <span className="text-3xl opacity-10">🖼️</span>
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] opacity-30 italic">Chưa có ảnh nào được tải lên</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

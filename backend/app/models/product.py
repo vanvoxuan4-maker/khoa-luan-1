@@ -64,6 +64,7 @@ class Hinhanh(Base):
     ma_anh = Column(Integer, primary_key=True, index=True) 
     ma_sanpham = Column(Integer, ForeignKey("sanpham.ma_sanpham", ondelete="CASCADE"), nullable=False)
     image_url = Column(String, nullable=False)
+    mau = Column(String(50), nullable=True) # Màu sắc của ảnh (ví dụ: "Đỏ", "Xanh")
     is_main = Column(Boolean, default=False)
     sanpham = relationship("Sanpham", back_populates="hinhanh")
     

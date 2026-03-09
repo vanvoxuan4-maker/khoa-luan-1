@@ -1,6 +1,6 @@
 import os
 from sqlalchemy import event
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, attributes
 from app.models.product import Sanpham, Danhmuc, Thuonghieu, Hinhanh
 
 def delete_file_safe(path: str):
@@ -25,7 +25,7 @@ def receive_after_delete_danhmuc(mapper, connection, target):
 @event.listens_for(Danhmuc, 'after_update')
 def receive_after_update_danhmuc(mapper, connection, target):
     # Lấy state cũ để so sánh
-    state = event.get_history(target, 'hinh_anh')
+    state = attributes.get_history(target, 'hinh_anh')
     if state.deleted: # Nếu có ảnh cũ bị thay thế
         old_image = state.deleted[0]
         if old_image and old_image != target.hinh_anh:
@@ -39,7 +39,7 @@ def receive_after_delete_thuonghieu(mapper, connection, target):
 
 @event.listens_for(Thuonghieu, 'after_update')
 def receive_after_update_thuonghieu(mapper, connection, target):
-    state = event.get_history(target, 'logo')
+    state = attributes.get_history(target, 'logo')
     if state.deleted:
         old_logo = state.deleted[0]
         if old_logo and old_logo != target.logo:
@@ -53,7 +53,7 @@ def receive_after_delete_hinhanh(mapper, connection, target):
 
 @event.listens_for(Hinhanh, 'after_update')
 def receive_after_update_hinhanh(mapper, connection, target):
-    state = event.get_history(target, 'image_url')
+    state = attributes.get_history(target, 'image_url')
     if state.deleted:
         old_url = state.deleted[0]
         if old_url and old_url != target.image_url:

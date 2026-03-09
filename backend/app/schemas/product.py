@@ -47,6 +47,7 @@ class ThuonghieuResponse(ThuonghieuBase):
 class HinhanhResponse(BaseModel):
     ma_anh: int
     image_url: str  # Đường dẫn ảnh (/static/images/...)
+    mau: Optional[str] = None # Màu sắc của ảnh
     is_main: bool
     
     class Config:

@@ -10,6 +10,7 @@ import Breadcrumb from '../layouts/Breadcrumb';
 const ProductDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const { addToast, showConfirm } = useNotification();
     const { toggleWishlist, isFavorite } = useWishlist();
     const { addToCart } = useCart();
@@ -35,6 +36,9 @@ const ProductDetail = () => {
     };
 
     useEffect(() => {
+        // Luôn cuộn lên đầu trang khi ID sản phẩm thay đổi để tránh kẹt ở vị trí cũ
+        window.scrollTo(0, 0);
+
         const fetchProduct = async () => {
             try {
                 const res = await axios.get(`http://localhost:8000/sanpham/${id}`);
@@ -45,14 +49,28 @@ const ProductDetail = () => {
                     const colors = res.data.mau.split(',').map(c => c.trim()).filter(c => c.length > 0);
                     if (colors.length > 0) setSelectedColor(colors[0]);
 
-                    // Chia ảnh theo cụm: Mỗi màu chiếm một số lượng ảnh bằng nhau trong danh sách
+                    // PHIÊN BẢN MỚI: Phân nhóm ảnh dựa trên trường 'mau' thực tế lưu trong DB
                     if (res.data.hinhanh && res.data.hinhanh.length > 0) {
-                        const imagesPerColor = Math.ceil(res.data.hinhanh.length / colors.length);
                         const grouped = {};
-                        colors.forEach((color, idx) => {
-                            const start = idx * imagesPerColor;
-                            const end = start + imagesPerColor;
-                            grouped[color] = res.data.hinhanh.slice(start, end);
+                        colors.forEach(color => {
+                            const upperColor = color.trim().toUpperCase();
+
+                            // Lọc ảnh khớp màu HOẶC không có màu
+                            const imagesForColor = res.data.hinhanh.filter(img =>
+                                !img.mau || img.mau.trim().toUpperCase() === upperColor
+                            );
+
+                            // SẮP XẾP: Đưa những ảnh có nhãn màu khớp CHÍNH XÁC lên đầu
+                            imagesForColor.sort((a, b) => {
+                                const aUpper = a.mau ? a.mau.trim().toUpperCase() : '';
+                                const bUpper = b.mau ? b.mau.trim().toUpperCase() : '';
+
+                                if (aUpper === upperColor && bUpper !== upperColor) return -1;
+                                if (aUpper !== upperColor && bUpper === upperColor) return 1;
+                                return 0;
+                            });
+
+                            grouped[color] = imagesForColor;
                         });
                         setColorImages(grouped);
                     }
@@ -106,11 +124,19 @@ const ProductDetail = () => {
             if (product.hinhanh && product.hinhanh.length > 0) {
                 const mainImg = product.hinhanh.find(img => img.is_main);
                 defaultImg = mainImg ? mainImg.image_url : product.hinhanh[0].image_url;
-                if (!defaultImg.startsWith('http')) defaultImg = `http://localhost:8000${defaultImg}`;
+                if (defaultImg && !defaultImg.startsWith('http')) defaultImg = `http://localhost:8000${defaultImg}`;
             }
             setSelectedImage(defaultImg || "https://via.placeholder.com/500?text=No+Image");
         }
     }, [product]);
+
+    // 👇 NEW: Cập nhật ảnh chính khi đổi màu sắc
+    useEffect(() => {
+        if (selectedColor && colorImages[selectedColor] && colorImages[selectedColor].length > 0) {
+            const firstImgOfColor = colorImages[selectedColor][0];
+            setSelectedImage(getThumbUrl(firstImgOfColor.image_url));
+        }
+    }, [selectedColor, colorImages]);
 
     const handleAddToCart = async () => {
         const token = localStorage.getItem('user_access_token');
@@ -154,18 +180,21 @@ const ProductDetail = () => {
         }
     };
 
-    // Scroll to section logic
-    const location = useLocation();
+    // Logic cuộn đến phần cụ thể (ví dụ: #reviews)
     useEffect(() => {
-        if (!loading && product && location.hash) {
-            const element = document.getElementById(location.hash.substring(1));
+        const hash = location.hash;
+        if (!loading && product && hash && hash.length > 1) {
+            const targetId = hash.substring(1);
+            const element = document.getElementById(targetId);
             if (element) {
-                setTimeout(() => {
-                    element.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
+                // Đợi một chút để layout render ổn định trước khi cuộn
+                const timer = setTimeout(() => {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 300);
+                return () => clearTimeout(timer);
             }
         }
-    }, [loading, product, location.hash]);
+    }, [loading, product, location.pathname, location.hash]); // Thêm pathname để trigger khi đổi từ SP này sang SP khác cùng hash
 
     if (loading) return <div className="p-20 text-center">Đang tải chi tiết sản phẩm...</div>;
     if (!product) return <div className="p-20 text-center text-red-500">Không tìm thấy sản phẩm!</div>;
@@ -234,25 +263,38 @@ const ProductDetail = () => {
                             />
                         </div>
 
-                        {/* Thumbnails Gallery */}
-                        {product.hinhanh && product.hinhanh.length > 1 && (
-                            <div className="flex gap-4 overflow-x-auto pb-2">
-                                {product.hinhanh.map((img, idx) => (
-                                    <button
-                                        key={idx}
-                                        onClick={() => setSelectedImage(getThumbUrl(img.image_url))}
-                                        className={`w-20 h-20 rounded-xl border-2 overflow-hidden flex-shrink-0 bg-white ${selectedImage === getThumbUrl(img.image_url) ? 'border-blue-600 ring-2 ring-blue-100' : 'border-transparent hover:border-gray-300'}`}
-                                    >
-                                        <img
-                                            src={getThumbUrl(img.image_url)}
-                                            alt={`Thumbnail ${idx}`}
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => { e.target.parentElement.style.display = 'none'; }}
-                                        />
-                                    </button>
-                                ))}
-                            </div>
-                        )}
+                        {/* Thumbnails Gallery - Hiển thị toàn bộ ảnh của sản phẩm để khách hàng dễ dàng lựa chọn */}
+                        {(() => {
+                            const displayImages = product.hinhanh; // Luôn hiển thị tất cả ảnh
+
+                            if (displayImages && displayImages.length > 0) {
+                                return (
+                                    <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar-light">
+                                        {displayImages.map((img, idx) => {
+                                            const thumbUrl = getThumbUrl(img.image_url);
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => setSelectedImage(thumbUrl)}
+                                                    className={`w-20 h-20 rounded-xl border-2 overflow-hidden flex-shrink-0 bg-white transition-all duration-300 ${selectedImage === thumbUrl ? 'border-blue-600 ring-2 ring-blue-100 scale-95' : 'border-gray-100 hover:border-blue-300'}`}
+                                                >
+                                                    <img
+                                                        src={thumbUrl}
+                                                        alt={`Thumbnail ${idx}`}
+                                                        className="w-full h-full object-cover"
+                                                        onError={(e) => {
+                                                            console.warn("Thumbnail load failed:", thumbUrl);
+                                                            e.target.src = 'https://via.placeholder.com/100?text=Error';
+                                                        }}
+                                                    />
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })()}
                     </div>
 
                     {/* Cột Phải: Thông Tin - Premium Design */}

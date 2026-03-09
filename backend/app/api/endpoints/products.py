@@ -25,6 +25,7 @@ from app.schemas.product import (
     ThuonghieuCreate, ThuonghieuResponse,
     SanphamCreate, SanphamResponse, SanphamUpdate
 )
+from app.utils.product_utils import generate_random_product_code
 
 router = APIRouter()
 
@@ -444,8 +445,16 @@ def get_sanpham_by_id(ma_sanpham: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Không tìm thấy sản phẩm")
     return product
 
+@router.get("/generate-code")
+def get_generated_code(prefix: str = "SP", db: Session = Depends(get_db)):
+    """
+    API tạo mã sản phẩm ngẫu nhiên duy nhất.
+    """
+    code = generate_random_product_code(db, prefix=prefix)
+    return {"code": code}
+
 @router.post("/upload-anh/{ma_sanpham}")
-async def upload_image(ma_sanpham: int, is_main: bool = False, file: UploadFile = File(...), db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
+async def upload_image(ma_sanpham: int, is_main: bool = False, mau: Optional[str] = None, file: UploadFile = File(...), db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
     from PIL import Image
     import io
 
@@ -501,7 +510,7 @@ async def upload_image(ma_sanpham: int, is_main: bool = False, file: UploadFile 
             buffer.write(contents)
 
     link_cho_web = f"/static/images/{final_name}"
-    db_image = Hinhanh(ma_sanpham=ma_sanpham, image_url=link_cho_web, is_main=is_main)
+    db_image = Hinhanh(ma_sanpham=ma_sanpham, image_url=link_cho_web, is_main=is_main, mau=mau)
     db.add(db_image)
     db.commit()
     return {"link_hien_thi": link_cho_web, "message": "Cập nhật ảnh thành công! (đã nén tự động)"}
@@ -513,14 +522,21 @@ def delete_image(ma_anh: int, db: Session = Depends(get_db), admin: User = Depen
     image = db.query(Hinhanh).filter(Hinhanh.ma_anh == ma_anh).first()
     if not image:
         raise HTTPException(status_code=404, detail="Không tìm thấy ảnh")
-    
-    # Hooks in app.utils.image_hooks will automatically handle physical file deletion
-    # when db.delete(image) is called.
-    
-    # Xóa record trong DB
     db.delete(image)
     db.commit()
     return {"message": "Đã xóa ảnh thành công"}
+
+# API cập nhật thông tin ảnh (màu sắc)
+@router.put("/update-anh/{ma_anh}")
+def update_image_info(ma_anh: int, mau: Optional[str] = None, db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
+    """Cập nhật màu sắc cho ảnh đã tồn tại"""
+    image = db.query(Hinhanh).filter(Hinhanh.ma_anh == ma_anh).first()
+    if not image:
+        raise HTTPException(status_code=404, detail="Không tìm thấy ảnh")
+    
+    image.mau = mau
+    db.commit()
+    return {"message": "Cập nhật thông tin ảnh thành công"}
 
 # API đặt ảnh chính
 @router.put("/set-anh-chinh/{ma_anh}")

@@ -95,22 +95,30 @@ import { Outlet } from 'react-router-dom';
 
 const URLNormalizer = () => {
   const location = useLocation();
+  const navType = useNavigationType();
   const prevPathRef = React.useRef(location.pathname);
 
   useLayoutEffect(() => {
-    // Chỉ scroll lên đầu khi PATHNAME thực sự thay đổi (chuyển trang),
-    // KHÔNG cuộn khi chỉ thay đổi search params (lọc, sắp xếp)
-    const pathnameChanged = prevPathRef.current !== location.pathname;
+    // 1. Chỉ xử lý cuộn trang nếu KHÔNG PHẢI là thao tác Back/Forward (POP)
+    if (navType !== 'POP') {
+      const pathnameChanged = prevPathRef.current !== location.pathname;
 
+      if (pathnameChanged) {
+        // Luôn cuộn lên đầu khi chuyển sang một trang hoàn toàn mới (khác pathname)
+        // Ví dụ: /products -> /promotions, hoặc /products -> /products/1
+        window.scrollTo(0, 0);
+        prevPathRef.current = location.pathname;
+      }
+    }
+
+    // 2. Thiết lập scrollRestoration dựa trên kiểu điều hướng
     if ('scrollRestoration' in window.history) {
-      window.history.scrollRestoration = 'manual';
+      // Nếu là POP, để trình duyệt tự quản lý để khôi phục vị trí cũ
+      // Nếu là PUSH/REPLACE, dùng manual để mình chủ động cuộn lên đầu
+      window.history.scrollRestoration = navType === 'POP' ? 'auto' : 'manual';
     }
 
-    if (pathnameChanged) {
-      window.scrollTo(0, 0);
-      prevPathRef.current = location.pathname;
-    }
-
+    // 3. Chuẩn hóa URL (giữ nguyên logic cũ)
     const rawPath = window.location.pathname;
     const decodedPath = decodeURIComponent(rawPath);
     const trimmedPath = decodedPath.trim();
@@ -119,6 +127,7 @@ const URLNormalizer = () => {
       window.history.replaceState({}, '', trimmedPath + window.location.search);
     }
 
+    // 4. Ngăn chặn lăn chuột làm thay đổi giá trị input number
     const handleWheel = (e) => {
       if (document.activeElement.type === 'number') {
         document.activeElement.blur();
@@ -126,7 +135,7 @@ const URLNormalizer = () => {
     };
     document.addEventListener('wheel', handleWheel, { passive: true });
     return () => document.removeEventListener('wheel', handleWheel);
-  }, [location]);
+  }, [location, navType]);
 
   return null;
 };

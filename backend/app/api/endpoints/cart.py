@@ -72,20 +72,23 @@ def view_cart(db: Session = Depends(get_db), current_user: User = Depends(get_cu
             
             # Logic chọn ảnh theo màu (nếu có màu đã chọn)
             found_image = False
-            if item.mau_sac and product_info.mau and all_images:
-                colors = [c.strip() for c in product_info.mau.split(',') if c.strip()]
-                if item.mau_sac in colors:
-                    color_index = colors.index(item.mau_sac)
-                    # Giả định: Ảnh được chia đều cho các màu
-                    if len(colors) > 0:
-                        images_per_color = len(all_images) / len(colors)
-                        # Chọn ảnh đầu tiên của nhóm màu tương ứng
-                        img_idx = int(color_index * images_per_color)
-                        if img_idx < len(all_images):
-                            hinh_anh_dai_dien = all_images[img_idx].image_url
-                            found_image = True
+            if item.mau_sac and all_images:
+                # Tìm ảnh có trường màu khớp với màu của item
+                target_color = item.mau_sac.strip().lower()
+                
+                # Ưu tiên ảnh khớp màu hoàn toàn
+                color_match_imgs = [
+                    img for img in all_images 
+                    if img.mau and img.mau.strip().lower() == target_color
+                ]
+                
+                if color_match_imgs:
+                    # Nếu có nhiều ảnh cùng màu, ưu tiên ảnh chính (is_main) của màu đó hoặc ảnh đầu tiên
+                    best_img = next((img for img in color_match_imgs if img.is_main), color_match_imgs[0])
+                    hinh_anh_dai_dien = best_img.image_url
+                    found_image = True
 
-            # Nếu không tìm thấy ảnh theo màu, dùng ảnh đại diện (is_main)
+            # Nếu không tìm thấy ảnh theo màu, hoặc sản phẩm không có màu, dùng ảnh đại diện chung (is_main)
             if not found_image:
                 main_img = next((img for img in all_images if img.is_main), all_images[0] if all_images else None)
                 if main_img:

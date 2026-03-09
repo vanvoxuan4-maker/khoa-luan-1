@@ -123,43 +123,20 @@ class ChiTietDonHang(Base):
              main_img = next((img for img in self.sanpham.hinhanh if img.is_main), None)
              return main_img.image_url if main_img else (self.sanpham.hinhanh[0].image_url if self.sanpham.hinhanh else None)
 
-        # 2. Xử lý logic ánh xạ Màu -> Ảnh
-        try:
-            # Lấy danh sách màu từ DB (ví dụ: "Đỏ, Xanh, Vàng")
-            colors = [c.strip() for c in self.sanpham.mau.split(',') if c.strip()]
+        # 2. Xử lý logic ánh xạ Màu -> Ảnh dựa trên trường 'mau' thực tế
+        target_color = self.mau_sac.strip().lower()
+        
+        # Tìm các ảnh có màu khớp
+        color_match_imgs = [
+            img for img in self.sanpham.hinhanh 
+            if img.mau and img.mau.strip().lower() == target_color
+        ]
+        
+        if color_match_imgs:
+            # Ưu tiên ảnh chính của màu đó hoặc ảnh đầu tiên trong nhóm màu
+            best_img = next((img for img in color_match_imgs if img.is_main), color_match_imgs[0])
+            return best_img.image_url
             
-            if self.mau_sac not in colors:
-                 # Màu không khớp -> Trả về ảnh chính
-                main_img = next((img for img in self.sanpham.hinhanh if img.is_main), None)
-                return main_img.image_url if main_img else self.sanpham.hinhanh[0].image_url
-
-            # Logic chia nhóm ảnh (giống Frontend)
-            # Giả sử: 6 ảnh, 3 màu => Mỗi màu 2 ảnh
-            # Màu 0 (Đỏ) -> Ảnh [0, 1]
-            # Màu 1 (Xanh) -> Ảnh [2, 3] ...
-            
-            total_images = len(self.sanpham.hinhanh)
-            num_colors = len(colors)
-            
-            if num_colors == 0:
-                 return self.sanpham.hinhanh[0].image_url
-
-            images_per_color = import_math_ceil(total_images / num_colors)
-            
-            color_index = colors.index(self.mau_sac)
-            
-            # Tính index ảnh đầu tiên của màu này
-            start_index = color_index * images_per_color
-            
-            if start_index < total_images:
-                return self.sanpham.hinhanh[start_index].image_url
-            
-            return self.sanpham.hinhanh[0].image_url
-
-        except Exception as e:
-            print(f"Error mapping image color: {e}")
-            return self.sanpham.hinhanh[0].image_url
-
-def import_math_ceil(x):
-    import math
-    return math.ceil(x)
+        # 3. Nếu không khớp màu -> Trả về ảnh chính chung hoặc ảnh đầu tiên
+        main_img = next((img for img in self.sanpham.hinhanh if img.is_main), self.sanpham.hinhanh[0] if self.sanpham.hinhanh else None)
+        return main_img.image_url if main_img else None
