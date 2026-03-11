@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../../../utils/apiConfig';
 import { useLocation } from 'react-router-dom';
@@ -29,39 +29,39 @@ const LogoBike = () => (
 
 // Trạng thái đơn hàng (Giao vận)
 export const TRANG_THAI_VIET = {
-  pending: { label: "⏳ Chờ xử lý", color: "bg-yellow-50 text-yellow-700 border-yellow-200" }, // Đổi sang Vàng
-  confirmed: { label: "✅ Đã xác nhận", color: "bg-blue-50 text-blue-600 border-blue-200" },
-  shipping: { label: "🚚 Đang giao", color: "bg-orange-50 text-orange-700 border-orange-200" }, // Đổi sang Cam
-  delivered: { label: "🎉 Hoàn thành", color: "bg-green-50 text-green-700 border-green-200" },
-  cancelled: { label: "❌ Đã hủy", color: "bg-red-50 text-red-700 border-red-200" },
-  returned: { label: "⏪ Trả hàng", color: "bg-purple-50 text-purple-700 border-purple-200" }
+  pending:   { label: "Chờ xử lý",  icon: "⏳", color: "bg-amber-50 text-amber-700 border-amber-200" },
+  confirmed: { label: "Đã xác nhận", icon: "✅", color: "bg-blue-50 text-blue-600 border-blue-200" },
+  shipping:  { label: "Đang giao",  icon: "🚚", color: "bg-orange-50 text-orange-700 border-orange-200" },
+  delivered: { label: "Hoàn thành", icon: "🎉", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  cancelled: { label: "Đã hủy",    icon: "❌", color: "bg-red-50 text-red-600 border-red-200" },
+  returned:  { label: "Trả hàng",  icon: "⏪", color: "bg-purple-50 text-purple-700 border-purple-200" }
 };
 
-// 👇 CẤU HÌNH CỘT THANH TOÁN (Khớp với ENUM Database)
+// CẤU HÌNH CỘT THANH TOÁN
 export const PAYMENT_STATUS_MAP = {
   paid: {
-    label: "ĐÃ THANH TOÁN",
+    label: "Đã thanh toán",
     color: "text-emerald-700 bg-emerald-50 border-emerald-200",
     icon: "💰",
     actionLabel: "Hoàn tác (Chưa thu)",
     nextStatus: "pending"
   },
   pending: {
-    label: "CHƯA THANH TOÁN",
+    label: "Chưa thanh toán",
     color: "text-amber-600 bg-amber-50 border-amber-200",
     icon: "⏳",
     actionLabel: "Xác nhận đã thu tiền",
     nextStatus: "paid"
   },
   failed: {
-    label: "THANH TOÁN LỖI",
+    label: "Thanh toán lỗi",
     color: "text-rose-600 bg-rose-50 border-rose-200",
     icon: "⚠️",
     actionLabel: "Xử lý lại (Về chờ)",
     nextStatus: "pending"
   },
   refunded: {
-    label: "ĐÃ HOÀN TIỀN",
+    label: "Đã hoàn tiền",
     color: "text-purple-700 bg-purple-50 border-purple-200",
     icon: "↩️",
     actionLabel: "Đã xử lý hoàn tiền",
@@ -262,46 +262,38 @@ const OrderManager = ({ highlightOrderId }) => {
       </div>
 
       {/* TIÊU ĐỀ DANH SÁCH */}
-      <div className="flex items-center gap-3 mb-6 pl-2 border-l-4 border-purple-500">
+      <div className="flex items-center justify-between mb-6 pl-2 border-l-4 border-purple-500">
         <h4 className="text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 via-purple-600 to-pink-600 uppercase tracking-wide">
           Danh sách đơn hàng
         </h4>
+        <span className="text-[11px] text-blue-600 font-bold italic bg-blue-50/50 px-4 py-1.5 rounded-full border border-blue-100 shadow-[0_0_15px_rgba(59,130,246,0.15)] hidden md:flex items-center gap-2 transition-all hover:scale-105 hover:bg-blue-100/50 cursor-default select-none group/note">
+          <span className="animate-pulse text-sm">💡</span> 
+          <span>Nhắc nhở: Hãy nhấn vào đơn hàng để xem chi tiết</span>
+        </span>
       </div>
 
       {/* TABLE */}
-      <div className="bg-white/80 backdrop-blur-md rounded-[3rem] shadow-xl shadow-blue-500/5 border border-white overflow-hidden">
+      <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.07)] overflow-hidden border border-slate-100">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-separate border-spacing-0 min-w-[900px]">
-            <thead className="bg-gradient-to-r from-amber-600 to-yellow-700 text-amber-50 text-[11px] uppercase font-black tracking-widest">
-              <tr className="divide-x divide-amber-200/40">
-                <th className="py-8 px-4 text-center w-16">Mã</th>
-                <th className="py-8 px-5 w-[180px] text-center">Khách hàng</th>
-                <th className="py-8 px-4 text-center w-32">Tổng tiền</th>
-                <th className="py-8 px-2 text-center w-20">PT TT</th>
-                <th className="py-8 px-2 text-center w-40">
-                  <div className="flex flex-col items-center justify-center leading-tight">
-                    <span>Trạng thái</span>
-                    <span>đơn hàng</span>
-                  </div>
-                </th>
-                <th className="py-8 px-2 text-center w-40">
-                  <div className="flex flex-col items-center justify-center leading-tight">
-                    <span>Trạng thái</span>
-                    <span>thanh toán</span>
-                  </div>
-                </th>
-                <th className="py-8 px-3 text-center w-[150px]">Thao tác</th>
+          <table className="w-full text-left min-w-[900px]">
+            <thead>
+              <tr className="bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[13px] font-semibold uppercase tracking-wide">
+                <th className="py-4 px-4 text-center rounded-tl-xl w-16">Mã</th>
+                <th className="py-4 px-5 text-left w-[200px]">Khách hàng</th>
+                <th className="py-4 px-4 text-right w-36">Tổng tiền</th>
+                <th className="py-4 px-3 text-center w-20">PT TT</th>
+                <th className="py-4 px-3 text-center w-44">Trạng thái đơn</th>
+                <th className="py-4 px-3 text-center w-44">Trạng thái TT</th>
+                <th className="py-4 px-3 text-center rounded-tr-xl w-[160px]">Thao tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredOrders.length > 0 ? filteredOrders.map((order, index) => {
-                const statusInfo = TRANG_THAI_VIET[order.trang_thai] || { label: order.trang_thai, color: "bg-gray-100" };
+            <tbody>
+              {filteredOrders.length > 0 ? filteredOrders.map((order) => {
+                const statusInfo = TRANG_THAI_VIET[order.trang_thai] || { label: order.trang_thai, icon: '❓', color: 'bg-gray-100 text-gray-600 border-gray-200' };
                 const paymentKey = PAYMENT_STATUS_MAP[order.trangthai_thanhtoan] ? order.trangthai_thanhtoan : 'pending';
                 const paymentInfo = PAYMENT_STATUS_MAP[paymentKey];
                 const giamGia = order.voucher_giam || 0;
                 const giaThucTe = order.tong_tien;
-
-                // Hoàn tiền chỉ khi đơn đã giao hoặc đã hủy và đã thanh toán
                 const canRefund = order.trangthai_thanhtoan === 'paid' &&
                   (order.trang_thai === 'delivered' || order.trang_thai === 'cancelled');
 
@@ -310,83 +302,90 @@ const OrderManager = ({ highlightOrderId }) => {
                     id={`order-row-${order.ma_don_hang}`}
                     key={order.ma_don_hang}
                     data-order-id={order.ma_don_hang}
-                    className={`hover:bg-blue-50/40 transition-colors group relative ${order.ma_don_hang === highlightedId ? 'bg-amber-50/60 shadow-inner' : ''}`}
-                    onClick={() => setSelectedOrder(order)}
+                    className={`border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer relative
+                      ${order.ma_don_hang === highlightedId ? 'bg-amber-50' : ''}`}
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setHighlightedId(null);
+                    }}
                   >
-                    {/* Mã đơn */}
-                    <td className="py-3 px-4 text-center align-middle relative">
+                    {/* Mã đơn – center */}
+                    <td className="py-4 px-4 text-center align-middle relative">
                       {order.ma_don_hang === highlightedId && (
                         <span className="absolute left-1.5 top-1/2 -translate-y-1/2 flex h-2.5 w-2.5">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                           <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
                         </span>
                       )}
-                      <span className="font-black text-slate-500 text-xs">#{order.ma_don_hang}</span>
+                      <span className="font-semibold text-slate-500 text-[13px]">#{order.ma_don_hang}</span>
                     </td>
 
-                    {/* Khách hàng */}
-                    <td className="py-3 px-5 align-middle text-center">
-                      <div className="font-extrabold text-slate-800 text-[13px] truncate max-w-[170px] uppercase mx-auto">{order.ten_nguoi_nhan}</div>
-                      <div className="text-[10px] text-slate-400 font-medium mt-0.5 flex items-center justify-center gap-1">
+                    {/* Khách hàng – left */}
+                    <td className="py-4 px-5 align-middle text-left">
+                      <div className="font-semibold text-slate-800 text-[14px] truncate max-w-[190px] uppercase">{order.ten_nguoi_nhan}</div>
+                      <div className="text-[12px] text-slate-400 mt-0.5 flex items-center gap-1">
                         <span>📞</span><span>{order.sdt_nguoi_nhan}</span>
                       </div>
-                      <div className="text-[10px] text-slate-400 font-medium truncate max-w-[170px] flex items-center justify-center gap-1 mx-auto" title={order.dia_chi_giao}>
+                      <div className="text-[12px] text-slate-400 truncate max-w-[190px] flex items-center gap-1" title={order.dia_chi_giao}>
                         <span className="shrink-0">📍</span><span className="truncate">{order.dia_chi_giao}</span>
                       </div>
                     </td>
 
-                    {/* Tổng tiền */}
-                    <td className="py-3 px-4 text-center align-middle">
-                      <div className="font-black text-orange-600 text-sm">{giaThucTe?.toLocaleString('vi-VN')} VND</div>
+                    {/* Tổng tiền – right */}
+                    <td className="py-4 px-4 text-right align-middle">
+                      <div className="font-bold text-orange-600 text-[14px]">{giaThucTe?.toLocaleString('vi-VN')} VND</div>
                       {giamGia > 0 && (
-                        <div className="text-[9px] text-pink-500 font-bold mt-0.5">-{giamGia?.toLocaleString('vi-VN')} VND</div>
-                      )
-                      }
+                        <div className="text-[11px] text-pink-400 font-medium mt-0.5">-{giamGia?.toLocaleString('vi-VN')} VND</div>
+                      )}
                     </td>
 
-                    {/* PT Thanh toán */}
-                    <td className="py-3 px-4 text-center align-middle">
-                      <span className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border
-                        ${order.phuong_thuc?.toLowerCase() === 'cod' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                          order.phuong_thuc?.toLowerCase() === 'vnpay' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                            'bg-gray-50 text-gray-600 border-gray-200'}`}>
-                        {order.phuong_thuc || 'N/A'}
+                    {/* PT Thanh toán – center */}
+                    <td className="py-4 px-3 text-center align-middle">
+                      <span className={`inline-block px-3 py-1 rounded-full text-[11px] font-semibold border
+                        ${ order.phuong_thuc?.toLowerCase() === 'cod'
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : order.phuong_thuc?.toLowerCase() === 'vnpay'
+                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              : 'bg-slate-50 text-slate-600 border-slate-200'
+                        }`}>
+                        {order.phuong_thuc?.toUpperCase() || 'N/A'}
                       </span>
                     </td>
 
-                    {/* Trạng thái giao vận */}
-                    <td className="py-3 px-2 text-center align-middle">
-                      <span className={`inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase border leading-tight w-[145px] h-[36px] ${statusInfo.color}`}>
-                        <span className="text-center whitespace-nowrap">{statusInfo.label}</span>
+                    {/* Trạng thái giao vận – center */}
+                    <td className="py-4 px-3 text-center align-middle">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold border ${statusInfo.color}`}>
+                        <span>{statusInfo.icon}</span>
+                        <span className="whitespace-nowrap">{statusInfo.label}</span>
                       </span>
                     </td>
 
-                    {/* Trạng thái thanh toán */}
-                    <td className="py-3 px-2 text-center align-middle">
+                    {/* Trạng thái thanh toán – center */}
+                    <td className="py-4 px-3 text-center align-middle">
                       {order.trangthai_thanhtoan !== 'refunded' ? (
                         <button
                           onClick={(e) => { e.stopPropagation(); updatePaymentStatus(order.ma_don_hang, order.trangthai_thanhtoan, order.tong_tien); }}
-                          className={`flex items-center justify-center gap-1.5 mx-auto px-2.5 py-1.5 rounded-xl text-[9px] font-black uppercase border transition-all hover:opacity-80 active:scale-95 leading-tight w-[145px] h-[36px] ${paymentInfo.color}`}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold border transition-all hover:brightness-95 active:scale-95 ${paymentInfo.color}`}
                           title={paymentInfo.actionLabel}
                         >
-                          <span className="text-base leading-none shrink-0">{paymentInfo.icon}</span>
-                          <span className="text-center whitespace-nowrap">{paymentInfo.label}</span>
+                          <span>{paymentInfo.icon}</span>
+                          <span className="whitespace-nowrap">{paymentInfo.label}</span>
                         </button>
                       ) : (
-                        <span className={`flex items-center justify-center mx-auto px-2.5 py-1.5 rounded-xl text-[9px] font-black uppercase border leading-tight w-[145px] h-[36px] ${paymentInfo.color}`}>
-                          <span className="text-base leading-none shrink-0">{paymentInfo.icon}</span>
-                          <span className="text-center whitespace-nowrap">{paymentInfo.label}</span>
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold border ${paymentInfo.color}`}>
+                          <span>{paymentInfo.icon}</span>
+                          <span className="whitespace-nowrap">{paymentInfo.label}</span>
                         </span>
                       )}
                     </td>
 
-                    {/* Thao tác */}
-                    <td className="py-3 px-3 text-center align-middle" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-center gap-1">
+                    {/* Thao tác – center */}
+                    <td className="py-4 px-3 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-1.5">
                         {/* Dropdown trạng thái */}
-                        <div className="relative group" onClick={(e) => e.stopPropagation()}>
+                        <div className="relative" onClick={(e) => e.stopPropagation()}>
                           <select
-                            className="appearance-none bg-white border border-slate-200 text-slate-700 py-1.5 pl-2 pr-6 rounded-lg text-[11px] font-bold focus:outline-none focus:ring-2 focus:ring-blue-400/30 cursor-pointer transition-all shadow-sm"
+                            className="appearance-none bg-white border border-slate-200 text-slate-700 py-1.5 pl-3 pr-7 rounded-lg text-[13px] font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-300/50 cursor-pointer transition hover:border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed"
                             onChange={(e) => updateStatus(order.ma_don_hang, e.target.value)}
                             value={order.trang_thai}
                             disabled={order.trang_thai === 'delivered' || order.trang_thai === 'cancelled' || order.trang_thai === 'returned'}
@@ -398,29 +397,28 @@ const OrderManager = ({ highlightOrderId }) => {
                             <option value="returned">⏪ Trả hàng</option>
                             <option value="cancelled">❌ Hủy đơn</option>
                           </select>
-                          <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] pointer-events-none text-slate-400">▼</div>
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[10px]">▼</div>
                         </div>
 
-                        {/* Nút hoàn tiền - chỉ hiện khi delivered/cancelled và đã TT */}
+                        {/* Nút hoàn tiền */}
                         {canRefund && (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleRefund(order.ma_don_hang, order.tong_tien); }}
-                            className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white border border-purple-200 flex items-center justify-center transition-all active:scale-90 text-xs"
+                            className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white border border-purple-200 flex items-center justify-center transition-all active:scale-90"
                             title="Hoàn tiền"
                           >
                             ↩
                           </button>
                         )}
 
-
-                        {/* Nút xóa - chỉ khi đã hủy */}
+                        {/* Nút xóa */}
                         {order.trang_thai === 'cancelled' && (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDeleteOrder(order.ma_don_hang); }}
-                            className="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white border border-red-200 flex items-center justify-center transition-all active:scale-90"
+                            className="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white border border-red-200 flex items-center justify-center transition-all active:scale-90"
                             title="Xóa vĩnh viễn"
                           >
-                            <span className="text-xs">🗑️</span>
+                            🗑️
                           </button>
                         )}
                       </div>
@@ -428,14 +426,18 @@ const OrderManager = ({ highlightOrderId }) => {
                   </tr>
                 );
               }) : (
-                <tr><td colSpan="7" className="text-center py-16 text-slate-400 italic font-bold text-sm uppercase tracking-widest opacity-50">Dữ liệu trống</td></tr>
+                <tr>
+                  <td colSpan="7" className="text-center py-20 text-slate-400 text-sm italic">
+                    Không có đơn hàng nào
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
         </div>
-      </div >
+      </div>
       {selectedOrder && <OrderDetailModal order={selectedOrder} products={products} onClose={() => setSelectedOrder(null)} />}
-    </div >
+    </div>
   );
 };
 

@@ -12,254 +12,226 @@ const OrderDetailModal = ({ order, products, onClose }) => {
     const tongSauGiam = order.tong_tien || 0;
     const paymentKey = PAYMENT_STATUS_MAP[order.trangthai_thanhtoan] ? order.trangthai_thanhtoan : 'pending';
     const paymentInfo = PAYMENT_STATUS_MAP[paymentKey];
+    const isCancelled = order.trang_thai === 'cancelled';
+    const isReturned = order.trang_thai === 'returned';
 
     const findImage = (maSP) => {
         const product = products.find(p => p.ma_sanpham === maSP);
-        if (product && product.hinhanh && product.hinhanh.length > 0) {
-            const img = product.hinhanh[0];
-            const url = img.image_url || img;
+        if (product?.hinhanh?.length > 0) {
+            const url = product.hinhanh[0].image_url || product.hinhanh[0];
             return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
         }
         return null;
     };
 
-    // Timeline steps
     const timelineSteps = [
-        { key: 'pending', label: 'Chờ xử lý', icon: '⏳' },
-        { key: 'confirmed', label: 'Xác nhận', icon: '✅' },
-        { key: 'shipping', label: 'Đang giao', icon: '🚚' },
+        { key: 'pending',   label: 'Chờ xử lý', icon: '⏳' },
+        { key: 'confirmed', label: 'Xác nhận',   icon: '✅' },
+        { key: 'shipping',  label: 'Đang giao',  icon: '🚚' },
         { key: 'delivered', label: 'Hoàn thành', icon: '🎉' },
-        { key: 'returned', label: 'Trả hàng', icon: '⏪' },
     ];
     const currentStepIdx = timelineSteps.findIndex(s => s.key === order.trang_thai);
-    const isCancelled = order.trang_thai === 'cancelled';
+
+    // Uniform info row
+    const InfoRow = ({ label, value, valueCls = 'text-slate-800 font-semibold' }) => (
+        <div className="flex flex-col gap-0.5">
+            <span className="text-[12px] text-slate-400 font-medium">{label}</span>
+            <span className={`text-[14px] leading-snug ${valueCls}`}>{value || '—'}</span>
+        </div>
+    );
+
+    const statusInfo = TRANG_THAI_VIET[order.trang_thai] || { label: order.trang_thai, icon: '❓', color: 'bg-gray-100 text-gray-600 border-gray-200' };
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3">
             <style>{`
-        @keyframes modalSlideUp { from { opacity:0; transform:translateY(28px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
-        .modal-anim { animation: modalSlideUp 0.38s cubic-bezier(.22,1,.36,1) both; }
-        .tl-glow { box-shadow: 0 0 0 4px rgba(99,102,241,0.2), 0 0 20px rgba(99,102,241,0.45); }
-        @media print {
-          #printable-invoice { display: block !important; }
-        }
-      `}</style>
+                @keyframes modalUp { from { opacity:0; transform:translateY(16px) scale(0.98); } to { opacity:1; transform:none; } }
+                .mod-anim { animation: modalUp 0.28s cubic-bezier(.22,1,.36,1) both; }
+                @media print { #printable-invoice { display: block !important; } }
+            `}</style>
 
             {/* Backdrop */}
-            <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-md no-print" onClick={onClose} />
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm no-print" onClick={onClose} />
 
             {/* MODAL */}
             <div
-                className="modal-anim relative w-full max-w-5xl bg-[#0b1120] border border-slate-700/40 rounded-[2rem] shadow-[0_32px_80px_rgba(0,0,0,0.75)] overflow-hidden flex flex-col max-h-[93vh]"
+                className="mod-anim relative w-full max-w-6xl bg-white border border-slate-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden no-print"
+                style={{ maxHeight: 'calc(100vh - 24px)' }}
             >
-                {/* === HEADER (WEB) - 3 PHẦN ĐỒNG BỘ === */}
-                <div className="relative no-print shrink-0 overflow-hidden border-b border-slate-700/50">
-                    <div className="absolute inset-0 bg-slate-900" />
-                    <div className="relative px-7 py-5 flex items-start justify-between gap-6">
+                {/* ── TOP BAR ── */}
+                <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-white shadow-sm z-10">
 
-                        {/* 1. Trái: Logo & Thương hiệu */}
-                        <div className="flex items-start gap-3 flex-1">
-                            <div className="w-12 h-12 flex items-center justify-center border border-black rounded-lg bg-white">
-                                <svg viewBox="0 0 100 100" className="w-10 h-10" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="30" cy="65" r="16" stroke="black" strokeWidth="6" strokeDasharray="8 4" />
-                                    <circle cx="30" cy="65" r="5" fill="black" />
-                                    <circle cx="75" cy="65" r="16" stroke="black" strokeWidth="6" strokeDasharray="8 4" />
-                                    <circle cx="75" cy="65" r="4" fill="black" />
-                                    <path d="M30 65 L 42 35 L 75 65 M 42 35 L 65 35 M 58 65 L 42 35"
-                                        stroke="black" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
+                    {/* Brand + Order ID & Time */}
+                    <div className="flex items-center gap-3 shrink-0">
+                        <div className="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl shadow-md shadow-orange-100">
+                            <svg viewBox="0 0 100 100" className="w-6 h-6" fill="none">
+                                <circle cx="30" cy="65" r="16" stroke="white" strokeWidth="6" strokeDasharray="8 4" />
+                                <circle cx="30" cy="65" r="5" fill="white" />
+                                <circle cx="75" cy="65" r="16" stroke="white" strokeWidth="6" strokeDasharray="8 4" />
+                                <circle cx="75" cy="65" r="4" fill="white" />
+                                <path d="M30 65 L42 35 L75 65 M42 35 L65 35 M58 65 L42 35" stroke="white" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        </div>
+                        <div>
+                            <div className="text-slate-800 font-black text-[15px] leading-tight">
+                                BIKE<span className="text-orange-500">STORE</span>
                             </div>
-                            <div>
-                                <div className="text-white font-black text-lg tracking-wider leading-none">BIKE<span className="text-yellow-500">STORE</span></div>
-                                <div className="text-slate-500 text-[8px] font-black uppercase tracking-[0.2em] mt-1">Premium Bicycles</div>
+                            <div className="text-slate-500 text-[12px] font-bold mt-1 flex items-center gap-2">
+                                <span className="text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100">Mã đơn: #{order.ma_don_hang}</span>
+                                <span className="text-slate-400">🗓 {new Date(order.ngay_dat).toLocaleString('vi-VN')}</span>
                             </div>
                         </div>
+                    </div>
 
-                        {/* 2. Giữa: Tiêu đề */}
-                        <div className="text-center flex-[1.5]">
-                            <h2 className="text-white font-black text-xl uppercase tracking-[0.1em]">Chi tiết đơn # {order.ma_don_hang}</h2>
-                            <div className="text-indigo-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">Hóa đơn bán hàng</div>
-                        </div>
-
-                        {/* 3. Phải: Trạng thái & Đóng */}
-                        <div className="flex items-start gap-4 flex-1 justify-end">
-                            <div className={`px-4 py-1.5 rounded-full text-[10px] font-black border uppercase tracking-wider ${isCancelled ? 'bg-red-500/20 border-red-400/40 text-red-300' :
-                                order.trang_thai === 'returned' ? 'bg-purple-500/20 border-purple-400/40 text-purple-300' :
-                                    'bg-indigo-500/20 border-indigo-400/40 text-indigo-300'
-                                }`}>
-                                {isCancelled ? 'Đã hủy' : (TRANG_THAI_VIET[order.trang_thai]?.label || order.trang_thai)}
+                    {/* Timeline (center) */}
+                    <div className="flex-1 flex justify-center px-8">
+                        {(isCancelled || isReturned) ? (
+                            <span className={`px-4 py-1.5 rounded-full text-[13px] font-semibold border ${statusInfo.color}`}>
+                                {statusInfo.icon} {statusInfo.label}
+                            </span>
+                        ) : (
+                            <div className="flex items-center relative">
+                                <div className="absolute top-[18px] left-6 right-6 h-0.5 bg-slate-100" />
+                                <div
+                                    className="absolute top-[18px] left-6 h-0.5 bg-gradient-to-r from-orange-400 to-amber-400 transition-all duration-500"
+                                    style={{ width: currentStepIdx > 0 ? `${(currentStepIdx / (timelineSteps.length - 1)) * 100}%` : '0%' }}
+                                />
+                                {timelineSteps.map((step, i) => {
+                                    const done = i < currentStepIdx;
+                                    const cur  = i === currentStepIdx;
+                                    return (
+                                        <div key={step.key} className="flex flex-col items-center gap-1 z-10 w-20">
+                                            <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-base transition-all
+                                                ${done ? 'bg-orange-400 border-orange-400 text-white shadow-md shadow-orange-200' :
+                                                  cur  ? 'bg-white border-orange-500 text-orange-500 shadow-lg shadow-orange-200 ring-4 ring-orange-100' :
+                                                         'bg-white border-slate-200 text-slate-300'}`}>
+                                                {step.icon}
+                                            </div>
+                                            <span className={`text-[11px] font-semibold whitespace-nowrap
+                                                ${cur ? 'text-orange-600' : done ? 'text-orange-400' : 'text-slate-400'}`}>
+                                                {step.label}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                            <button onClick={onClose} className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white flex items-center justify-center text-xl transition-all hover:rotate-90 duration-300 shrink-0">×</button>
-                        </div>
+                        )}
+                    </div>
 
+                    {/* Close */}
+                    <div className="flex items-center gap-2.5 shrink-0">
+                        <button
+                            onClick={onClose}
+                            className="w-9 h-9 rounded-xl border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-100 hover:bg-red-50 flex items-center justify-center text-xl transition-all duration-200 hover:rotate-90"
+                        >
+                            ×
+                        </button>
                     </div>
                 </div>
 
-                {/* Timeline */}
-                {!isCancelled && (
-                    <div className="relative px-10 pb-6">
-                        <div className="flex items-center justify-between relative">
-                            <div className="absolute top-[18px] inset-x-0 h-0.5 bg-white/10 mx-8" />
-                            <div
-                                className="absolute top-[18px] left-0 h-0.5 bg-gradient-to-r from-white to-white/60 mx-8 transition-all duration-700"
-                                style={{ width: currentStepIdx >= 0 ? `${(currentStepIdx / (timelineSteps.length - 1)) * 100}%` : '0%' }}
-                            />
-                            {timelineSteps.map((step, i) => {
-                                const done = i < currentStepIdx;
-                                const current = i === currentStepIdx;
-                                return (
-                                    <div key={step.key} className="flex flex-col items-center gap-1.5 z-10">
-                                        <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-sm transition-all duration-300 
-                        ${done ? 'bg-white border-white text-indigo-700' :
-                                                current ? 'bg-indigo-500 border-white text-white tl-glow' :
-                                                    'bg-white/8 bg-opacity-10 border-white/20 text-white/25'}`}>
-                                            {step.icon}
-                                        </div>
-                                        <span className={`text-[9px] font-bold uppercase tracking-wider whitespace-nowrap ${current ? 'text-white' : done ? 'text-white/60' : 'text-white/25'
-                                            }`}>{step.label}</span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
+                {/* ── BODY: 3 columns ── */}
+                <div
+                    className="flex-1 grid gap-5 p-5 min-h-0 overflow-hidden bg-slate-50/50"
+                    style={{ gridTemplateColumns: '260px 1fr 240px' }}
+                >
+                    {/* ── COL LEFT (Customer & Shipping) ── */}
+                    <div className="flex flex-col gap-4 min-h-0 overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent' }}>
 
-                {/* === SCROLLABLE BODY (WEB) === */}
-                <div className="no-print flex-1 overflow-y-auto custom-scrollbar p-7 space-y-6"
-                    style={{ background: 'linear-gradient(160deg, #0d1325 0%, #0b1120 60%, #0f1728 100%)' }}>
-
-                    {/* Info cards */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        {/* Customer */}
-                        <div className="relative rounded-2xl border border-indigo-500/20 overflow-hidden p-5 group hover:border-indigo-400/40 transition-all duration-300"
-                            style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(139,92,246,0.04) 100%)' }}>
-                            <div className="absolute -top-6 -right-6 w-20 h-20 rounded-full bg-indigo-500/10 group-hover:scale-150 transition-transform duration-500" />
-                            <div className="flex items-center gap-2 mb-4">
-                                <div className="w-8 h-8 bg-indigo-500/20 rounded-xl border border-indigo-500/30 flex items-center justify-center text-sm">👤</div>
-                                <span className="text-indigo-400 text-[10px] font-black uppercase tracking-widest">Khách hàng</span>
+                        {/* Customer Info */}
+                        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 space-y-3">
+                            <div className="flex items-center gap-2 pb-2 border-b border-slate-50">
+                                <span className="text-lg">👤</span>
+                                <span className="text-[14px] font-bold text-slate-700 uppercase tracking-tight">Người nhận hàng</span>
                             </div>
-                            <div className="space-y-3">
-                                <div>
-                                    <div className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Họ tên</div>
-                                    <div className="text-white font-extrabold text-base mt-0.5 leading-tight">{order.ten_nguoi_nhan}</div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <div className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Điện thoại</div>
-                                        <div className="text-indigo-300 font-bold text-sm mt-0.5">📞 {order.sdt_nguoi_nhan}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Ngày đặt</div>
-                                        <div className="text-slate-300 font-bold text-sm mt-0.5">🗓️ {new Date(order.ngay_dat).toLocaleDateString('vi-VN')}</div>
-                                    </div>
-                                </div>
-                            </div>
+                            <InfoRow label="Họ tên" value={order.ten_nguoi_nhan} valueCls="text-slate-900 font-bold text-[15px] uppercase" />
+                            <InfoRow label="Số điện thoại" value={`📞 ${order.sdt_nguoi_nhan}`} valueCls="text-orange-600 font-bold text-[15px]" />
                         </div>
 
-                        {/* Shipping */}
-                        <div className="relative rounded-2xl border border-sky-500/20 overflow-hidden p-5 group hover:border-sky-400/40 transition-all duration-300"
-                            style={{ background: 'linear-gradient(135deg, rgba(14,165,233,0.07) 0%, rgba(56,189,248,0.03) 100%)' }}>
-                            <div className="absolute -top-6 -right-6 w-20 h-20 rounded-full bg-sky-500/10 group-hover:scale-150 transition-transform duration-500" />
-                            <div className="flex items-center gap-2 mb-4">
-                                <div className="w-8 h-8 bg-sky-500/20 rounded-xl border border-sky-500/30 flex items-center justify-center text-sm">🚚</div>
-                                <span className="text-sky-400 text-[10px] font-black uppercase tracking-widest">Giao hàng</span>
+                        {/* Shipping Info */}
+                        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 space-y-3">
+                            <div className="flex items-center gap-2 pb-2 border-b border-slate-50">
+                                <span className="text-lg">🚚</span>
+                                <span className="text-[14px] font-bold text-slate-700 uppercase tracking-tight">Vận chuyển</span>
                             </div>
-                            <div className="space-y-3">
-                                <div>
-                                    <div className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Địa chỉ nhận</div>
-                                    <div className="text-white font-bold text-sm mt-0.5 leading-snug">{order.dia_chi_giao}</div>
-                                </div>
-                                <div>
-                                    <div className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Phương thức thanh toán</div>
-                                    <div className="mt-1.5">
-                                        <span className={`inline-block px-2.5 py-1 rounded-lg text-[11px] font-black border uppercase ${order.phuong_thuc?.toLowerCase() === 'cod' ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' :
-                                            order.phuong_thuc?.toLowerCase() === 'vnpay' ? 'bg-blue-500/15 text-blue-300 border-blue-500/30' :
-                                                'bg-slate-700 text-slate-300 border-slate-600'
-                                            }`}>{order.phuong_thuc || 'N/A'}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Payment */}
-                        <div className="relative rounded-2xl border border-emerald-500/20 overflow-hidden p-5 group hover:border-emerald-400/40 transition-all duration-300"
-                            style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.07) 0%, rgba(52,211,153,0.03) 100%)' }}>
-                            <div className="absolute -top-6 -right-6 w-20 h-20 rounded-full bg-emerald-500/10 group-hover:scale-150 transition-transform duration-500" />
-                            <div className="flex items-center gap-2 mb-4">
-                                <div className="w-8 h-8 bg-emerald-500/20 rounded-xl border border-emerald-500/30 flex items-center justify-center text-sm">💳</div>
-                                <span className="text-emerald-400 text-[10px] font-black uppercase tracking-widest">Thanh toán</span>
-                            </div>
-                            <div className="space-y-3">
-                                <div>
-                                    <div className="text-slate-500 text-[9px] uppercase font-bold tracking-wider mb-2">Trạng thái</div>
-                                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-black border ${paymentKey === 'paid' ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' :
-                                        paymentKey === 'refunded' ? 'bg-purple-500/15 text-purple-300 border-purple-500/30' :
-                                            paymentKey === 'failed' ? 'bg-rose-500/15 text-rose-300 border-rose-500/30' :
-                                                'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                                        }`}><span>{paymentInfo.icon}</span>{paymentInfo.label}</div>
-                                </div>
-                                {order.ma_giamgia && (
-                                    <div>
-                                        <div className="text-slate-500 text-[9px] uppercase font-bold tracking-wider mb-1">Voucher</div>
-                                        <span className="inline-block px-2.5 py-0.5 rounded-lg bg-pink-500/10 text-pink-300 border border-pink-500/20 text-[11px] font-black">🎟️ {order.ma_giamgia}</span>
-                                    </div>
-                                )}
-                            </div>
+                            <InfoRow label="Địa chỉ giao hàng" value={order.dia_chi_giao} valueCls="text-slate-700 font-medium text-[13px] leading-snug" />
+                            {order.ngay_giao_du_kien && (
+                                <InfoRow
+                                    label="Dự kiến giao"
+                                    value={`📅 ${new Date(order.ngay_giao_du_kien).toLocaleDateString('vi-VN')}`}
+                                    valueCls="text-sky-600 font-bold"
+                                />
+                            )}
                         </div>
                     </div>
 
-                    {/* Products table */}
-                    <div>
-                        <div className="flex items-center gap-2 mb-3">
-                            <div className="w-1 h-5 rounded-full bg-gradient-to-b from-indigo-400 to-fuchsia-400" />
-                            <span className="text-white/50 text-[10px] font-black uppercase tracking-[0.2em]">📦 Danh sách sản phẩm ({itemsOnly.length} mặt hàng)</span>
+                    {/* ── COL CENTER (Products) ── */}
+                    <div className="flex flex-col min-h-0 bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div className="shrink-0 px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="w-1 h-5 rounded-full bg-orange-500" />
+                                <span className="text-[14px] font-bold text-slate-700 uppercase tracking-tight">Danh sách sản phẩm</span>
+                            </div>
+                            <span className="bg-orange-50 text-orange-600 px-3 py-1 rounded-full text-[12px] font-bold">
+                                {itemsOnly.length} sản phẩm
+                            </span>
                         </div>
-                        {/* Bảng sản phẩm */}
-                        <div className="bg-slate-900/40 rounded-2xl border border-slate-700/30 overflow-hidden mb-6">
+
+                        <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e2e8f0 transparent' }}>
                             <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-slate-800/50 text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] border-b border-white/5">
-                                        <th className="py-4 px-5 w-16 text-center">STT</th>
-                                        <th className="py-4 px-2">Sản phẩm</th>
-                                        <th className="py-4 px-4 text-center">SL</th>
-                                        <th className="py-4 px-4 text-right">Đơn giá</th>
-                                        <th className="py-4 px-5 text-right">Thành tiền</th>
+                                <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-100">
+                                    <tr className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                        <th className="py-3 px-4 text-center w-12">#</th>
+                                        <th className="py-3 px-3">Sản phẩm</th>
+                                        <th className="py-3 px-4 text-center w-16">SL</th>
+                                        <th className="py-3 px-4 text-right w-32">Đơn giá</th>
+                                        <th className="py-3 px-5 text-right w-40">Thành tiền</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-white/5">
+                                <tbody className="divide-y divide-slate-50">
                                     {itemsOnly.map((item, idx) => {
-                                        const imageUrl = item.hinh_anh
+                                        const imgUrl = item.hinh_anh
                                             ? (item.hinh_anh.startsWith('http') ? item.hinh_anh : `${API_BASE_URL}${item.hinh_anh}`)
                                             : findImage(item.ma_sanpham);
                                         return (
-                                            <tr key={idx} className={`group transition-colors ${idx % 2 === 1 ? 'bg-white/[0.02]' : ''} hover:bg-indigo-500/5`}>
-                                                <td className="py-4 px-5 text-center">
-                                                    <span className="inline-flex w-6 h-6 items-center justify-center rounded-lg bg-slate-800 text-slate-500 text-[10px] font-bold border border-slate-700 group-hover:bg-indigo-500 group-hover:text-white group-hover:border-indigo-400 transition-all">
-                                                        {idx + 1}
+                                            <tr key={idx} className="hover:bg-orange-50/30 transition-colors group">
+                                                <td className="py-4 px-4 text-center align-middle">
+                                                    <span className="text-[12px] font-bold text-slate-300 group-hover:text-orange-400">
+                                                        {idx + 1 < 10 ? `0${idx + 1}` : idx + 1}
                                                     </span>
                                                 </td>
-                                                <td className="py-4 px-2">
+                                                <td className="py-4 px-3 align-middle">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-12 h-12 rounded-xl bg-slate-800/80 border border-slate-700/60 overflow-hidden flex items-center justify-center shrink-0 group-hover:border-indigo-500/50 transition-colors">
-                                                            {imageUrl ? <img src={imageUrl} alt={item.ten_sanpham} className="w-full h-full object-contain" /> : <span className="text-xl">🚲</span>}
+                                                        <div className="w-11 h-11 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 overflow-hidden">
+                                                            {imgUrl
+                                                                ? <img src={imgUrl} alt="" className="w-full h-full object-contain" />
+                                                                : <span className="text-xl">🚲</span>
+                                                            }
                                                         </div>
-                                                        <div>
-                                                            <div className="text-white font-extrabold text-sm leading-tight group-hover:text-indigo-300 transition-colors">{item.ten_sanpham}</div>
-                                                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                                                {item.ma_sanpham && <span className="text-[9px] text-slate-500 bg-slate-800 px-1.5 py-0.5 rounded font-mono">#{item.ma_sanpham}</span>}
-                                                                {item.mau_sac && <span className="text-[9px] font-bold text-blue-400">🎨 {item.mau_sac}</span>}
+                                                        <div className="min-w-0">
+                                                            <div className="text-[14px] text-slate-800 font-bold leading-tight truncate group-hover:text-orange-600 transition-colors">
+                                                                {item.ten_sanpham}
+                                                            </div>
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded font-bold border border-slate-100">ID: {item.ma_sanpham}</span>
+                                                                {item.mau_sac && <span className="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-100 whitespace-nowrap">🎨 {item.mau_sac}</span>}
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="py-4 px-4 text-center">
-                                                    <span className="inline-flex w-8 h-8 rounded-xl items-center justify-center bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-black text-sm">{item.so_luong}</span>
+                                                <td className="py-4 px-4 text-center align-middle">
+                                                    <span className="inline-flex w-8 h-8 rounded-lg items-center justify-center bg-orange-50 border border-orange-100 text-orange-600 font-bold text-[13px]">
+                                                        {item.so_luong}
+                                                    </span>
                                                 </td>
-                                                <td className="py-4 px-4 text-right">
-                                                    <span className="text-white font-bold text-xs">{item.gia_mua?.toLocaleString('vi-VN')} <span className="text-slate-400 text-[12px]">VND</span></span>
+                                                <td className="py-4 px-4 text-right align-middle">
+                                                    <span className="text-slate-600 font-bold text-[14px]">
+                                                        {item.gia_mua?.toLocaleString('vi-VN')}
+                                                    </span>
                                                 </td>
-                                                <td className="py-4 px-5 text-right">
-                                                    <span className="text-blue-500 font-black">{item.thanh_tien?.toLocaleString('vi-VN')} <span className="text-blue-600 text-[14px] font-bold">VND</span></span>
+                                                <td className="py-4 px-5 text-right align-middle">
+                                                    <span className="text-orange-600 font-extrabold text-[15px]">
+                                                        {item.thanh_tien?.toLocaleString('vi-VN')}
+                                                    </span>
                                                 </td>
                                             </tr>
                                         );
@@ -269,84 +241,93 @@ const OrderDetailModal = ({ order, products, onClose }) => {
                         </div>
                     </div>
 
-                    {/* Summary Table */}
-                    <div className="flex flex-col gap-4">
-                        <div className="relative rounded-2xl overflow-hidden w-full border border-slate-700/30"
-                            style={{ background: 'linear-gradient(160deg, rgba(15,23,42,0.6) 0%, rgba(11,17,32,0.8) 100%)' }}>
-                            <div className="p-6">
-                                <table className="w-full text-base">
-                                    <tbody className="divide-y divide-white/5">
-                                        <tr className="border-none">
-                                            <td className="py-4 text-slate-400 font-bold">📦 Tạm tính:</td>
-                                            <td className="py-4 text-right text-slate-200 font-black text-lg">{subtotal.toLocaleString('vi-VN')} VND</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="py-4 text-slate-400 font-bold">🚚 Phí vận chuyển:</td>
-                                            <td className="py-4 text-right text-slate-200 font-black text-lg">{shipFee > 0 ? `+${shipFee.toLocaleString('vi-VN')}` : '0'} VND</td>
-                                        </tr>
-                                        {giamGia > 0 && (
-                                            <tr>
-                                                <td className="py-4 text-pink-400 font-black italic">
-                                                    <span className="underline decoration-pink-500/30 decoration-2 underline-offset-4">
-                                                        🎟️ Giảm giá Voucher: {order.voucher_info && (
-                                                            <span className="text-[11px] text-pink-300 font-bold uppercase tracking-tight not-italic ml-1">
-                                                                ({order.ma_giamgia} -{order.voucher_info.type === 'percentage' ? `${order.voucher_info.value}%` : `${order.voucher_info.value.toLocaleString('vi-VN')} VND`})
-                                                            </span>
-                                                        )}
-                                                    </span>
-                                                </td>
-                                                <td className="py-4 text-right text-pink-400 font-black text-lg">-{giamGia.toLocaleString('vi-VN')} VND</td>
-                                            </tr>
-                                        )}
-                                        <tr className="border-t-2 border-indigo-500/50">
-                                            <td className="py-6">
-                                                <div className="text-white/70 text-xs font-black uppercase tracking-[0.2em]">Tổng thanh toán:</div>
-                                            </td>
-                                            <td className="py-6 text-right">
-                                                <div className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 drop-shadow-[0_0_20px_rgba(99,102,241,0.4)]">
-                                                    {tongSauGiam.toLocaleString('vi-VN')} VND
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                    {/* ── COL RIGHT (Payment & Totals) ── */}
+                    <div className="flex flex-col gap-4 min-h-0 overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent' }}>
+
+                        {/* Payment Status Card (Moved from Left) */}
+                        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 space-y-3 shrink-0">
+                            <div className="flex items-center gap-2 pb-2 border-b border-slate-50">
+                                <span className="text-lg">💳</span>
+                                <span className="text-[14px] font-bold text-slate-700 uppercase tracking-tight">Thanh toán</span>
+                            </div>
+                            <div className="space-y-3">
+                                <InfoRow label="Phương thức" value={order.phuong_thuc?.toUpperCase() || 'N/A'} valueCls="text-slate-800 font-bold" />
+                                <div>
+                                    <span className="text-[12px] text-slate-400 font-medium block mb-1.5">Trạng thái</span>
+                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold border w-full justify-center
+                                        ${paymentKey === 'paid'     ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                          paymentKey === 'refunded' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                                          paymentKey === 'failed'   ? 'bg-red-50 text-red-600 border-red-200' :
+                                                                      'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                                        {paymentInfo.icon} {paymentInfo.label}
+                                    </span>
+                                </div>
+                                {order.ma_giamgia && (
+                                    <div>
+                                        <span className="text-[12px] text-slate-400 font-medium block mb-1">Voucher áp dụng</span>
+                                        <div className="flex items-center justify-between bg-pink-50 border border-pink-100 p-2 rounded-lg">
+                                            <span className="text-pink-600 text-[12px] font-bold">🎟️ {order.ma_giamgia}</span>
+                                            <span className="text-pink-500 text-[11px] font-black">-{giamGia.toLocaleString('vi-VN')} VND</span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                        <div className="text-slate-600 text-[10px] italic flex items-center gap-2">
-                            <span>ℹ️ Thông tin được trích xuất tự động. Cập nhật trạng thái sẽ thông báo ngay đến khách hàng.</span>
+
+                        {/* Totals Summary */}
+                        <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden shrink-0 flex flex-col">
+                            <div className="px-4 py-3 border-b border-slate-50 flex items-center gap-2 bg-slate-50/50">
+                                <div className="w-1 h-4 rounded-full bg-orange-500" />
+                                <span className="text-[13px] font-bold text-slate-700 uppercase tracking-tight">Thông tin chi phí</span>
+                            </div>
+                            <div className="p-4 space-y-2.5">
+                                <div className="flex justify-between items-center text-[13px]">
+                                    <span className="text-slate-500">Tiền hàng</span>
+                                    <span className="text-slate-700 font-bold">{subtotal.toLocaleString('vi-VN')} VND</span>
+                                </div>
+                                <div className="flex justify-between items-center text-[13px]">
+                                    <span className="text-slate-500">Phí vận chuyển</span>
+                                    <span className="text-slate-700 font-bold">+{shipFee.toLocaleString('vi-VN')} VND</span>
+                                </div>
+                                {giamGia > 0 && (
+                                    <div className="flex justify-between items-center text-[13px]">
+                                        <span className="text-pink-500 font-medium">Giảm voucher</span>
+                                        <span className="text-pink-600 font-bold">-{giamGia.toLocaleString('vi-VN')} VND</span>
+                                    </div>
+                                )}
+
+                                {/* Grand Total Section */}
+                                <div className="mt-4 pt-4 border-t border-slate-100 text-center">
+                                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Cần thanh toán</div>
+                                    <div className="text-[26px] font-black text-orange-600 leading-none">
+                                        {tongSauGiam.toLocaleString('vi-VN')}
+                                    </div>
+                                    <div className="text-[13px] font-black text-orange-300 mt-1">VND</div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
 
-                {/* === PRINT LAYOUT (Separate Component) === */}
-                <OrderPrint
-                    order={order}
-                    itemsOnly={itemsOnly}
-                    subtotal={subtotal}
-                    shipFee={shipFee}
-                    giamGia={giamGia}
-                    tongSauGiam={tongSauGiam}
-                />
-
-                {/* === FOOTER (WEB) === */}
-                <div className="no-print shrink-0 px-7 py-4 border-t border-slate-800/60 flex justify-between items-center"
-                    style={{ background: 'rgba(11,18,32,0.85)', backdropFilter: 'blur(12px)' }}>
-                    <div className="text-slate-600 text-[10px] font-medium">
-                        🗓️ {new Date(order.ngay_dat).toLocaleString('vi-VN')}
-                    </div>
-                    <div className="flex gap-3">
-                        <button onClick={onClose}
-                            className="px-6 py-2.5 rounded-xl bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white transition-all border border-slate-700 text-[11px] font-black uppercase tracking-wider">
-                            Đóng
-                        </button>
-                        <button onClick={() => window.print()}
-                            className="px-6 py-2.5 rounded-xl text-white font-black uppercase tracking-wider text-[11px] flex items-center gap-2 active:scale-95 transition-all"
-                            style={{ background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', boxShadow: '0 6px 24px rgba(99,102,241,0.45)' }}>
-                            🖨️ In Hóa Đơn
-                        </button>
+                        {/* Actions (Spacing fix: move to bottom of col) */}
+                        <div className="flex flex-col gap-3 mt-auto pt-4 border-t border-slate-100">
+                            <button
+                                onClick={() => window.print()}
+                                className="w-full py-3 text-white font-bold text-[14px] uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 hover:shadow-lg shadow-orange-200 bg-gradient-to-r from-orange-500 to-amber-500"
+                            >
+                                🖨️ In Hóa Đơn
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-[13px] font-bold uppercase tracking-wider transition-all"
+                            >
+                                Đóng
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            {/* Print layout */}
+            <OrderPrint order={order} itemsOnly={itemsOnly} subtotal={subtotal} shipFee={shipFee} giamGia={giamGia} tongSauGiam={tongSauGiam} />
         </div>
     );
 };
