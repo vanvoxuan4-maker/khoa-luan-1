@@ -174,7 +174,7 @@ const UserProfile = () => {
                 </div>
                 {/* Back Button - Aligned with Title */}
                 <button
-                    onClick={() => navigate(-1)}
+                    onClick={() => navigate('/')}
                     className="group flex items-center gap-2 px-6 py-2.5 bg-white text-blue-600 font-black rounded-xl border-2 border-blue-100 shadow-lg shadow-blue-100/50 hover:border-blue-300 hover:bg-blue-50/50 hover:text-red-600 transition-all active:scale-95 uppercase text-xs tracking-wider shrink-0"
                 >
                     <span className="text-xl transition-transform group-hover:-translate-x-1">←</span>

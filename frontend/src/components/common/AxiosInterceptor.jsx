@@ -3,6 +3,9 @@ import axios from 'axios';
 import { useNotification } from '../../context/NotificationContext';
 import { getBestToken } from '../../utils/auth';
 
+// Global flag to prevent multiple redirects across renders
+let isRedirectingGlobal = false;
+
 const AxiosInterceptor = () => {
     const { showAlert, addToast } = useNotification();
     const isAlerting = useRef(false);
@@ -27,9 +30,25 @@ const AxiosInterceptor = () => {
                 const status = error.response ? error.response.status : null;
                 const isLoginRequest = error.config?.url?.includes('/login');
 
-                // --- 401 / 403: Hết hạn hoặc không có quyền ---
+                // --- 401 / 403: Hết hạn hoặc tài khoản bị khóa ---
                 if ((status === 401 || status === 403) && !isAlerting.current && !isLoginRequest) {
+
+                    // Xác định admin hay user request
+                    const isAdminRequest = error.config?.url?.includes('/admin') || window.location.pathname.startsWith('/admin');
+                    const loginPath = isAdminRequest ? '/admin/login' : '/login';
+
+                    // Nếu đã ở trang login rồi → bỏ qua, tránh loop vô tận
+                    if (window.location.pathname === loginPath) {
+                        return Promise.reject(error);
+                    }
+
+                    // Nếu đang redirect rồi → bỏ qua request này
+                    if (isRedirectingGlobal) {
+                        return Promise.reject(error);
+                    }
+
                     isAlerting.current = true;
+                    isRedirectingGlobal = true;
 
                     const message = status === 401
                         ? "Phiên đăng nhập của bạn đã hết hạn. Vui lòng đăng nhập lại để tiếp tục."
@@ -39,19 +58,17 @@ const AxiosInterceptor = () => {
 
                     await showAlert(message, title, "error");
 
-                    const isAdminRequest = error.config?.url?.includes('/admin') || window.location.pathname.startsWith('/admin');
-                    const tokenKey = isAdminRequest ? 'admin_access_token' : 'user_access_token';
-
-                    if (!localStorage.getItem(tokenKey) && isAlerting.current) {
-                        return Promise.reject(error);
-                    }
-
                     const keysToRemove = isAdminRequest
                         ? ['admin_access_token', 'admin_info', 'admin_user_info']
                         : ['user_access_token', 'user_info', 'user_user_info'];
 
                     keysToRemove.forEach(key => localStorage.removeItem(key));
-                    window.location.href = isAdminRequest ? '/admin/login' : '/login';
+
+                    // Reset flags trước khi redirect
+                    isAlerting.current = false;
+                    isRedirectingGlobal = false;
+
+                    window.location.href = loginPath;
                 }
 
                 // --- 500: Lỗi server nội bộ ---

@@ -112,7 +112,9 @@ const BannerSlider = () => {
                             <div className={`w-full h-full overflow-hidden ${isRealIndex ? 'animate-slow-zoom' : ''}`}>
                                 <img src={slide.src} alt={slide.title} className="w-full h-full object-cover object-center" />
                             </div>
-                            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent"></div>
+                            <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent" />
+                            {/* Bottom gradient for extra depth */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
                             <div className="absolute inset-0 flex items-center px-10 md:px-24">
                                 <div className={`max-w-2xl text-white transition-all duration-700 ${isRealIndex ? 'animate-fade-in-blur translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
                                     <h1 className="text-4xl md:text-7xl font-black mb-4 tracking-tight drop-shadow-2xl">
@@ -122,8 +124,19 @@ const BannerSlider = () => {
                                         {slide.subtitle}
                                     </p>
                                     <div className="flex gap-4">
-                                        <Link to="/products" className="bg-blue-600 text-white px-8 py-4 rounded-full font-black text-sm uppercase tracking-widest hover:bg-white hover:text-blue-600 transition-all transform hover:scale-105 shadow-xl shadow-blue-500/20">
-                                            Khám phá ngay
+                                        <Link
+                                            to="/products"
+                                            className="font-black text-sm uppercase tracking-widest transition-all transform hover:scale-105 shadow-xl flex items-center gap-2 group/btn"
+                                            style={{
+                                                background: 'linear-gradient(135deg, #FF6A00, #FF8C00)',
+                                                color: '#fff',
+                                                padding: '16px 32px',
+                                                borderRadius: 50,
+                                                boxShadow: '0 8px 30px rgba(255, 106, 0, 0.45)',
+                                            }}
+                                        >
+                                            <span>Khám phá ngay</span>
+                                            <svg className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
                                         </Link>
                                     </div>
                                 </div>

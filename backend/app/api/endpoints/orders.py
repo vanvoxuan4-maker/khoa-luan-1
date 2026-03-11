@@ -567,6 +567,32 @@ def get_my_orders(db: Session = Depends(get_db), current_user: User = Depends(de
          
     return orders
 
+@router.get("/my-orders/{ma_don_hang}", response_model=OrderResponse)
+def get_my_order_detail(
+    ma_don_hang: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """Lấy chi tiết 1 đơn hàng cụ thể của user hiện tại"""
+    order = db.query(DonHang).filter(
+        DonHang.ma_don_hang == ma_don_hang,
+        DonHang.ma_user == current_user.ma_user,
+        DonHang.xoa_don == False
+    ).options(
+        joinedload(DonHang.lichsu_donhang),
+        joinedload(DonHang.chitiet_donhang)
+    ).first()
+
+    if not order:
+        raise HTTPException(status_code=404, detail="Không tìm thấy đơn hàng")
+
+    if not order.ten_nguoi_nhan:
+        order.ten_nguoi_nhan = current_user.hovaten or "Khách hàng"
+    if not order.trangthai_thanhtoan:
+        order.trangthai_thanhtoan = TrangThaiPayment.PENDING
+
+    return order
+
 @router.delete("/my-orders/clean")
 def clean_my_orders(db: Session = Depends(get_db), current_user: User = Depends(deps.get_current_user)):
     """Dọn dẹp lịch sử đơn hàng của user"""

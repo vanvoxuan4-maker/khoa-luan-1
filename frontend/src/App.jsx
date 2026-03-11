@@ -24,6 +24,7 @@ import Wishlist from './components/users/Wishlist/Wishlist';
 import Checkout from './components/users/orders/Checkout';
 import OrderSuccess from './components/users/orders/OrderSuccess';
 import OrderHistory from './components/users/orders/OrderHistory';
+import OrderDetail from './components/users/orders/OrderDetail';
 import VNPayPayment from './components/users/orders/VNPayPayment';
 import UserAddressPage from './components/users/account/UserAddressPage';
 
@@ -172,6 +173,7 @@ function App() {
               <Route path="/payment-failed" element={<UserLayout><div className="p-20 text-center text-red-600 font-bold text-2xl">Thanh toán thất bại! Vui lòng thử lại.</div></UserLayout>} />
 
               <Route path="/my-orders" element={<AuthGuard><UserLayout><OrderHistory /></UserLayout></AuthGuard>} />
+              <Route path="/my-orders/:id" element={<AuthGuard><UserLayout><OrderDetail /></UserLayout></AuthGuard>} />
               <Route path="/profile" element={<AuthGuard><UserLayout><UserProfile /></UserLayout></AuthGuard>} />
               <Route path="/profile/addresses" element={<AuthGuard><UserLayout><UserAddressPage /></UserLayout></AuthGuard>} />
 

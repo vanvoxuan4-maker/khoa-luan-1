@@ -1,0 +1,40 @@
+# docker-compose.yml
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: bicycle_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: web_bike
+    ports:
+      - "5432:5432"
+    volumes:
+      - bicycle_pg_data:/var/lib/postgresql/data
+      - ./backend/app/db/sql:/docker-entrypoint-initdb.d
+
+  backend:
+    build: ./backend
+    container_name: bicycle_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:123@db:5432/web_bike
+    volumes:
+      - ./backend/static/images:/app/static/images
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    container_name: bicycle_frontend
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  bicycle_pg_data:

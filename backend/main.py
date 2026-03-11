@@ -90,8 +90,8 @@ async def periodic_image_cleanup_loop():
 
 @app.on_event("startup")
 async def startup_event():
-    # Khởi tạo background task
-    asyncio.create_task(periodic_image_cleanup_loop())
+    # Background tasks có thể thêm ở đây nếu cần
+    pass
 
 @app.get("/")
 def read_root():

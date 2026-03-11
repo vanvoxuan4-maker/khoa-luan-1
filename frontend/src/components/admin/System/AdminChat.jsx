@@ -8,18 +8,29 @@ const AdminChat = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
+  const isFirstLoad = useRef(true);
   const token = localStorage.getItem('admin_access_token');
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = (behavior = "smooth") => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
   useEffect(() => {
-    if (isOpen) fetchHistory();
+    if (isOpen) {
+      isFirstLoad.current = true;
+      fetchHistory();
+    }
   }, [isOpen]);
 
   useEffect(() => {
-    scrollToBottom();
+    if (messages.length > 0) {
+      if (isFirstLoad.current) {
+        scrollToBottom("auto");
+        isFirstLoad.current = false;
+      } else {
+        scrollToBottom("smooth");
+      }
+    }
   }, [messages]);
 
   const fetchHistory = async () => {

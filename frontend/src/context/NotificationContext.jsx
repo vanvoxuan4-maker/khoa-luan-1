@@ -16,10 +16,10 @@ export const NotificationProvider = ({ children }) => {
     });
 
     // --- TOAST LOGIC ---
-    const addToast = useCallback((message, type = 'success', title = '') => {
+    const addToast = useCallback((message, type = 'success', title = '', duration = 3000) => {
         const id = Date.now();
         setToasts(prev => [...prev, { id, message, type, title }]);
-        setTimeout(() => removeToast(id), 3000); // Auto remove after 3s
+        setTimeout(() => removeToast(id), duration);
     }, []);
 
     const removeToast = useCallback((id) => {

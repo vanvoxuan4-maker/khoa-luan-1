@@ -209,7 +209,7 @@ const AdminLayout = ({ children }) => {
         </div>
       </div>
 
-      <div className="relative z-10">
+      <div className="relative">
 
         {/* MAIN CONTENT AREA */}
         <main className="pt-36 pb-12 px-4 w-full min-h-screen">
@@ -247,7 +247,7 @@ const AdminLayout = ({ children }) => {
             </div>
           </div>
 
-          <div className="animate-fade-in-up relative z-10">
+          <div className="animate-fade-in-up">
             <Outlet />
           </div>
         </main>

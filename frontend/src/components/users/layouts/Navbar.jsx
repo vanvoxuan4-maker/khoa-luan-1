@@ -77,7 +77,68 @@ const Navbar = () => {
   return (
     <header className={`sticky top-0 z-50 w-full transition-all duration-300 shadow-xl ${isScrolled ? 'py-0' : 'py-0'}`}>
 
-      {/* 1️⃣ HÀNG TRÊN: LOGO - TÌM KIẾM - USER (Màu Xanh Đậm) */}
+      {/* 0️⃣ PROMOTION BAR */}
+      <div
+        style={{
+          background: 'linear-gradient(90deg, #E65C00, #F9D423, #E65C00)',
+          backgroundSize: '200% 100%',
+          animation: 'promoSlide 4s linear infinite',
+          height: '34px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '13px',
+          fontWeight: 600,
+          color: '#fff',
+          letterSpacing: '0.02em',
+          gap: '24px',
+          padding: '6px 16px',
+          userSelect: 'none',
+        }}
+      >
+        <style>{`
+          @keyframes promoSlide {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+          .nav-item-underline {
+            position: relative;
+          }
+          .nav-item-underline::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            right: 50%;
+            height: 2px;
+            background: #1d4ed8;
+            transition: left 0.3s ease, right 0.3s ease;
+          }
+          .nav-item-underline:hover::after {
+            left: 0;
+            right: 0;
+          }
+          .nav-item-underline.active-nav::after {
+            left: 0;
+            right: 0;
+          }
+          .icon-btn {
+            transition: transform 0.2s ease, background-color 0.2s ease;
+          }
+          .icon-btn:hover {
+            transform: scale(1.15);
+          }
+        `}</style>
+        <span>🚚 Miễn phí vận chuyển cho đơn từ 25.000.000đ</span>
+        <span style={{ opacity: 0.6 }}>|</span>
+        <span>🔥 Giảm giá trực tiếp tới 39% cho nhiều sản phẩm</span>
+        <span style={{ opacity: 0.6 }}>|</span>
+        <span>🎯 Freeship nội thành Đà Nẵng từ 15.000.000đ</span>
+        <span style={{ opacity: 0.6 }}>|</span>
+        <span>📞 Hotline: <strong>0961 178 265</strong></span>
+      </div>
+
       <div className="bg-blue-700 text-white py-4">
         <div className="container mx-auto px-4 gap-8 flex items-center justify-between">
 
@@ -116,16 +177,17 @@ const Navbar = () => {
             </div>
           </Link>
 
-          {/* Search Bar - LỚN & Ở GIỮA */}
+          {/* Search Bar - ROUNDED + ENHANCED SHADOW */}
           <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-2xl relative group mx-8">
             <input
               type="text"
               placeholder="Tìm kiếm sản phẩm..."
-              className="w-full pl-5 pr-14 py-2.5 rounded-full text-slate-800 font-bold bg-white border-2 border-transparent focus:border-blue-300 placeholder-slate-400 transition-all focus:outline-none focus:ring-4 focus:ring-blue-500/30 shadow-lg"
+              className="w-full pl-6 pr-16 py-2.5 text-slate-800 font-bold bg-white border-2 border-transparent focus:border-blue-300 placeholder-slate-400 transition-all focus:outline-none focus:ring-4 focus:ring-blue-500/30 shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_25px_rgba(0,0,0,0.2)] focus:shadow-[0_6px_25px_rgba(59,130,246,0.25)]"
+              style={{ borderRadius: 30 }}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <button type="submit" className="absolute right-1.5 top-1.5 bottom-1.5 px-4 bg-yellow-400 hover:bg-yellow-500 text-blue-900 rounded-full font-bold transition-all flex items-center justify-center shadow-md transform active:scale-95">
+            <button type="submit" className="absolute right-1.5 top-1.5 bottom-1.5 px-5 bg-yellow-400 hover:bg-yellow-500 active:bg-yellow-600 text-blue-900 font-bold transition-all flex items-center justify-center shadow-md active:scale-95" style={{ borderRadius: 26 }}>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             </button>
           </form>
@@ -179,7 +241,7 @@ const Navbar = () => {
 
             {/* Wishlist */}
             <Link to="/wishlist" className="flex items-center gap-2 text-white hover:text-yellow-400 transition-colors relative group">
-              <div className="w-10 h-10 rounded-full bg-blue-800 flex items-center justify-center border border-blue-600 shadow-md relative">
+              <div className="w-10 h-10 rounded-full bg-blue-800 flex items-center justify-center border border-blue-600 shadow-md relative icon-btn group-hover:bg-blue-600">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
                 {wishlistItems.length > 0 && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-black flex items-center justify-center rounded-full shadow-md ring-2 ring-white">
@@ -194,7 +256,7 @@ const Navbar = () => {
 
             {/* Cart */}
             <Link to="/cart" className="flex items-center gap-2 text-white hover:text-yellow-400 transition-colors relative group">
-              <div className="w-10 h-10 rounded-full bg-blue-800 flex items-center justify-center border border-blue-600 shadow-md relative">
+              <div className="w-10 h-10 rounded-full bg-blue-800 flex items-center justify-center border border-blue-600 shadow-md relative icon-btn group-hover:bg-blue-600">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                 {cartCount > 0 && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 text-red-600 text-[10px] font-black flex items-center justify-center rounded-full shadow-md ring-2 ring-white">
@@ -215,42 +277,23 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* 2️⃣ HÀNG DƯỚI: MENU (Màu Trắng -> CĂN GIỮA) */}
+      {/* 2️⃣ HÀNG DƯỚI: MENU */}
       <div className="bg-white border-b border-gray-200 hidden md:block">
         <div className="container mx-auto px-4 flex justify-center">
-          <nav className="flex items-center gap-12 font-bold text-sm text-slate-700">
-            <NavLink
-              to="/products"
-              className={({ isActive }) =>
-                `py-4 uppercase transition-all font-bold text-sm ${isActive ? 'text-blue-700 border-b-2 border-blue-700' : 'text-slate-700 hover:text-blue-700'}`
-              }
-            >
-              SẢN PHẨM
-            </NavLink>
-            <NavLink
-              to="/promotions"
-              className={({ isActive }) =>
-                `py-4 uppercase transition-all font-bold text-sm ${isActive ? 'text-blue-700 border-b-2 border-blue-700' : 'text-slate-700 hover:text-blue-700'}`
-              }
-            >
-              KHUYẾN MÃI
-            </NavLink>
-            <NavLink
-              to="/about"
-              className={({ isActive }) =>
-                `py-4 uppercase transition-all font-bold text-sm ${isActive ? 'text-blue-700 border-b-2 border-blue-700' : 'text-slate-700 hover:text-blue-700'}`
-              }
-            >
-              GIỚI THIỆU
-            </NavLink>
-            <NavLink
-              to="/contact"
-              className={({ isActive }) =>
-                `py-4 uppercase transition-all font-bold text-sm ${isActive ? 'text-blue-700 border-b-2 border-blue-700' : 'text-slate-700 hover:text-blue-700'}`
-              }
-            >
-              LIÊN HỆ
-            </NavLink>
+          <nav className="flex items-center gap-16 font-bold text-sm text-slate-700">
+            {[{to: '/products', label: 'SẢN PHẨM'}, {to: '/promotions', label: 'KHUYẾN MÃI'}, {to: '/about', label: 'GIỚI THIỆU'}, {to: '/contact', label: 'LIÊN HỆ'}].map(({to, label}) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  `py-4 uppercase font-bold text-sm relative nav-item-underline transition-colors ${
+                    isActive ? 'text-blue-700 active-nav' : 'text-slate-700 hover:text-blue-700'
+                  }`
+                }
+              >
+                {label}
+              </NavLink>
+            ))}
           </nav>
         </div>
       </div>
