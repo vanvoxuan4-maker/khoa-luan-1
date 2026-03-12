@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 from app.db.session import get_db
 from app.models.user import User
@@ -367,7 +368,7 @@ def update_order_status(
         # 👇 LOGIC COD: Giao thành công -> Đã thanh toán
         if status_input == "delivered":
             # Ghi nhận ngày giao hàng thực tế
-            order.ngay_giao_thuc_te = datetime.now()
+            order.ngay_giao_thuc_te = func.now()
             
             # Kiểm tra xem phương thức thanh toán có phải là COD không
             # Lưu ý: phuong_thuc trong DB lưu là string (do Enum convert), nên so sánh với "cod" hoặc PhuongThucPayment.COD.value
@@ -384,7 +385,7 @@ def update_order_status(
                 payment_record = db.query(ThanhToan).filter(ThanhToan.ma_don_hang == ma_don_hang).first()
                 if payment_record:
                     payment_record.trang_thai = "success"
-                    payment_record.ngay_thanhtoan = datetime.now()
+                    payment_record.ngay_thanhtoan = func.now()
 
         order.trang_thai = new_status_enum
         
@@ -443,6 +444,16 @@ def update_payment_status(
     order = db.query(DonHang).filter(DonHang.ma_don_hang == ma_don_hang).first()
     if not order:
         raise HTTPException(status_code=404, detail="Không tìm thấy đơn hàng")
+    
+    # 👇 THÊM LOGIC RÀNG BUỘC: Đơn COD đã hủy thì không đổi trạng thái thanh toán
+    is_cod = (order.phuong_thuc.value == "cod") if hasattr(order.phuong_thuc, "value") else (str(order.phuong_thuc).lower() == "cod")
+    is_cancelled = (order.trang_thai.value == "cancelled") if hasattr(order.trang_thai, "value") else (str(order.trang_thai).lower() == "cancelled")
+    
+    if is_cod and is_cancelled:
+        raise HTTPException(
+            status_code=400, 
+            detail="Không thể thay đổi trạng thái thanh toán cho đơn hàng COD đã bị hủy."
+        )
     
     valid_statuses = ["pending", "paid", "failed", "refunded"]
     if status not in valid_statuses:

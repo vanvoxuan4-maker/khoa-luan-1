@@ -139,8 +139,8 @@ const Navbar = () => {
         <span>📞 Hotline: <strong>0961 178 265</strong></span>
       </div>
 
-      <div className="bg-blue-700 text-white py-4">
-        <div className="container mx-auto px-4 gap-8 flex items-center justify-between">
+      <div className="bg-blue-700 text-white py-3 shadow-lg">
+        <div className="container mx-auto px-4 flex items-center justify-between gap-10">
 
           {/* Logo giữ nguyên nhưng chỉnh lại màu text cho hợp nền xanh */}
           <Link to="/" className="flex items-center gap-3 flex-shrink-0 group">
@@ -178,7 +178,7 @@ const Navbar = () => {
           </Link>
 
           {/* Search Bar - ROUNDED + ENHANCED SHADOW */}
-          <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-2xl relative group mx-8">
+          <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-xl relative group">
             <input
               type="text"
               placeholder="Tìm kiếm sản phẩm..."
@@ -199,10 +199,9 @@ const Navbar = () => {
             {isLoggedIn ? (
               <div className="relative group z-50">
                 <button className="flex items-center gap-2 text-white hover:text-yellow-400 transition-colors">
-                  <div className="text-right hidden sm:block">
-                    {/* <p className="text-xs text-blue-200 uppercase font-bold">Xin chào</p> */}
+                  <div className="text-right hidden sm:block leading-tight">
                     <p className="font-bold text-sm max-w-[150px] truncate">{userName}</p>
-                    {userEmail && <p className="text-sm text-blue-100 font-bold italic truncate max-w-[150px]">{userEmail}</p>}
+                    {userEmail && <p className="text-[11px] text-blue-100 font-bold italic truncate max-w-[150px] opacity-80">{userEmail}</p>}
                   </div>
                   <div className="w-10 h-10 rounded-full bg-blue-800 flex items-center justify-center border border-blue-600 shadow-md">
                     <span className="text-xl">👤</span>

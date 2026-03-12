@@ -171,6 +171,19 @@ const OrderDetailModal = ({ order, products, onClose }) => {
                                         valueCls="text-sky-600 font-bold"
                                     />
                                 )}
+                                {order.ngay_giao_thuc_te && (
+                                    <InfoRow
+                                        label="Ngày giao hàng"
+                                        value={`✅ ${new Date(order.ngay_giao_thuc_te).toLocaleString('vi-VN', { 
+                                            day: '2-digit', 
+                                            month: '2-digit', 
+                                            year: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}`}
+                                        valueCls="text-emerald-600 font-extrabold"
+                                    />
+                                )}
                             </div>
                         </div>
 

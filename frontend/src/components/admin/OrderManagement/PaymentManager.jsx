@@ -53,7 +53,7 @@ const PaymentManager = () => {
     const configs = {
       success: { label: "✅ Thành công", color: "bg-emerald-50 text-emerald-600 border-emerald-200" },
       paid: { label: "✅ Thành công", color: "bg-emerald-50 text-emerald-600 border-emerald-200" },
-      failed: { label: "❌ Thất bại", color: "bg-rose-50 text-rose-600 border-rose-200" },
+      failed: { label: "🚫 Đã hủy", color: "bg-rose-50 text-rose-600 border-rose-200" },
       pending: { label: "⏳ Đang chờ", color: "bg-amber-50 text-amber-600 border-amber-200" },
       refunded: { label: "↩️ Hoàn tiền", color: "bg-purple-50 text-purple-600 border-purple-200" }
     };
@@ -127,7 +127,7 @@ const PaymentManager = () => {
           <FilterButton statusKey="pending" label="Đang chờ" icon="⏳" />
           <FilterButton statusKey="success" label="Thành công" icon="✅" />
           <FilterButton statusKey="refunded" label="Hoàn tiền" icon="↩️" />
-          <FilterButton statusKey="failed" label="Thất bại" icon="❌" />
+          <FilterButton statusKey="failed" label="Đã hủy" icon="🚫" />
           {/* Refresh Button */}
           <button
             onClick={fetchPayments}

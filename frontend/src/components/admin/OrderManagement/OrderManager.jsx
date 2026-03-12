@@ -54,9 +54,9 @@ export const PAYMENT_STATUS_MAP = {
     nextStatus: "paid"
   },
   failed: {
-    label: "Thanh toán lỗi",
+    label: "Thanh toán đã hủy",
     color: "text-rose-600 bg-rose-50 border-rose-200",
-    icon: "⚠️",
+    icon: "🚫",
     actionLabel: "Xử lý lại (Về chờ)",
     nextStatus: "pending"
   },
@@ -362,21 +362,36 @@ const OrderManager = ({ highlightOrderId }) => {
 
                     {/* Trạng thái thanh toán – center */}
                     <td className="py-4 px-3 text-center align-middle">
-                      {order.trangthai_thanhtoan !== 'refunded' ? (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); updatePaymentStatus(order.ma_don_hang, order.trangthai_thanhtoan, order.tong_tien); }}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold border transition-all hover:brightness-95 active:scale-95 ${paymentInfo.color}`}
-                          title={paymentInfo.actionLabel}
-                        >
-                          <span>{paymentInfo.icon}</span>
-                          <span className="whitespace-nowrap">{paymentInfo.label}</span>
-                        </button>
-                      ) : (
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold border ${paymentInfo.color}`}>
-                          <span>{paymentInfo.icon}</span>
-                          <span className="whitespace-nowrap">{paymentInfo.label}</span>
-                        </span>
-                      )}
+                      {(() => {
+                        const isRefunded = order.trangthai_thanhtoan === 'refunded';
+                        const isCodCancelled = order.phuong_thuc?.toLowerCase() === 'cod' && order.trang_thai === 'cancelled';
+                        const isDisabled = isRefunded || isCodCancelled;
+
+                        return (
+                          <button
+                            disabled={isDisabled}
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              if (!isDisabled) updatePaymentStatus(order.ma_don_hang, order.trangthai_thanhtoan, order.tong_tien); 
+                            }}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold border transition-all ${
+                              isDisabled 
+                                ? 'opacity-70 cursor-not-allowed' 
+                                : 'hover:brightness-95 active:scale-95'
+                            } ${paymentInfo.color}`}
+                            title={
+                              isCodCancelled 
+                                ? 'Không thể đổi trạng thái thanh toán cho đơn COD đã hủy' 
+                                : isRefunded 
+                                  ? 'Đơn hàng đã hoàn tiền, không thể thay đổi' 
+                                  : paymentInfo.actionLabel
+                            }
+                          >
+                            <span>{paymentInfo.icon}</span>
+                            <span className="whitespace-nowrap">{paymentInfo.label}</span>
+                          </button>
+                        );
+                      })()}
                     </td>
 
                     {/* Thao tác – center */}

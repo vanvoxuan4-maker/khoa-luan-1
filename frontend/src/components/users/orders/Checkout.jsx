@@ -708,7 +708,9 @@ const Checkout = () => {
                                                     <span className="text-lg">📞</span> {addr.sdt_nguoi_nhan}
                                                 </p>
                                                 <p className="flex items-start gap-2 text-sm text-slate-500 font-bold leading-relaxed">
-                                                    <span className="text-lg">📍</span> {addr.dia_chi}, {addr.tinh_thanh}
+                                                    <span className="text-lg">📍</span> {addr.dia_chi.toLowerCase().includes(addr.tinh_thanh.toLowerCase())
+                                                        ? addr.dia_chi
+                                                        : `${addr.dia_chi}, ${addr.tinh_thanh}`}
                                                 </p>
                                             </div>
                                             <div className="mt-4 flex opacity-0 group-hover:opacity-100 transition-opacity">

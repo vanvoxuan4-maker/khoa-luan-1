@@ -198,7 +198,9 @@ const AdminAddressManager = ({ user, onClose }) => {
                                         {/* Chi tiết địa chỉ */}
                                         <div className="flex-grow pr-4">
                                             <p className="text-[13px] font-bold text-slate-600 leading-snug">
-                                                {addr.dia_chi}
+                                                {addr.dia_chi.toLowerCase().includes(addr.tinh_thanh.toLowerCase())
+                                                    ? addr.dia_chi
+                                                    : `${addr.dia_chi}, ${addr.tinh_thanh}`}
                                             </p>
                                             {addr.is_mac_dinh && (
                                                 <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest mt-1 block">Địa chỉ mặc định</span>

@@ -65,12 +65,21 @@ const Dashboard = () => {
             const dateStr = date.toISOString().split('T')[0];
 
             const dayOrders = orders.filter(o => {
-                const d = new Date(o.ngay_dat || o.created_at);
+                // Ưu tiên ngày giao thực tế nếu đơn đã hoàn thành
+                const dateToUse = (o.trang_thai === 'delivered' && o.ngay_giao_thuc_te) 
+                    ? o.ngay_giao_thuc_te 
+                    : (o.ngay_dat || o.created_at);
+                const d = new Date(dateToUse);
                 return d.toISOString().split('T')[0] === dateStr;
             });
 
             const revenue = dayOrders
-                .filter(o => (o.trangthai_thanhtoan || '').toLowerCase() === 'paid')
+                .filter(o => {
+                    const ps = (o.trangthai_thanhtoan || '').toLowerCase();
+                    const os = (o.trang_thai || '').toLowerCase();
+                    // Tính doanh thu nếu: Đã thanh toán HOẶC đơn đã hoàn thành (tự động coi là đã thu tiền)
+                    return ps === 'paid' || ps === 'success' || ps === 'completed' || os === 'delivered';
+                })
                 .reduce((s, o) => s + (o.tong_tien || 0), 0);
 
             const refunded = dayOrders
@@ -156,7 +165,7 @@ const Dashboard = () => {
 
             if (ps === 'refunded') {
                 refundedAmount += total;
-            } else if ((ps === 'paid' || ps === 'success' || ps === 'completed') && !isFailedOrCancelled) {
+            } else if ((ps === 'paid' || ps === 'success' || ps === 'completed' || status === 'delivered') && !isFailedOrCancelled) {
                 paidAmount += total;
             }
         });
@@ -542,16 +551,26 @@ const Dashboard = () => {
                         {/* ── Mini stat: Doanh thu hôm nay ── */}
                         {(() => {
                             const today = new Date().toISOString().split('T')[0];
-                            const todayRevenue = rawOrders
-                                .filter(o => {
-                                    const d = new Date(o.ngay_dat || o.created_at).toISOString().split('T')[0];
-                                    return d === today && (o.trangthai_thanhtoan || '').toLowerCase() === 'paid';
-                                })
-                                .reduce((s, o) => s + (o.tong_tien || 0), 0);
                             const todayOrders = rawOrders.filter(o => {
                                 const d = new Date(o.ngay_dat || o.created_at).toISOString().split('T')[0];
                                 return d === today;
                             }).length;
+
+                            const todayRevenue = rawOrders
+                                .filter(o => {
+                                    const dateToUse = (o.trang_thai === 'delivered' && o.ngay_giao_thuc_te) 
+                                        ? o.ngay_giao_thuc_te 
+                                        : (o.ngay_dat || o.created_at);
+                                    const dStr = new Date(dateToUse).toISOString().split('T')[0];
+                                    const ps = (o.trangthai_thanhtoan || '').toLowerCase();
+                                    const os = (o.trang_thai || '').toLowerCase();
+                                    
+                                    return dStr === today && 
+                                           (ps === 'paid' || ps === 'success' || ps === 'completed' || os === 'delivered') &&
+                                           !['cancelled', 'failed', 'returned'].includes(os);
+                                })
+                                .reduce((s, o) => s + (o.tong_tien || 0), 0);
+
                             return (
                                 <>
                                     <div className="h-px bg-slate-100" />
