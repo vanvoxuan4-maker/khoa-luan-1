@@ -43,17 +43,28 @@ const VoucherManager = () => {
 
   const handleUpdate = async (id) => {
     try {
-      // Đảm bảo solandung là số
       const payload = {
         ...renewalData,
         solandung: parseInt(renewalData.solandung) || 0
       };
       await axios.put(`${API_BASE_URL}/admin/vouchers/${id}`, payload, { headers: { Authorization: `Bearer ${token}` } });
-      alert("✅ Gia hạn và mở lại thành công!");
+      alert("✅ Cập nhật thành công!");
       setEditingVoucher(null);
-      await fetchVouchers(); // Đợi fetch xong để re-render
+      await fetchVouchers();
     } catch (err) {
-      alert("Lỗi khi gia hạn: " + (err.response?.data?.detail || err.message));
+      alert("Lỗi khi cập nhật: " + (err.response?.data?.detail || err.message));
+    }
+  };
+
+  const handleToggleActive = async (id, currentStatus) => {
+    try {
+      await axios.put(`${API_BASE_URL}/admin/vouchers/${id}`, 
+        { is_active: !currentStatus }, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchVouchers();
+    } catch (err) {
+      alert("Lỗi khi thay đổi trạng thái");
     }
   };
 
@@ -244,9 +255,18 @@ const VoucherManager = () => {
                         <div>
                           <h4 className="text-2xl font-black tracking-[0.1em] drop-shadow-xl uppercase">{v.ma_giamgia}</h4>
                           <div className="mt-2 flex items-center gap-2">
-                            <span className={`text-[8px] font-black px-2.5 py-1 rounded-lg border border-white/30 uppercase tracking-widest ${isClosed ? 'bg-black/40' : 'bg-white/20'}`}>
-                              {isClosed ? '🔴 Đã đóng' : '🟢 Hoạt động'}
-                            </span>
+                            <label className="relative inline-flex items-center cursor-pointer group">
+                              <input 
+                                type="checkbox" 
+                                className="sr-only peer" 
+                                checked={v.is_active}
+                                onChange={() => handleToggleActive(v.ma_khuyenmai, v.is_active)}
+                              />
+                              <div className="w-9 h-5 bg-slate-400/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500 shadow-inner"></div>
+                              <span className={`ml-2 text-[8px] font-black uppercase tracking-widest ${v.is_active ? 'text-green-300' : 'text-slate-300'}`}>
+                                {v.is_active ? 'Hoạt động' : 'Tạm dừng'}
+                              </span>
+                            </label>
                           </div>
                         </div>
                         <div className="bg-white/95 text-indigo-700 px-3 py-2 rounded-xl shadow-2xl font-black text-xl border-b-4 border-indigo-100 flex flex-col items-center">
@@ -326,20 +346,18 @@ const VoucherManager = () => {
                         </div>
 
                         <div className="flex gap-2 w-full pt-1">
-                          {isClosed && !isEditing && (
-                            <button
-                              onClick={() => {
-                                setEditingVoucher(v.ma_khuyenmai);
-                                setRenewalData({
-                                  ngay_ketthuc: v.ngay_ketthuc ? v.ngay_ketthuc.split('T')[0] : '',
-                                  solandung: v.solandung
-                                });
-                              }}
-                              className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black uppercase tracking-[0.1em] hover:bg-slate-900 transition-all shadow-lg shadow-indigo-500/10 flex items-center justify-center gap-2"
-                            >
-                              🚀 Mở lại mã
-                            </button>
-                          )}
+                          <button
+                            onClick={() => {
+                              setEditingVoucher(v.ma_khuyenmai);
+                              setRenewalData({
+                                ngay_ketthuc: v.ngay_ketthuc ? v.ngay_ketthuc.split('T')[0] : '',
+                                solandung: v.solandung
+                              });
+                            }}
+                            className="flex-1 bg-white text-indigo-600 border border-indigo-100 py-3 rounded-xl font-black uppercase tracking-[0.1em] hover:bg-indigo-600 hover:text-white transition-all shadow-xl shadow-indigo-500/5 flex items-center justify-center gap-2"
+                          >
+                            <span>📝</span> Sửa
+                          </button>
                           <button
                             onClick={() => handleDelete(v.ma_khuyenmai)}
                             className="flex-1 bg-white text-red-500 border border-red-100 py-3 rounded-xl font-black uppercase tracking-[0.1em] hover:bg-red-500 hover:text-white transition-all shadow-xl shadow-red-500/5 flex items-center justify-center gap-2"

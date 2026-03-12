@@ -130,6 +130,7 @@ class VoucherCreate(BaseModel):
 class VoucherUpdate(BaseModel):
     solandung: Optional[int] = None
     ngay_ketthuc: Optional[datetime] = None
+    is_active: Optional[bool] = None
 
 class VoucherOut(BaseModel):
     ma_khuyenmai: int
@@ -234,10 +235,10 @@ def update_voucher(id: int, data: VoucherUpdate, db: Session = Depends(get_db), 
     if data.solandung is not None:
         v.solandung = data.solandung
     if data.ngay_ketthuc is not None:
-        # Set giờ kết thúc là cuối ngày (23:59:59)
         v.ngay_ketthuc = data.ngay_ketthuc.replace(hour=23, minute=59, second=59)
+    if data.is_active is not None:
+        v.is_active = data.is_active
     
-    v.is_active = True # Khôi phục trạng thái hoạt động nếu bị tắt
     db.commit()
     db.refresh(v)
     

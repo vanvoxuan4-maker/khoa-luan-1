@@ -1,0 +1,17 @@
+# frontend/Dockerfile.dev
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Chỉ copy file package để tận dụng cache
+COPY package*.json ./
+RUN npm install
+
+# Copy toàn bộ code
+COPY . .
+
+# Vite mặc định chạy cổng 5173
+EXPOSE 5173
+
+# Chạy với --host để truy cập được từ bên ngoài container
+CMD ["npm", "run", "dev", "--", "--host"]

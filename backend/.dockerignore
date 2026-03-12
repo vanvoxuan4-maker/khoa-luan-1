@@ -1,0 +1,12 @@
+**/.venv
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.git
+.gitignore
+.vscode
+*.db
+*.sqlite3
+backend/static/images/*
+!backend/static/images/.gitkeep

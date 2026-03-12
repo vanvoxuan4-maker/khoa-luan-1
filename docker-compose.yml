@@ -23,16 +23,23 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:123@db:5432/web_bike
     volumes:
+      - ./backend:/app
       - ./backend/static/images:/app/static/images
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
       - db
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
     container_name: bicycle_frontend
     restart: always
     ports:
-      - "3000:80"
+      - "3000:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       - backend
 
