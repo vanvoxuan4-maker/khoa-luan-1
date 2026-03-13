@@ -126,49 +126,13 @@ const AdminUserDetail = () => {
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => navigate('/admin/users')}
-                        className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm"
-                        title="Quay lại danh sách"
+                        className="h-10 px-4 bg-white border border-slate-200 rounded-xl flex items-center gap-2 text-slate-500 hover:bg-slate-50 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm group"
                     >
-                        <span className="text-lg">←</span>
+                        <span className="text-lg group-hover:-translate-x-1 transition-transform">←</span>
+                        <span className="text-sm font-bold">Quay lại</span>
                     </button>
 
-                    {/* Status Toggle Area */}
-                    <div className="flex items-center gap-4 bg-white px-5 py-2.5 rounded-2xl border border-blue-100 shadow-sm">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Trạng thái:</span>
-                        <div className="relative group/status">
-                            <select
-                                disabled={isSelf || user.quyen === 'admin'}
-                                value={user.status || 'active'}
-                                onChange={async (e) => {
-                                    const nextStatus = e.target.value;
-                                    try {
-                                        await axios.put(`${API_BASE_URL}/admin/users/${id}/status?status=${nextStatus}`, null, {
-                                            headers: { Authorization: `Bearer ${token}` }
-                                        });
-                                        setUser({ ...user, status: nextStatus });
-                                        addToast(`Đã chuyển trạng thái sang ${TRANG_THAI_USER[nextStatus].label}`, "success");
-                                    } catch (err) {
-                                        addToast("Lỗi cập nhật trạng thái", "error");
-                                    }
-                                }}
-                                className={`appearance-none px-[14px] py-[6px] rounded-[20px] text-[13px] font-medium border transition-all outline-none ${isSelf || user.quyen === 'admin' ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:shadow-md focus:ring-4 focus:ring-blue-500/10'}`}
-                                style={{
-                                    backgroundColor: TRANG_THAI_USER[user.status || 'active'].style.backgroundColor,
-                                    color: TRANG_THAI_USER[user.status || 'active'].style.color,
-                                    borderColor: `${TRANG_THAI_USER[user.status || 'active'].style.color}20`
-                                }}
-                            >
-                                <option value="active">✅ ACTIVE</option>
-                                <option value="banned">🚫 BANNED</option>
-                                <option value="inactive">⏳ INACTIVE</option>
-                            </select>
-                            {!(isSelf || user.quyen === 'admin') && (
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] pointer-events-none opacity-40">
-                                    ▼
-                                </div>
-                            )}
-                        </div>
-                    </div>
+
                 </div>
             </div>
 

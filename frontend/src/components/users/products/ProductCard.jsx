@@ -84,21 +84,21 @@ const ProductCard = ({
                 )}
 
                 {/* Image Area */}
-                <div className="flex-grow flex items-center justify-center mb-6 relative mt-4">
+                <div className="h-48 flex items-center justify-center mb-6 relative mt-4">
                     <div className="absolute inset-0 bg-blue-500/5 rounded-full scale-0 group-hover:scale-100 transition-transform duration-700 blur-2xl"></div>
                     <img
                         src={getProductImage(product)}
                         alt={product.ten_sanpham}
                         loading="lazy"
                         decoding="async"
-                        className="w-[85%] h-[85%] object-contain group-hover:scale-110 transition-transform duration-700 relative z-10"
+                        className="max-w-full max-h-40 object-contain group-hover:scale-110 transition-transform duration-700 relative z-10"
                     />
                 </div>
 
                 {/* Info Area */}
                 <div className="mt-auto space-y-4 text-center">
                     <div className="space-y-3">
-                        <h3 className="text-[16px] font-black text-slate-800 tracking-tight line-clamp-2 min-h-[3rem] leading-snug group-hover:text-blue-600 transition-colors overflow-hidden px-1">
+                        <h3 className="text-[16px] font-black text-slate-800 tracking-tight line-clamp-2 h-[3rem] leading-snug group-hover:text-blue-600 transition-colors overflow-hidden px-1">
                             {product.ten_sanpham}
                         </h3>
                     </div>

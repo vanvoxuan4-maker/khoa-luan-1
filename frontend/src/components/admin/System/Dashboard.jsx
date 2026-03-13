@@ -11,7 +11,7 @@ import StatBox from './StatBox';
 const QuickActionCard = ({ title, desc, icon, color, onClick }) => (
     <button
         onClick={onClick}
-        className="group relative flex items-center gap-5 p-6 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-white hover:border-slate-200 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl overflow-hidden"
+        className="group relative flex items-center gap-5 p-6 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border-2 border-transparent hover:border-blue-500 hover:ring-4 hover:ring-blue-500/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl overflow-hidden"
     >
         <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-gradient-to-br ${color} opacity-[0.03] group-hover:opacity-10 rounded-full transition-all duration-500 group-hover:scale-150`} />
 

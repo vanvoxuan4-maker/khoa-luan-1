@@ -160,11 +160,27 @@ const UserList = () => {
                     <div className="text-[12px] text-blue-600 font-mono font-bold">📞 {u.sdt || "Chưa có SĐT"}</div>
                   </td>
                   <td className="py-4 px-6 text-center align-middle">
-                    <div
-                      className="inline-block px-2.5 py-1 rounded-full text-xs font-medium border shadow-sm"
-                      style={{ backgroundColor: s.style.backgroundColor, color: s.style.color, borderColor: `${s.style.color}20` }}
-                    >
-                      {s.icon} {s.label}
+                    <div className="relative group/status inline-block">
+                      <select
+                        disabled={currentAdminId === u.ma_user || u.quyen === 'admin'}
+                        value={u.status || 'active'}
+                        onChange={(e) => handleStatusChange(u.ma_user, e.target.value)}
+                        className={`appearance-none px-4 py-1.5 rounded-full text-[11px] font-bold border transition-all outline-none ${currentAdminId === u.ma_user || u.quyen === 'admin' ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:shadow-md focus:ring-4 focus:ring-blue-500/10'}`}
+                        style={{
+                          backgroundColor: TRANG_THAI_USER[u.status || 'active'].style.backgroundColor,
+                          color: TRANG_THAI_USER[u.status || 'active'].style.color,
+                          borderColor: `${TRANG_THAI_USER[u.status || 'active'].style.color}20`
+                        }}
+                      >
+                        <option value="active">✅ ACTIVE</option>
+                        <option value="banned">🚫 BANNED</option>
+                        <option value="inactive">⏳ INACTIVE</option>
+                      </select>
+                      {!(currentAdminId === u.ma_user || u.quyen === 'admin') && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[8px] pointer-events-none opacity-40">
+                          ▼
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="py-4 px-6 align-middle text-center">

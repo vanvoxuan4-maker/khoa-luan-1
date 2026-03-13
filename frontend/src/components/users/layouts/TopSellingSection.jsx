@@ -115,7 +115,7 @@ const TopSellingSection = ({ products }) => {
                                 key={`${p.ma_sanpham}-${idx}`}
                                 product={p}
                                 className="min-w-[250px] md:min-w-[300px] snap-start"
-                                cardClassName="p-4 h-[430px]"
+                                cardClassName="p-4 h-[450px]"
                                 showActionHint={false}
                             />
                         ))}
