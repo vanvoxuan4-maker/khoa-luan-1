@@ -253,7 +253,7 @@ const OrderHistory = () => {
                                                     #{order.ma_don_hang}
                                                 </p>
                                                 <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9CA3AF' }}>
-                                                    {new Date(order.ngay_dat).toLocaleString('vi-VN', { dateStyle: 'medium', timeStyle: 'short' })}
+                                                    {new Date(order.ngay_dat && !order.ngay_dat.includes('Z') ? `${order.ngay_dat}Z` : order.ngay_dat).toLocaleString('vi-VN', { dateStyle: 'medium', timeStyle: 'short' })}
                                                 </p>
                                             </div>
                                             <span style={{
@@ -432,7 +432,7 @@ const OrderHistory = () => {
                             >✕</button>
                         </div>
                         {/* Modal body */}
-                        <div style={{ maxHeight: '60vh', overflowY: 'auto', padding: '8px 0' }}>
+                        <div style={{ maxHeight: '60vh', overflowY: 'auto', overflowX: 'hidden', padding: '8px 0' }}>
                             <StatusTracker
                                 history={selectedOrder.lichsu_donhang}
                                 expectedDate={selectedOrder.ngay_giao_du_kien}

@@ -78,15 +78,16 @@ const FilterSidebar = ({ onFilterChange, filters = {} }) => {
 
     const handlePriceApply = () => {
         onFilterChange({
-            min_price: priceRange.min || null,
-            max_price: priceRange.max || null
+            min_price: (Number(priceRange.min) === 0) ? null : priceRange.min,
+            max_price: (Number(priceRange.max) === 200000000) ? null : priceRange.max,
+            sort_by: 'price_desc' // Automatically sort from high to low when filtering price
         });
     };
 
     const handleReset = () => {
         setSelectedCategory(null);
         setSelectedBrand(null);
-        setPriceRange({ min: '', max: '' });
+        setPriceRange({ min: 0, max: 200000000 });
         setMinRating(0);
         onFilterChange({
             category_id: null,
@@ -167,30 +168,59 @@ const FilterSidebar = ({ onFilterChange, filters = {} }) => {
                     </span>
                 </button>
 
-                <div className={`overflow-hidden transition-all duration-500 ease-in-out ${expandedSections.price ? 'max-h-64 opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="relative group">
-                                <input
-                                    type="number"
-                                    placeholder="Min"
-                                    value={priceRange.min}
-                                    onChange={e => setPriceRange({ ...priceRange, min: e.target.value })}
-                                    className="w-full pl-4 pr-10 py-3 bg-slate-50 border-2 border-transparent rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-200 focus:ring-4 focus:ring-blue-500/5 transition-all"
-                                />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300 uppercase">VND</span>
+                <div className={`overflow-hidden transition-all duration-500 ease-in-out ${expandedSections.price ? 'max-h-[300px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+                    <div className="space-y-6">
+                        {/* Dual Range Slider Display */}
+                        <div className="flex justify-between items-center px-1">
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Từ</span>
+                                <span className="text-sm font-black text-blue-600">{(priceRange.min || 0).toLocaleString()} <small className="text-[10px]">VND</small></span>
                             </div>
-                            <div className="relative group">
-                                <input
-                                    type="number"
-                                    placeholder="Max"
-                                    value={priceRange.max}
-                                    onChange={e => setPriceRange({ ...priceRange, max: e.target.value })}
-                                    className="w-full pl-4 pr-10 py-3 bg-slate-50 border-2 border-transparent rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-200 focus:ring-4 focus:ring-blue-500/5 transition-all"
-                                />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300 uppercase">VND</span>
+                            <div className="h-px w-8 bg-slate-200" />
+                            <div className="flex flex-col items-end">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Đến</span>
+                                <span className="text-sm font-black text-blue-600">{(priceRange.max || 200000000).toLocaleString()} <small className="text-[10px]">VND</small></span>
                             </div>
                         </div>
+
+                        {/* Interactive Slider Area */}
+                        <div className="px-3 pt-2 pb-6">
+                            <div className="range-slider-container">
+                                <div className="range-slider-track" />
+                                <div 
+                                    className="range-slider-range" 
+                                    style={{
+                                        left: `${((priceRange.min || 0) / 200000000) * 100}%`,
+                                        right: `${100 - ((priceRange.max || 200000000) / 200000000) * 100}%`
+                                    }}
+                                />
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="200000000"
+                                    step="500000"
+                                    value={priceRange.min || 0}
+                                    onChange={(e) => {
+                                        const val = Math.min(Number(e.target.value), (priceRange.max || 200000000) - 500000);
+                                        setPriceRange({ ...priceRange, min: val });
+                                    }}
+                                    className="range-slider-input"
+                                />
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="200000000"
+                                    step="500000"
+                                    value={priceRange.max || 200000000}
+                                    onChange={(e) => {
+                                        const val = Math.max(Number(e.target.value), (Number(priceRange.min) || 0) + 500000);
+                                        setPriceRange({ ...priceRange, max: val });
+                                    }}
+                                    className="range-slider-input"
+                                />
+                            </div>
+                        </div>
+
                         <button
                             onClick={handlePriceApply}
                             className="w-full py-4 bg-slate-900 text-white text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-blue-600 hover:shadow-2xl hover:shadow-blue-200 transition-all duration-300 active:scale-95"

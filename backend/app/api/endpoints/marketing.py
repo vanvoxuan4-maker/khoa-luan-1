@@ -124,12 +124,15 @@ class VoucherCreate(BaseModel):
     kieu_giamgia: str = "percentage"
     giatrigiam: float
     don_toithieu: float = 0
+    giam_toida: Optional[float] = None
     solandung: int = 100
     ngay_ketthuc: Optional[datetime] = None
 
 class VoucherUpdate(BaseModel):
     solandung: Optional[int] = None
     ngay_ketthuc: Optional[datetime] = None
+    giam_toida: Optional[float] = None
+    giatrigiam: Optional[float] = None
     is_active: Optional[bool] = None
 
 class VoucherOut(BaseModel):
@@ -138,6 +141,7 @@ class VoucherOut(BaseModel):
     kieu_giamgia: str
     giatrigiam: float
     don_toithieu: float
+    giam_toida: Optional[float] = None
     solandung: int
     solan_hientai: int
     ngay_batdau: Optional[datetime] 
@@ -173,6 +177,7 @@ def create_voucher(voucher: VoucherCreate, db: Session = Depends(get_db), admin:
         kieu_giamgia=voucher.kieu_giamgia,
         giatrigiam=voucher.giatrigiam,
         don_toithieu=voucher.don_toithieu,
+        giam_toida=voucher.giam_toida,
         solandung=voucher.solandung,
         ngay_batdau=datetime.now(),
         # 👇 Quan trọng: Set giờ kết thúc là cuối ngày (23:59:59)
@@ -232,11 +237,20 @@ def update_voucher(id: int, data: VoucherUpdate, db: Session = Depends(get_db), 
     if not v:
         raise HTTPException(status_code=404, detail="Không tìm thấy mã")
     
-    if data.solandung is not None:
+    update_data = data.dict(exclude_unset=True)
+    
+    if "solandung" in update_data:
         v.solandung = data.solandung
-    if data.ngay_ketthuc is not None:
-        v.ngay_ketthuc = data.ngay_ketthuc.replace(hour=23, minute=59, second=59)
-    if data.is_active is not None:
+    if "giatrigiam" in update_data:
+        v.giatrigiam = data.giatrigiam
+    if "ngay_ketthuc" in update_data:
+        if data.ngay_ketthuc:
+            v.ngay_ketthuc = data.ngay_ketthuc.replace(hour=23, minute=59, second=59)
+        else:
+            v.ngay_ketthuc = None
+    if "giam_toida" in update_data:
+        v.giam_toida = data.giam_toida
+    if "is_active" in update_data:
         v.is_active = data.is_active
     
     db.commit()
@@ -332,6 +346,9 @@ def validate_voucher(
     # Calculate discount
     if voucher.kieu_giamgia == "percentage":
         discount_amount = request.tong_tien * (float(voucher.giatrigiam) / 100)
+        # ✅ Áp dụng giảm tối đa nếu có (Discount Cap)
+        if voucher.giam_toida is not None and voucher.giam_toida > 0:
+            discount_amount = min(discount_amount, float(voucher.giam_toida))
     else:  # fixed
         discount_amount = float(voucher.giatrigiam)
     

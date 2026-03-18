@@ -109,7 +109,14 @@ const StatusTracker = ({ history, expectedDate, status }) => {
                             const isActive = isSpecial || (item.isCompleted || index === latestIdx);
                             const isLatest = isSpecial ? (index === data.length - 1) : (index === latestIdx);
 
-                            const date = item.thoi_gian ? new Date(item.thoi_gian) : null;
+                            const parseUTC = (dateStr) => {
+                                if (!dateStr) return null;
+                                // Nếu không có múi giờ (Z hoặc +HH:MM), thêm 'Z' để ép trình duyệt hiểu là UTC
+                                const isoStr = (dateStr.includes('Z') || dateStr.includes('+')) ? dateStr : `${dateStr}Z`;
+                                return new Date(isoStr);
+                            };
+
+                            const date = parseUTC(item.thoi_gian);
                             const formattedDate = date ? date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "--/--";
                             const formattedTime = date ? date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : "--:--";
 

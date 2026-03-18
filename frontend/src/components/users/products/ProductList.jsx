@@ -20,7 +20,7 @@ const ProductList = () => {
     const minPrice = searchParams.get('min_price') || null;
     const maxPrice = searchParams.get('max_price') || null;
     const minRating = searchParams.get('min_rating') ? parseInt(searchParams.get('min_rating')) : 0;
-    const sortBy = searchParams.get('sort') || 'newest';
+    const sortBy = searchParams.get('sort_by') || 'newest';
     const currentPage = searchParams.get('page') ? parseInt(searchParams.get('page')) : 1;
 
     // Derived filters object for API and Sidebar
@@ -42,7 +42,7 @@ const ProductList = () => {
 
         if (isReset) {
             // Remove all filter-related params
-            ['category_id', 'brand_id', 'min_price', 'max_price', 'min_rating'].forEach(p => nextParams.delete(p));
+            ['category_id', 'brand_id', 'min_price', 'max_price', 'min_rating', 'sort_by'].forEach(p => nextParams.delete(p));
         } else {
             Object.entries(newFilters).forEach(([key, value]) => {
                 if (value === null || value === '' || value === 0) {
@@ -60,7 +60,7 @@ const ProductList = () => {
 
     const handleSortChange = (newSort) => {
         const nextParams = new URLSearchParams(searchParams);
-        nextParams.set('sort', newSort);
+        nextParams.set('sort_by', newSort);
         nextParams.set('page', '1');
         setSearchParams(nextParams);
         setShouldScrollToTop(false); // Do not scroll on sort
@@ -216,32 +216,33 @@ const ProductList = () => {
                             ) : (
                                 <>
                                     {/* Sorting / Summary Header */}
-                                    <div className="flex justify-between items-center mb-10 pb-6 border-b border-slate-100">
-                                        <div>
+                                    <div className="flex justify-between items-center mb-10 bg-slate-50/50 p-4 rounded-3xl border border-slate-100 shadow-sm">
+                                        <div className="pl-4">
                                             {searchTerm && (
-                                                <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">
+                                                <h2 className="text-xl font-black text-slate-900 tracking-tight mb-1">
                                                     Kết quả cho: <span className="text-blue-600 italic">"{searchTerm}"</span>
                                                 </h2>
                                             )}
                                             <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em]">
-                                                Tìm thấy <span className="text-slate-900">{totalItems}</span> sản phẩm vượt trội
+                                                Tìm thấy <span className="text-blue-600 font-black">{totalItems}</span> siêu phẩm
                                             </p>
                                         </div>
 
                                         {/* Sort Controls */}
                                         <div className="flex items-center gap-4">
-                                            <span className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em] hidden sm:block">Sắp xếp theo:</span>
-                                            <div className="relative group">
+                                            <span className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em] hidden sm:block">Sắp xếp:</span>
+                                            <div className="relative group pr-2">
                                                 <select
                                                     value={sortBy}
                                                     onChange={(e) => handleSortChange(e.target.value)}
-                                                    className="appearance-none bg-white border-2 border-slate-100 rounded-2xl px-6 py-3 pr-12 text-sm font-black text-slate-900 focus:outline-none focus:border-blue-600 transition-all cursor-pointer hover:border-slate-200 shadow-sm"
+                                                    className="appearance-none bg-white border-2 border-slate-100 rounded-2xl px-6 py-2.5 pr-10 text-xs font-black text-slate-800 outline-none focus:border-blue-600 transition-all cursor-pointer hover:border-slate-200 shadow-sm"
                                                 >
                                                     <option value="newest">Mới nhất</option>
                                                     <option value="price_asc">Giá: Thấp đến Cao</option>
                                                     <option value="price_desc">Giá: Cao đến Thấp</option>
+                                                    <option value="discount_desc">Giảm giá nhiều nhất</option>
                                                 </select>
-                                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                                <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
                                                     </svg>

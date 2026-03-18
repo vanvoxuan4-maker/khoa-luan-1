@@ -268,7 +268,7 @@ const OrderManager = ({ highlightOrderId }) => {
         </h4>
         <span className="text-[11px] text-blue-600 font-bold italic bg-blue-50/50 px-4 py-1.5 rounded-full border border-blue-100 shadow-[0_0_15px_rgba(59,130,246,0.15)] hidden md:flex items-center gap-2 transition-all hover:scale-105 hover:bg-blue-100/50 cursor-default select-none group/note">
           <span className="animate-pulse text-sm">💡</span> 
-          <span>Nhắc nhở: Hãy nhấn vào đơn hàng để xem chi tiết</span>
+          <span>Nhắc nhở: Hãy nhấn vào mã đơn hàng để xem chi tiết</span>
         </span>
       </div>
 
@@ -302,12 +302,8 @@ const OrderManager = ({ highlightOrderId }) => {
                     id={`order-row-${order.ma_don_hang}`}
                     key={order.ma_don_hang}
                     data-order-id={order.ma_don_hang}
-                    className={`border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer relative
+                    className={`border-b border-slate-100 hover:bg-slate-50 transition-colors relative
                       ${order.ma_don_hang === highlightedId ? 'bg-amber-50' : ''}`}
-                    onClick={() => {
-                      setSelectedOrder(order);
-                      setHighlightedId(null);
-                    }}
                   >
                     {/* Mã đơn – center */}
                     <td className="py-4 px-4 text-center align-middle relative">
@@ -317,7 +313,15 @@ const OrderManager = ({ highlightOrderId }) => {
                           <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
                         </span>
                       )}
-                      <span className="font-semibold text-slate-500 text-[13px]">#{order.ma_don_hang}</span>
+                      <span 
+                        className="font-black text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-[13px] transition-all"
+                        onClick={() => {
+                          setSelectedOrder(order);
+                          setHighlightedId(null);
+                        }}
+                      >
+                        #{order.ma_don_hang}
+                      </span>
                     </td>
 
                     {/* Khách hàng – left */}

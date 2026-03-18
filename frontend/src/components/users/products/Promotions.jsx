@@ -14,6 +14,7 @@ const Promotions = () => {
     const minPrice = searchParams.get('min_price');
     const maxPrice = searchParams.get('max_price');
     const minRating = searchParams.get('min_rating');
+    const sortBy = searchParams.get('sort_by') || 'newest';
     const currentPage = parseInt(searchParams.get('page') || '1');
 
     const filters = {
@@ -21,7 +22,8 @@ const Promotions = () => {
         brand_id: brandId,
         min_price: minPrice,
         max_price: maxPrice,
-        min_rating: minRating
+        min_rating: minRating,
+        sort_by: sortBy
     };
 
     const [vouchers, setVouchers] = useState([]);
@@ -99,7 +101,7 @@ const Promotions = () => {
     const handleFilterChange = (newFilters, isReset = false) => {
         const nextParams = new URLSearchParams(searchParams);
         if (isReset) {
-            ['category_id', 'brand_id', 'min_price', 'max_price', 'min_rating'].forEach(p => nextParams.delete(p));
+            ['category_id', 'brand_id', 'min_price', 'max_price', 'min_rating', 'sort_by'].forEach(p => nextParams.delete(p));
         } else {
             Object.entries(newFilters).forEach(([key, value]) => {
                 if (value === null || value === '' || value === 0) nextParams.delete(key);
@@ -216,7 +218,8 @@ const Promotions = () => {
             <div className="animate-fade-in pb-20 overflow-hidden">
                 {/* NEW: TOAST NOTIFICATION */}
                 {toast.show && (
-                    <div className="fixed top-4 right-4 z-[9999] animate-slide-in-right">
+                    <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
+                        <div className="animate-slide-down pointer-events-auto">
                         <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[320px]">
                             <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -228,23 +231,24 @@ const Promotions = () => {
                                 <p className="text-xs text-green-100 font-bold mt-1">{toast.code}</p>
                             </div>
                         </div>
+                        </div>
                     </div>
                 )}
 
                 {/* Add animation keyframes */}
                 <style>{`
-                @keyframes slide-in-right {
-                    from {
-                        transform: translateX(100%);
+                @keyframes slide-down {
+                    0% {
+                        transform: translateY(-100%);
                         opacity: 0;
                     }
-                    to {
-                        transform: translateX(0);
+                    100% {
+                        transform: translateY(0);
                         opacity: 1;
                     }
                 }
-                .animate-slide-in-right {
-                    animation: slide-in-right 0.3s ease-out;
+                .animate-slide-down {
+                    animation: slide-down 0.4s cubic-bezier(0.16, 1, 0.3, 1);
                 }
             `}</style>
                 {/* 1. HERO BANNER - AUTOMATIC SLIDER */}
@@ -419,7 +423,7 @@ const Promotions = () => {
                                                     <span className="text-xl font-black text-blue-600 tracking-tight">
                                                         {(p.gia * (1 - p.gia_tri_giam / 100))?.toLocaleString('vi-VN')} VND
                                                     </span>
-                                                    <span className="text-xs font-bold text-slate-300 line-through">
+                                                    <span className="text-xs font-bold text-slate-400 line-through">
                                                         {p.gia?.toLocaleString('vi-VN')} VND
                                                     </span>
                                                 </div>
@@ -579,6 +583,25 @@ const Promotions = () => {
 
                             {/* DANH SÁCH SẢN PHẨM */}
                             <div className="flex-1">
+                                <div className="flex justify-between items-center mb-10 bg-slate-50/50 p-4 rounded-3xl border border-slate-100">
+                                    <div className="text-xs font-black text-slate-400 uppercase tracking-widest pl-2">
+                                        Tìm thấy <span className="text-blue-600">{totalItems}</span> sản phẩm
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sắp xếp:</span>
+                                        <select 
+                                            value={sortBy}
+                                            onChange={(e) => handleFilterChange({ sort_by: e.target.value })}
+                                            className="bg-white border border-slate-200 text-xs font-bold text-slate-700 py-2.5 px-4 rounded-xl outline-none focus:border-blue-500 transition-all cursor-pointer shadow-sm"
+                                        >
+                                            <option value="newest">Mới nhất</option>
+                                            <option value="price_asc">Giá: Thấp đến Cao</option>
+                                            <option value="price_desc">Giá: Cao đến Thấp</option>
+                                            <option value="discount_desc">Giảm giá nhiều nhất</option>
+                                        </select>
+                                    </div>
+                                </div>
+
                                 {loading ? (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                                         {[1, 2, 3, 4, 5, 6].map(i => (
@@ -611,7 +634,7 @@ const Promotions = () => {
                                                                 <span className="text-xl font-black text-red-600 tracking-tighter">
                                                                     {(p.gia * (1 - p.gia_tri_giam / 100))?.toLocaleString('vi-VN')}đ
                                                                 </span>
-                                                                <span className="text-[10px] font-bold text-slate-400 line-through opacity-60">
+                                                                <span className="text-[10px] font-bold text-slate-500 line-through">
                                                                     {p.gia?.toLocaleString('vi-VN')}đ
                                                                 </span>
                                                             </div>
@@ -680,6 +703,44 @@ const Promotions = () => {
                                         Không tìm thấy sản phẩm khuyến mãi nào khớp với bộ lọc.
                                     </div>
                                 )}
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* ─── Premium CTA: Shimmer ─── */}
+                    <section className="py-32 relative overflow-hidden rounded-[40px] mb-32 group">
+                        <div className="absolute inset-0 z-0">
+                            <img 
+                                src="/assets/about/promo_cta.png" 
+                                alt="Premium Promotion" 
+                                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                            />
+                            <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[2px]" />
+                            <div className="absolute inset-0 animate-premium-glow bg-gradient-to-tr from-blue-900/40 via-transparent to-indigo-900/40" />
+                        </div>
+                        
+                        <div className="container mx-auto px-6 relative z-10 text-center">
+                            <div className="max-w-4xl mx-auto space-y-12">
+                                <h2 className="text-4xl md:text-6xl font-black text-white leading-tight uppercase tracking-tighter">
+                                    Sẵn sàng bắt đầu <br /> <span className="text-shimmer-light uppercase">hành trình mới?</span>
+                                </h2>
+                                <p className="text-xl text-slate-300 font-medium max-w-2xl mx-auto leading-relaxed">
+                                    Đừng bỏ lỡ những siêu phẩm với mức giá ưu đãi nhất. Hãy chọn cho mình người bạn đồng hành hoàn hảo ngay hôm nay!
+                                </p>
+                                <div className="flex flex-col sm:flex-row gap-6 justify-center">
+                                    <Link
+                                        to="/products"
+                                        className="px-12 py-5 bg-blue-600 text-white rounded-full font-black text-lg hover:bg-blue-700 transition-all hover:scale-105 shadow-2xl shadow-blue-500/20 active:scale-95 uppercase tracking-widest"
+                                    >
+                                        Mua sắm ngay
+                                    </Link>
+                                    <Link
+                                        to="/about"
+                                        className="px-12 py-5 bg-white/10 text-white rounded-full font-black text-lg hover:bg-white/20 backdrop-blur-md transition-all hover:scale-105 border border-white/20 active:scale-95 uppercase tracking-widest"
+                                    >
+                                        Tìm hiểu thêm
+                                    </Link>
+                                </div>
                             </div>
                         </div>
                     </section>

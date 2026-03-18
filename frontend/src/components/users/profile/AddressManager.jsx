@@ -74,13 +74,13 @@ const AddressCard = ({ addr, index, onEdit, onDelete, onSetDefault }) => {
             onMouseLeave={() => setHovered(false)}
             style={{
                 position: 'relative',
-                background: isDefault ? 'linear-gradient(135deg,#f0f7ff 0%,#fff 100%)' : '#fff',
-                border: isDefault ? '1.5px solid #60a5fa' : '1.5px solid #e5e7eb',
+                background: isDefault ? 'linear-gradient(135deg,#f0f7ff 0%,#fff 100%)' : (hovered ? '#f9fafb' : '#fff'),
+                border: isDefault ? '1.5px solid #60a5fa' : (hovered ? '1.5px solid #3b82f6' : '1.5px solid #e5e7eb'),
                 borderRadius: '14px',
                 padding: '20px',
                 boxShadow: hovered
                     ? '0 8px 28px rgba(37,99,235,.14)'
-                    : isDefault ? '0 2px 10px rgba(37,99,235,.09)' : '0 1px 4px rgba(0,0,0,.07)',
+                    : isDefault ? '0 2px 10px rgba(37,99,235,.09)' : '0 1px 4px rgba(0,0,0,.05)',
                 transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
                 transition: 'box-shadow .22s ease, transform .22s ease, border-color .22s ease',
                 animationDelay: `${index * 60}ms`,

@@ -92,14 +92,14 @@ const OrderDetailModal = ({ order, products, onClose }) => {
                             <div className="flex items-center relative min-w-[360px] justify-between">
                                 {/* Base background line - adjusted range to avoid trailing end */}
                                 <div className="absolute top-[18px] left-[18px] right-[18px] h-0.5 bg-slate-100" />
-                                
+
                                 {/* Progress line - stops precisely at the last node center */}
                                 <div
                                     className="absolute top-[18px] left-[18px] h-0.5 bg-gradient-to-r from-orange-400 to-amber-400 transition-all duration-500"
-                                    style={{ 
-                                        width: currentStepIdx > 0 
-                                            ? `calc(${(currentStepIdx / (timelineSteps.length - 1)) * 100}% - ${currentStepIdx === (timelineSteps.length - 1) ? '36px' : (36 * (currentStepIdx / (timelineSteps.length - 1))) + 'px'})` 
-                                            : '0%' 
+                                    style={{
+                                        width: currentStepIdx > 0
+                                            ? `calc(${(currentStepIdx / (timelineSteps.length - 1)) * 100}% - ${currentStepIdx === (timelineSteps.length - 1) ? '36px' : (36 * (currentStepIdx / (timelineSteps.length - 1))) + 'px'})`
+                                            : '0%'
                                     }}
                                 />
                                 {timelineSteps.map((step, i) => {
@@ -174,9 +174,9 @@ const OrderDetailModal = ({ order, products, onClose }) => {
                                 {order.ngay_giao_thuc_te && (
                                     <InfoRow
                                         label="Ngày giao hàng"
-                                        value={`✅ ${new Date(order.ngay_giao_thuc_te).toLocaleString('vi-VN', { 
-                                            day: '2-digit', 
-                                            month: '2-digit', 
+                                        value={`✅ ${new Date(order.ngay_giao_thuc_te).toLocaleString('vi-VN', {
+                                            day: '2-digit',
+                                            month: '2-digit',
                                             year: 'numeric',
                                             hour: '2-digit',
                                             minute: '2-digit'

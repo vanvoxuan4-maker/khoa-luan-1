@@ -4,7 +4,6 @@ from app.db.base_class import Base
 import enum
 from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM
 
-# Định nghĩa lại (hoặc import từ product nếu muốn, nhưng để riêng cho đỡ lỗi import vòng)
 class KieuGiamGia(str, enum.Enum):
     percentage = "percentage"
     fixed_amount = "fixed_amount"
@@ -44,6 +43,7 @@ class Makhuyenmai(Base):
     
     giatrigiam = Column(Numeric(10, 2), nullable=False)
     don_toithieu = Column(Numeric(10, 2), default=0)
+    giam_toida = Column(Numeric(10, 2), nullable=True) # Mức giảm tối đa
     solandung = Column(Integer, nullable=True)
     solan_hientai = Column(Integer, default=0)
     ngay_batdau = Column(DateTime, nullable=False)

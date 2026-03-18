@@ -217,7 +217,7 @@ const OrderDetail = () => {
                                 #{order.ma_don_hang}
                             </h2>
                             <p style={{ margin: 0, fontSize: 13, color: '#9CA3AF' }}>
-                                📅 Đặt lúc: {new Date(order.ngay_dat).toLocaleString('vi-VN', { dateStyle: 'medium', timeStyle: 'short' })}
+                                📅 Đặt lúc: {new Date(order.ngay_dat && !order.ngay_dat.includes('Z') ? `${order.ngay_dat}Z` : order.ngay_dat).toLocaleString('vi-VN', { dateStyle: 'medium', timeStyle: 'short' })}
                             </p>
                         </div>
                         <div style={{ textAlign: 'right' }}>
@@ -298,12 +298,12 @@ const OrderDetail = () => {
                         {/* Delivery date hint */}
                         {order.trang_thai !== 'delivered' && order.trang_thai !== 'cancelled' && order.ngay_giao_du_kien && (
                             <p style={{ margin: '16px 0 0', fontSize: 13, color: '#6B7280', textAlign: 'center' }}>
-                                🗓️ Dự kiến giao: <strong style={{ color: '#374151' }}>{new Date(order.ngay_giao_du_kien).toLocaleDateString('vi-VN')}</strong>
+                                🗓️ Dự kiến giao: <strong style={{ color: '#374151' }}>{new Date(order.ngay_giao_du_kien && !order.ngay_giao_du_kien.includes('Z') ? `${order.ngay_giao_du_kien}Z` : order.ngay_giao_du_kien).toLocaleDateString('vi-VN')}</strong>
                             </p>
                         )}
                         {order.trang_thai === 'delivered' && order.ngay_giao_thuc_te && (
                             <p style={{ margin: '16px 0 0', fontSize: 13, color: '#10B981', textAlign: 'center', fontWeight: 600 }}>
-                                🎉 Đã giao thành công vào: {new Date(order.ngay_giao_thuc_te).toLocaleDateString('vi-VN')}
+                                🎉 Đã giao thành công vào: {new Date(order.ngay_giao_thuc_te && !order.ngay_giao_thuc_te.includes('Z') ? `${order.ngay_giao_thuc_te}Z` : order.ngay_giao_thuc_te).toLocaleDateString('vi-VN')}
                             </p>
                         )}
                     </Card>

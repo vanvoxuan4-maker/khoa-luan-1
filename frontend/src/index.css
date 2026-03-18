@@ -78,9 +78,6 @@ input[type=number] {
   animation: fade-in-up 0.8s ease-out forwards;
 }
 
-/* --- HYPER-IMMERSIVE SYSTEM --- */
-
-/* 1. Animated Gradient Typography */
 .text-shimmer {
   background: linear-gradient(to right,
       #0f172a 20%,
@@ -500,3 +497,62 @@ input[type="password"]::-ms-clear {
 .animate-shimmer {
   animation: shimmer 2s ease-in-out infinite;
 }
+
+/* --- DUAL RANGE SLIDER CUSTOM STYLES --- */
+.range-slider-container {
+  position: relative;
+  width: 100%;
+  height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+.range-slider-input {
+  position: absolute;
+  width: 100%;
+  pointer-events: none;
+  appearance: none;
+  height: 0;
+  outline: none;
+  z-index: 20;
+}
+
+.range-slider-input::-webkit-slider-thumb {
+  pointer-events: auto;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: white;
+  border: 4px solid #2563eb;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+  transition: all 0.2s ease;
+}
+
+.range-slider-input::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+}
+
+.range-slider-track {
+  position: absolute;
+  width: 100%;
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 10px;
+  z-index: 10;
+}
+
+.range-slider-range {
+  position: absolute;
+  height: 6px;
+  background: #2563eb;
+  border-radius: 10px;
+  z-index: 11;
+}
+
+/* Chrome fix for overlapping inputs */
+.range-slider-input:last-child {
+  z-index: 21;
+}

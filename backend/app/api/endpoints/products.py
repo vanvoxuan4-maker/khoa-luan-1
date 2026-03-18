@@ -510,9 +510,18 @@ async def upload_image(ma_sanpham: int, is_main: bool = False, mau: Optional[str
             buffer.write(contents)
 
     link_cho_web = f"/static/images/{final_name}"
-    db_image = Hinhanh(ma_sanpham=ma_sanpham, image_url=link_cho_web, is_main=is_main, mau=mau)
-    db.add(db_image)
-    db.commit()
+    try:
+        db_image = Hinhanh(ma_sanpham=ma_sanpham, image_url=link_cho_web, is_main=is_main, mau=mau)
+        db.add(db_image)
+        db.commit()
+    except Exception as db_err:
+        db.rollback()
+        # NẾU LỖI DATABASE, XOÁ NGAY FILE VỪA LƯU ĐỂ TRÁNH RÁC
+        if os.path.exists(file_location):
+            os.remove(file_location)
+        print(f"Error saving to DB, deleted file {file_location}: {db_err}")
+        raise HTTPException(status_code=500, detail="Lỗi lưu thông tin ảnh vào cơ sở dữ liệu")
+
     return {"link_hien_thi": link_cho_web, "message": "Cập nhật ảnh thành công! (đã nén tự động)"}
 
 # API xóa ảnh

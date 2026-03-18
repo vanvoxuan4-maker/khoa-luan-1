@@ -7,11 +7,11 @@ const VoucherManager = () => {
   const token = localStorage.getItem('admin_access_token');
 
   const [formData, setFormData] = useState({
-    ma_giamgia: '', kieu_giamgia: 'percentage', giatrigiam: '', don_toithieu: 0, solandung: 100, ngay_ketthuc: ''
+    ma_giamgia: '', kieu_giamgia: 'percentage', giatrigiam: '', don_toithieu: 0, giam_toida: '', solandung: 100, ngay_ketthuc: ''
   });
 
   const [editingVoucher, setEditingVoucher] = useState(null);
-  const [renewalData, setRenewalData] = useState({ ngay_ketthuc: '', solandung: '' });
+  const [renewalData, setRenewalData] = useState({ ngay_ketthuc: '', solandung: '', giam_toida: '', giatrigiam: '' });
   const [isAdding, setIsAdding] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -27,13 +27,17 @@ const VoucherManager = () => {
   const handleCreate = async () => {
     if (!formData.ma_giamgia || !formData.giatrigiam) return alert("Vui lòng nhập đủ Mã Code và Giá Trị Giảm!");
     const payload = {
-      ...formData, giatrigiam: Number(formData.giatrigiam), don_toithieu: Number(formData.don_toithieu), solandung: Number(formData.solandung),
+      ...formData, 
+      giatrigiam: Number(formData.giatrigiam), 
+      don_toithieu: Number(formData.don_toithieu), 
+      giam_toida: formData.giam_toida ? Number(formData.giam_toida) : null,
+      solandung: Number(formData.solandung),
       ngay_ketthuc: formData.ngay_ketthuc ? formData.ngay_ketthuc : null
     };
     try {
       await axios.post(`${API_BASE_URL}/admin/vouchers`, payload, { headers: { Authorization: `Bearer ${token}` } });
       alert("✅ Tạo mã thành công!");
-      setFormData({ ma_giamgia: '', kieu_giamgia: 'percentage', giatrigiam: '', don_toithieu: 0, solandung: 100, ngay_ketthuc: '' });
+      setFormData({ ma_giamgia: '', kieu_giamgia: 'percentage', giatrigiam: '', don_toithieu: 0, giam_toida: '', solandung: 100, ngay_ketthuc: '' });
       setIsAdding(false);
       fetchVouchers();
     } catch (err) {
@@ -45,7 +49,9 @@ const VoucherManager = () => {
     try {
       const payload = {
         ...renewalData,
-        solandung: parseInt(renewalData.solandung) || 0
+        solandung: parseInt(renewalData.solandung) || 0,
+        giatrigiam: renewalData.giatrigiam !== '' ? Number(renewalData.giatrigiam) : undefined,
+        giam_toida: renewalData.giam_toida !== '' ? Number(renewalData.giam_toida) : null
       };
       await axios.put(`${API_BASE_URL}/admin/vouchers/${id}`, payload, { headers: { Authorization: `Bearer ${token}` } });
       alert("✅ Cập nhật thành công!");
@@ -124,7 +130,7 @@ const VoucherManager = () => {
             <h3 className="text-xl font-bold text-white mb-8 flex items-center gap-3 relative z-10">
               <span className="bg-gradient-to-tr from-blue-500 to-purple-500 p-2.5 rounded-xl shadow-lg shadow-blue-500/30">🎟️</span>
               <div className="flex flex-col">
-                <span className="text-xs text-blue-400 uppercase tracking-[0.2em] font-black mb-1">Cấu hình ưu đãi</span>
+                <span className="text-xs text-blue-400 uppercase tracking-[0.2em] font-black mb-1">Cấu hình Voucher</span>
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-100 to-blue-200 uppercase">
                   Thiết Lập Mã Giảm Giá Mới
                 </span>
@@ -135,6 +141,7 @@ const VoucherManager = () => {
               <div className="md:col-span-6 group">
                 <label className="block text-[10px] font-black text-blue-300 uppercase mb-2 ml-1 tracking-widest">Mã Code (Định danh)</label>
                 <input
+                  required type="text"
                   value={formData.ma_giamgia}
                   onChange={e => setFormData({ ...formData, ma_giamgia: e.target.value.toUpperCase() })}
                   placeholder="VD: SIÊU_HÈ_2026"
@@ -142,35 +149,34 @@ const VoucherManager = () => {
                 />
               </div>
 
-              <div className="md:col-span-6 flex gap-4">
-                <div className="w-1/3 group relative">
-                  <label className="block text-[10px] font-black text-blue-300 uppercase mb-2 ml-1 tracking-widest">Loại Giảm</label>
-                  <div className="relative">
-                    <select
-                      value={formData.kieu_giamgia}
-                      onChange={e => setFormData({ ...formData, kieu_giamgia: e.target.value })}
-                      className="w-full bg-[#1e293b]/50 border border-slate-600 rounded-2xl pl-10 pr-4 h-14 font-black text-blue-100 text-[10px] outline-none focus:border-blue-500 cursor-pointer focus:bg-[#1e293b] transition-all appearance-none"
-                    >
-                      <option value="percentage">% PHẦN TRĂM</option>
-                      <option value="fixed_amount">💲 TIỀN MẶT</option>
-                    </select>
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
-                      </svg>
-                    </span>
-                  </div>
+              <div className="md:col-span-3 group relative">
+                <label className="block text-[10px] font-black text-blue-300 uppercase mb-2 ml-1 tracking-widest">Loại Giảm</label>
+                <div className="relative">
+                  <select
+                    value={formData.kieu_giamgia}
+                    onChange={e => setFormData({ ...formData, kieu_giamgia: e.target.value })}
+                    className="w-full bg-[#1e293b]/50 border border-slate-600 rounded-2xl pl-10 pr-4 h-14 font-black text-blue-100 text-[10px] outline-none focus:border-blue-500 cursor-pointer focus:bg-[#1e293b] transition-all appearance-none"
+                  >
+                    <option value="percentage">% PHẦN TRĂM</option>
+                    <option value="fixed_amount">💲 TIỀN MẶT</option>
+                  </select>
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  </span>
                 </div>
-                <div className="flex-1 group">
-                  <label className="block text-[10px] font-black text-blue-300 uppercase mb-2 ml-1 tracking-widest">Giá Trị</label>
-                  <input
-                    type="number" min="0" onKeyDown={blockInvalidChar}
-                    value={formData.giatrigiam}
-                    onChange={e => setFormData({ ...formData, giatrigiam: e.target.value })}
-                    placeholder={formData.kieu_giamgia === 'percentage' ? "VD: 15 %" : "VD: 50000 VND"}
-                    className="w-full bg-[#1e293b]/50 border border-slate-600 rounded-2xl px-5 h-14 font-black text-sm text-white outline-none focus:border-blue-500 focus:bg-[#1e293b] focus:shadow-[0_0_20px_rgba(59,130,246,0.2)] transition-all"
-                  />
-                </div>
+              </div>
+
+              <div className="md:col-span-3 group">
+                <label className="block text-[10px] font-black text-blue-300 uppercase mb-2 ml-1 tracking-widest">Giá Trị</label>
+                <input
+                  type="number" min="0" onKeyDown={blockInvalidChar}
+                  value={formData.giatrigiam}
+                  onChange={e => setFormData({ ...formData, giatrigiam: e.target.value })}
+                  placeholder={formData.kieu_giamgia === 'percentage' ? "VD: 15 %" : "VD: 50000 VND"}
+                  className="w-full bg-[#1e293b]/50 border border-slate-600 rounded-2xl px-5 h-14 font-black text-sm text-white outline-none focus:border-blue-500 focus:bg-[#1e293b] focus:shadow-[0_0_20px_rgba(59,130,246,0.2)] transition-all"
+                />
               </div>
 
               <div className="md:col-span-4 group">
@@ -194,6 +200,21 @@ const VoucherManager = () => {
                   onChange={e => setFormData({ ...formData, solandung: e.target.value })}
                   className="w-full bg-[#1e293b]/50 border border-slate-600 rounded-2xl px-5 h-14 font-black text-sm text-white outline-none focus:border-blue-500 focus:bg-[#1e293b] transition-all"
                 />
+              </div>
+
+              <div className="md:col-span-4 group">
+                <label className="block text-[10px] font-black text-blue-300 uppercase mb-2 ml-1 tracking-widest">Giảm Tối Đa</label>
+                <div className="relative">
+                  <input
+                    type="number" min="0" onKeyDown={blockInvalidChar}
+                    value={formData.giam_toida}
+                    onChange={e => setFormData({ ...formData, giam_toida: e.target.value })}
+                    placeholder="Không giới hạn"
+                    disabled={formData.kieu_giamgia !== 'percentage'}
+                    className={`w-full bg-[#1e293b]/50 border border-slate-600 rounded-2xl pl-5 pr-14 h-14 font-black text-sm text-white outline-none focus:border-blue-500 focus:bg-[#1e293b] transition-all ${formData.kieu_giamgia !== 'percentage' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-500 pointer-events-none">VND</span>
+                </div>
               </div>
 
               <div className="md:col-span-4 group">
@@ -232,7 +253,7 @@ const VoucherManager = () => {
         </div>
 
         {/* LƯỚI THẺ VOUCHER */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-20 items-start">
           {filteredVouchers.length > 0 ? (
             filteredVouchers.map(v => {
               const expiryDate = v.ngay_ketthuc ? new Date(v.ngay_ketthuc) : null;
@@ -246,7 +267,7 @@ const VoucherManager = () => {
                 <div key={v.ma_khuyenmai} className={`relative group transition-all duration-300 hover:-translate-y-2 ${isClosed && !isEditing ? 'grayscale opacity-70' : ''}`}>
                   <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-[2rem] opacity-0 group-hover:opacity-20 blur transition duration-500"></div>
 
-                  <div className="relative h-full bg-white/80 backdrop-blur-xl rounded-[2rem] overflow-hidden border border-white shadow-xl hover:shadow-2xl transition-all flex flex-col">
+                  <div className="relative bg-white/80 backdrop-blur-xl rounded-[2rem] overflow-hidden border border-white shadow-xl hover:shadow-2xl transition-all flex flex-col">
                     <div className={`p-6 relative text-white overflow-hidden ${isClosed ? 'bg-slate-600' : 'bg-gradient-to-br from-indigo-600 via-blue-600 to-indigo-700'}`}>
                       <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/20 rounded-full blur-3xl"></div>
                       <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-indigo-900/40 rounded-full blur-3xl"></div>
@@ -279,14 +300,30 @@ const VoucherManager = () => {
                     <div className="p-6 space-y-4 flex-grow">
                       {isEditing ? (
                         <div className="animate-fade-in space-y-4 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/50">
-                          <div>
-                            <label className="block text-[8px] font-black text-indigo-400 uppercase mb-1.5 ml-1 tracking-widest">Gia hạn đến ngày</label>
-                            <input
-                              type="date"
-                              className="w-full bg-white border border-indigo-200 rounded-xl px-3 h-10 text-xs font-black outline-none [color-scheme:light]"
-                              value={renewalData.ngay_ketthuc}
-                              onChange={e => setRenewalData({ ...renewalData, ngay_ketthuc: e.target.value })}
-                            />
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[8px] font-black text-indigo-400 uppercase mb-1.5 ml-1 tracking-widest">Giá trị giảm mới</label>
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  className="w-full bg-white border border-indigo-200 rounded-xl pl-3 pr-8 h-10 text-xs font-black outline-none"
+                                  value={renewalData.giatrigiam}
+                                  onChange={e => setRenewalData({ ...renewalData, giatrigiam: e.target.value })}
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 pointer-events-none">
+                                  {v.kieu_giamgia === 'percentage' ? '%' : 'đ'}
+                                </span>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-[8px] font-black text-indigo-400 uppercase mb-1.5 ml-1 tracking-widest">Gia hạn đến ngày</label>
+                              <input
+                                type="date"
+                                className="w-full bg-white border border-indigo-200 rounded-xl px-3 h-10 text-xs font-black outline-none [color-scheme:light]"
+                                value={renewalData.ngay_ketthuc}
+                                onChange={e => setRenewalData({ ...renewalData, ngay_ketthuc: e.target.value })}
+                              />
+                            </div>
                           </div>
                           <div>
                             <label className="block text-[8px] font-black text-indigo-400 uppercase mb-1.5 ml-1 tracking-widest">Tổng giới hạn mới ({v.solan_hientai})</label>
@@ -297,9 +334,16 @@ const VoucherManager = () => {
                               onChange={e => setRenewalData({ ...renewalData, solandung: e.target.value })}
                             />
                           </div>
-                          <div className="flex gap-2 w-full pt-1">
-                            <button onClick={() => handleUpdate(v.ma_khuyenmai)} className="flex-1 bg-indigo-600 text-white text-[9px] font-black py-3 rounded-xl hover:bg-slate-900 transition-colors uppercase tracking-widest shadow-lg shadow-indigo-500/10">Lưu lại</button>
-                            <button onClick={() => setEditingVoucher(null)} className="flex-1 bg-white text-slate-500 text-[9px] font-black py-3 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors uppercase">Hủy</button>
+                          <div>
+                            <label className="block text-[8px] font-black text-indigo-400 uppercase mb-1.5 ml-1 tracking-widest">Giảm tối đa mới (VND)</label>
+                            <input
+                              type="number"
+                              className={`w-full bg-white border border-indigo-200 rounded-xl px-3 h-10 text-xs font-black outline-none ${v.kieu_giamgia !== 'percentage' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              value={renewalData.giam_toida}
+                              onChange={e => setRenewalData({ ...renewalData, giam_toida: e.target.value })}
+                              disabled={v.kieu_giamgia !== 'percentage'}
+                              placeholder="Không giới hạn"
+                            />
                           </div>
                         </div>
                       ) : (
@@ -309,7 +353,12 @@ const VoucherManager = () => {
                             <div>
                               <p className="text-[8px] text-indigo-400 font-black uppercase tracking-widest mb-0.5">Yêu cầu tối thiểu</p>
                               <p className="text-xs font-black text-slate-700">
-                                {v.don_toithieu > 0 ? `Đơn từ ${parseFloat(v.don_toithieu).toLocaleString()} VND` : "Mọi loại đơn hàng"}
+                              {v.don_toithieu > 0 ? `Đơn từ ${parseFloat(v.don_toithieu).toLocaleString()} VND` : "Mọi loại đơn hàng"}
+                              {v.giam_toida > 0 && (
+                                <span className="block text-[9px] text-amber-500 font-bold mt-1">
+                                  Giảm tối đa {parseFloat(v.giam_toida).toLocaleString()} VND
+                                </span>
+                              )}
                               </p>
                             </div>
                           </div>
@@ -346,24 +395,45 @@ const VoucherManager = () => {
                         </div>
 
                         <div className="flex gap-2 w-full pt-1">
-                          <button
-                            onClick={() => {
-                              setEditingVoucher(v.ma_khuyenmai);
-                              setRenewalData({
-                                ngay_ketthuc: v.ngay_ketthuc ? v.ngay_ketthuc.split('T')[0] : '',
-                                solandung: v.solandung
-                              });
-                            }}
-                            className="flex-1 bg-white text-indigo-600 border border-indigo-100 py-3 rounded-xl font-black uppercase tracking-[0.1em] hover:bg-indigo-600 hover:text-white transition-all shadow-xl shadow-indigo-500/5 flex items-center justify-center gap-2"
-                          >
-                            <span>📝</span> Sửa
-                          </button>
-                          <button
-                            onClick={() => handleDelete(v.ma_khuyenmai)}
-                            className="flex-1 bg-white text-red-500 border border-red-100 py-3 rounded-xl font-black uppercase tracking-[0.1em] hover:bg-red-500 hover:text-white transition-all shadow-xl shadow-red-500/5 flex items-center justify-center gap-2"
-                          >
-                            <span>🗑️</span> Xóa
-                          </button>
+                          {isEditing ? (
+                            <>
+                              <button
+                                onClick={() => handleUpdate(v.ma_khuyenmai)}
+                                className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black uppercase tracking-[0.1em] hover:bg-slate-900 transition-all shadow-xl shadow-indigo-500/10 flex items-center justify-center gap-2"
+                              >
+                                <span>💾</span> Lưu lại
+                              </button>
+                              <button
+                                onClick={() => setEditingVoucher(null)}
+                                className="flex-1 bg-white text-slate-500 border border-slate-200 py-3 rounded-xl font-black uppercase tracking-[0.1em] hover:bg-red-50 hover:text-red-500 hover:border-red-500 transition-all flex items-center justify-center gap-2"
+                              >
+                                <span>✕</span> Hủy
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setEditingVoucher(v.ma_khuyenmai);
+                                  setRenewalData({
+                                    ngay_ketthuc: v.ngay_ketthuc ? v.ngay_ketthuc.split('T')[0] : '',
+                                    solandung: v.solandung,
+                                    giam_toida: v.giam_toida || '',
+                                    giatrigiam: v.giatrigiam
+                                  });
+                                }}
+                                className="flex-1 bg-white text-indigo-600 border border-indigo-100 py-3 rounded-xl font-black uppercase tracking-[0.1em] hover:bg-indigo-600 hover:text-white transition-all shadow-xl shadow-indigo-500/5 flex items-center justify-center gap-2"
+                              >
+                                <span>📝</span> Sửa
+                              </button>
+                              <button
+                                onClick={() => handleDelete(v.ma_khuyenmai)}
+                                className="flex-1 bg-white text-red-500 border border-red-100 py-3 rounded-xl font-black uppercase tracking-[0.1em] hover:bg-red-500 hover:text-white transition-all shadow-xl shadow-red-500/5 flex items-center justify-center gap-2"
+                              >
+                                <span>🗑️</span> Xóa
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>

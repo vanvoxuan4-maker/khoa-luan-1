@@ -145,6 +145,9 @@ def checkout(
             # Calculate discount
             if voucher.kieu_giamgia == "percentage":
                 giam_gia = tong_tien_don * (float(voucher.giatrigiam) / 100)
+                # ✅ Áp dụng giảm tối đa nếu có (Discount Cap)
+                if voucher.giam_toida is not None and voucher.giam_toida > 0:
+                    giam_gia = min(giam_gia, float(voucher.giam_toida))
             else:  # fixed
                 giam_gia = float(voucher.giatrigiam)
             
