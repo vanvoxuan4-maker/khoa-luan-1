@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../../../utils/apiConfig';
-import { Link } from 'react-router-dom';
+import { Link, useNavigationType } from 'react-router-dom';
 import BannerSlider from './BannerSlider';
 import TopSellingSection from './TopSellingSection';
 import CategorySection from './CategorySection';
@@ -14,6 +14,7 @@ const HomePage = () => {
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const navType = useNavigationType();
     const categoryRef = useRef(null);
 
     // Group products by category
@@ -75,6 +76,17 @@ const HomePage = () => {
     useEffect(() => {
         fetchData();
     }, []);
+
+    // KHÔI PHỤC VỊ TRÍ CUỘN: Khi load xong và là Back (POP) - Dùng useLayoutEffect để tránh chớp nháy
+    useLayoutEffect(() => {
+        if (!loading && navType === 'POP') {
+            const savedPos = sessionStorage.getItem(`scroll_pos_${window.location.pathname}`);
+            if (savedPos) {
+                window.scrollTo({ top: parseInt(savedPos), behavior: 'instant' });
+            }
+        }
+    }, [loading, navType]);
+
 
 
     return (

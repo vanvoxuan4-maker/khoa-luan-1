@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../../../utils/apiConfig';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useNavigationType } from 'react-router-dom';
 import StatusTracker from './StatusTracker';
 import { useNotification } from '../../../context/NotificationContext';
 
@@ -33,6 +33,7 @@ const fmt = (n) => (n ?? 0).toLocaleString('vi-VN');
 ───────────────────────────────────────────── */
 const OrderHistory = () => {
     const navigate = useNavigate();
+    const navType = useNavigationType();
     const { addToast, showConfirm } = useNotification();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -61,6 +62,16 @@ const OrderHistory = () => {
     };
 
     useEffect(() => { fetchOrders(); }, []);
+
+    // KHÔI PHỤC VỊ TRÍ CUỘN: Khi load xong và là Back (POP) - Dùng useLayoutEffect để tránh chớp nháy
+    useLayoutEffect(() => {
+        if (!loading && navType === 'POP') {
+            const savedPos = sessionStorage.getItem(`scroll_pos_${window.location.pathname}`);
+            if (savedPos) {
+                window.scrollTo({ top: parseInt(savedPos), behavior: 'instant' });
+            }
+        }
+    }, [loading, navType]);
 
     const handleRefresh = () => { setIsRefreshing(true); fetchOrders(false); };
 

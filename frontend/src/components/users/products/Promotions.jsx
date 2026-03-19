@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../../../utils/apiConfig';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigationType } from 'react-router-dom';
 import FilterSidebar from './FilterSidebar';
 import Breadcrumb from '../layouts/Breadcrumb';
 
 const Promotions = () => {
     const [searchParams, setSearchParams] = useSearchParams();
+    const navType = useNavigationType();
 
     // Parse filters from URL
     const categoryId = searchParams.get('category_id');
@@ -113,6 +114,7 @@ const Promotions = () => {
         setShouldScrollToTop(false); // Consistent with ProductList: don't scroll on filter
     };
 
+
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
@@ -165,6 +167,17 @@ const Promotions = () => {
         };
         fetchData();
     }, [categoryId, brandId, minPrice, maxPrice, minRating, currentPage]);
+
+    // KHÔI PHỤC VỊ TRÍ CUỘN: Khi load xong và là Back (POP) - Dùng useLayoutEffect để tránh chớp nháy
+    useLayoutEffect(() => {
+        if (!loading && navType === 'POP') {
+            const savedPos = sessionStorage.getItem(`scroll_pos_${window.location.pathname}`);
+            if (savedPos) {
+                window.scrollTo({ top: parseInt(savedPos), behavior: 'instant' });
+            }
+        }
+    }, [loading, navType]);
+
 
     // Cuộn lên đầu sau khi dữ liệu đã load xong
     useEffect(() => {

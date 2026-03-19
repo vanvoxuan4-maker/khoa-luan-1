@@ -82,8 +82,8 @@ const ForgotPassword = ({ onBackToLogin }) => {
     return (
         <div className="w-full max-w-sm mx-auto">
             <div className="mb-10 text-center">
-                <h2 className="text-5xl font-black text-indigo-600 tracking-tight mb-3 italic">quên mật khẩu</h2>
-                <p className="text-sm font-medium text-slate-500 uppercase tracking-widest">đặt lại mật khẩu của bạn</p>
+                <h2 className="text-5xl font-black text-indigo-600 tracking-tight mb-3 capitalize italic">Change Password</h2>
+                <p className="text-sm font-medium text-slate-500 tracking-widest">Reset your password</p>
             </div>
 
             <form onSubmit={handleResetPassword} className="space-y-6">

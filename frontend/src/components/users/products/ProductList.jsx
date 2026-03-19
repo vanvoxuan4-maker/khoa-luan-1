@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../../../utils/apiConfig';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigationType } from 'react-router-dom';
 import Breadcrumb from '../layouts/Breadcrumb';
 import useDebounce from '../../../hooks/useDebounce';
 
@@ -11,6 +11,7 @@ import ProductCard from './ProductCard'; // Import ProductCard
 const ProductList = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const navType = useNavigationType();
     const [searchParams, setSearchParams] = useSearchParams();
     const searchTerm = searchParams.get('search') || '';
     const debouncedSearch = useDebounce(searchTerm, 500);
@@ -107,6 +108,17 @@ const ProductList = () => {
 
         fetchItems();
     }, [debouncedSearch, categoryId, brandId, minPrice, maxPrice, minRating, sortBy, currentPage]);
+
+    // KHÔI PHỤC VỊ TRÍ CUỘN: Khi load xong và là Back (POP) - Dùng useLayoutEffect để tránh chớp nháy
+    useLayoutEffect(() => {
+        if (!loading && navType === 'POP') {
+            const savedPos = sessionStorage.getItem(`scroll_pos_${window.location.pathname}`);
+            if (savedPos) {
+                window.scrollTo({ top: parseInt(savedPos), behavior: 'instant' });
+            }
+        }
+    }, [loading, navType]);
+
 
     // Logic thực hiện cuộn trang thông minh (Smart Scroll)
     useEffect(() => {

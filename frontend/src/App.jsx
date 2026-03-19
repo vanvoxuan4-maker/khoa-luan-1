@@ -99,47 +99,48 @@ const URLNormalizer = () => {
   const navType = useNavigationType();
   const prevPathRef = React.useRef(location.pathname);
 
-  useLayoutEffect(() => {
-    // 1. Chỉ xử lý cuộn trang nếu KHÔNG PHẢI là thao tác Back/Forward (POP)
-    if (navType !== 'POP') {
-      const pathnameChanged = prevPathRef.current !== location.pathname;
-
-      if (pathnameChanged) {
-        // Luôn cuộn lên đầu khi chuyển sang một trang hoàn toàn mới (khác pathname)
-        // Ví dụ: /products -> /promotions, hoặc /products -> /products/1
-        window.scrollTo(0, 0);
-        prevPathRef.current = location.pathname;
-      }
-    }
-
-    // 2. Thiết lập scrollRestoration dựa trên kiểu điều hướng
+  // 1. Ép trình duyệt dùng cơ chế manual để mình tự điều khiển scroll
+  useEffect(() => {
     if ('scrollRestoration' in window.history) {
-      // Nếu là POP, để trình duyệt tự quản lý để khôi phục vị trí cũ
-      // Nếu là PUSH/REPLACE, dùng manual để mình chủ động cuộn lên đầu
-      window.history.scrollRestoration = navType === 'POP' ? 'auto' : 'manual';
+      window.history.scrollRestoration = 'manual';
     }
+  }, []);
 
-    // 3. Chuẩn hóa URL (giữ nguyên logic cũ)
+  useLayoutEffect(() => {
+    // 2. Chỉ cuộn lên đầu khi không phải thao tác Back/Forward
+    if (navType !== 'POP' && prevPathRef.current !== location.pathname) {
+      window.scrollTo(0, 0);
+    }
+    prevPathRef.current = location.pathname;
+
+    // 3. Chuẩn hóa URL
     const rawPath = window.location.pathname;
     const decodedPath = decodeURIComponent(rawPath);
-    const trimmedPath = decodedPath.trim();
-
-    if (decodedPath !== trimmedPath) {
-      window.history.replaceState({}, '', trimmedPath + window.location.search);
+    if (decodedPath !== decodedPath.trim()) {
+      window.history.replaceState({}, '', decodedPath.trim() + window.location.search);
     }
 
-    // 4. Ngăn chặn lăn chuột làm thay đổi giá trị input number
-    const handleWheel = (e) => {
-      if (document.activeElement.type === 'number') {
-        document.activeElement.blur();
-      }
+    // 4. Listeners: Lưu vị trí cuộn & Chống scroll thay đổi input number
+    const handleSaveScroll = () => {
+      sessionStorage.setItem(`scroll_pos_${window.location.pathname}`, window.scrollY.toString());
     };
+
+    const handleWheel = (e) => {
+      if (document.activeElement.type === 'number') document.activeElement.blur();
+    };
+
+    window.addEventListener('scroll', handleSaveScroll, { passive: true });
     document.addEventListener('wheel', handleWheel, { passive: true });
-    return () => document.removeEventListener('wheel', handleWheel);
-  }, [location, navType]);
+
+    return () => {
+      window.removeEventListener('scroll', handleSaveScroll);
+      document.removeEventListener('wheel', handleWheel);
+    };
+  }, [location.pathname, navType]);
 
   return null;
 };
+
 
 function App() {
   return (
