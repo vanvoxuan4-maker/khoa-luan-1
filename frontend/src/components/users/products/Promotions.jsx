@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../../../utils/apiConfig';
 import { Link, useSearchParams, useNavigationType } from 'react-router-dom';
@@ -18,14 +18,14 @@ const Promotions = () => {
     const sortBy = searchParams.get('sort_by') || 'newest';
     const currentPage = parseInt(searchParams.get('page') || '1');
 
-    const filters = {
+    const filters = useMemo(() => ({
         category_id: categoryId,
         brand_id: brandId,
         min_price: minPrice,
         max_price: maxPrice,
         min_rating: minRating,
         sort_by: sortBy
-    };
+    }), [categoryId, brandId, minPrice, maxPrice, minRating, sortBy]);
 
     const [vouchers, setVouchers] = useState([]);
     const [flashSaleProducts, setFlashSaleProducts] = useState([]);
@@ -166,7 +166,7 @@ const Promotions = () => {
             }
         };
         fetchData();
-    }, [categoryId, brandId, minPrice, maxPrice, minRating, currentPage]);
+    }, [categoryId, brandId, minPrice, maxPrice, minRating, sortBy, currentPage]);
 
     // KHÔI PHỤC VỊ TRÍ CUỘN: Khi load xong và là Back (POP) - Dùng useLayoutEffect để tránh chớp nháy
     useLayoutEffect(() => {

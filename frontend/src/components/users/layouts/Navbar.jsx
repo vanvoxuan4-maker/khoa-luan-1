@@ -326,7 +326,7 @@ const Navbar = () => {
             onClick={() => setShowLogoutConfirm(false)}
           ></div>
 
-          <div className="relative bg-white/95 backdrop-blur-2xl rounded-[2.5rem] p-0 shadow-[0_40px_100px_rgba(0,0,0,0.25)] border border-white/60 max-w-sm w-full animate-bounce-in overflow-hidden">
+          <div className="relative bg-white/95 backdrop-blur-lg rounded-[2.5rem] p-0 shadow-[0_40px_100px_rgba(0,0,0,0.25)] border border-white/60 max-w-sm w-full animate-bounce-in overflow-hidden">
 
             {/* Top Decorative Header */}
             <div className="h-32 bg-gradient-to-br from-red-500 via-rose-500 to-orange-500 relative flex items-center justify-center">

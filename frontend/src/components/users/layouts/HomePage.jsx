@@ -18,16 +18,18 @@ const HomePage = () => {
     const categoryRef = useRef(null);
 
     // Group products by category
-    const groupedProducts = categories.reduce((acc, cat) => {
-        const catProducts = allProducts.filter(p => p.ma_danhmuc === cat.ma_danhmuc);
-        if (catProducts.length > 0) {
-            acc.push({
-                category: cat,
-                products: catProducts
-            });
-        }
-        return acc;
-    }, []);
+    const groupedProducts = React.useMemo(() => {
+        return categories.reduce((acc, cat) => {
+            const catProducts = allProducts.filter(p => p.ma_danhmuc === cat.ma_danhmuc);
+            if (catProducts.length > 0) {
+                acc.push({
+                    category: cat,
+                    products: catProducts
+                });
+            }
+            return acc;
+        }, []);
+    }, [categories, allProducts]);
 
 
     // Scroll Reveal Intersection Observer
@@ -141,38 +143,41 @@ const HomePage = () => {
 
                     {/* 2. CATEGORY EXPLORER - ORANGE TOP BORDER GLASSMORPHISM */}
                     <div className="container mx-auto px-4 reveal">
-                        <section className="relative z-40 -mt-16 mb-24 overflow-hidden">
+                        <section className="relative z-[45] -mt-16 mb-24">
                             <div className="bg-white p-10 rounded-[4rem] shadow-2xl shadow-orange-900/10 border-t-2 border-orange-500 relative group/explorer">
                                 {/* Central Title Ornament - ORANGE THEME */}
                                 <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-orange-500 text-white px-12 py-3 rounded-b-[2.5rem] font-black text-xs uppercase tracking-[0.4em] shadow-lg shadow-orange-500/20 z-20">
                                     DANH MỤC SẢN PHẨM
                                 </div>
 
-                                <div className="flex animate-marquee-slow hover-pause relative z-10 pt-4">
-                                    {/* Duplicate categories for seamless marquee */}
-                                    {[...categories, ...categories, ...categories, ...categories].length > 0 ? [...categories, ...categories, ...categories, ...categories].map((cat, idx) => (
-                                        <Link to={`/products?category_id=${cat.ma_danhmuc}`} key={idx} className="group flex flex-col items-center gap-4 min-w-[150px] mx-6">
-                                            <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center p-3 ring-1 ring-slate-100 group-hover:ring-blue-400 group-hover:bg-blue-50/30 transition-all duration-700 shadow-sm group-hover:shadow-xl group-hover:shadow-blue-500/10 overflow-hidden relative">
-                                                <div className="absolute inset-0 bg-gradient-to-tr from-blue-100/0 via-white/50 to-blue-200/0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
+                                {/* Marquee Wrapper with Masking for Premium Look */}
+                                <div className="overflow-hidden relative z-10 pt-4 mask-fade-edges">
+                                    <div className="flex animate-marquee-slow hover-pause">
+                                        {/* Duplicate categories for seamless marquee */}
+                                        {[...categories, ...categories, ...categories, ...categories].length > 0 ? [...categories, ...categories, ...categories, ...categories].map((cat, idx) => (
+                                            <Link to={`/products?category_id=${cat.ma_danhmuc}`} key={idx} className="group flex flex-col items-center gap-4 min-w-[150px] mx-6">
+                                                <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center p-3 ring-1 ring-slate-100 group-hover:ring-blue-400 group-hover:bg-blue-50/30 transition-all duration-700 shadow-sm group-hover:shadow-xl group-hover:shadow-blue-500/10 overflow-hidden relative">
+                                                    <div className="absolute inset-0 bg-gradient-to-tr from-blue-100/0 via-white/50 to-blue-200/0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
 
-                                                {cat.hinh_anh ? (
-                                                    <img
-                                                        src={cat.hinh_anh.startsWith('http') ? cat.hinh_anh : `${API_BASE_URL}${cat.hinh_anh}`}
-                                                        alt={cat.ten_danhmuc}
-                                                        loading="lazy"
-                                                        className="w-full h-full object-contain relative z-10 group-hover:scale-110 transition-transform duration-700"
-                                                    />
-                                                ) : (
-                                                    <span className="text-3xl relative z-10 group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100">🚲</span>
-                                                )}
-                                            </div>
-                                            <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 group-hover:text-blue-600 transition-all text-center whitespace-nowrap">
-                                                {cat.ten_danhmuc}
-                                            </span>
-                                        </Link>
-                                    )) : (
-                                        <div className="w-full text-center text-slate-400 italic py-4">Sẵn sàng khám phá...</div>
-                                    )}
+                                                    {cat.hinh_anh ? (
+                                                        <img
+                                                            src={cat.hinh_anh.startsWith('http') ? cat.hinh_anh : `${API_BASE_URL}${cat.hinh_anh}`}
+                                                            alt={cat.ten_danhmuc}
+                                                            loading="lazy"
+                                                            className="w-full h-full object-contain relative z-10 group-hover:scale-110 transition-transform duration-700"
+                                                        />
+                                                    ) : (
+                                                        <span className="text-3xl relative z-10 group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100">🚲</span>
+                                                    )}
+                                                </div>
+                                                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 group-hover:text-blue-600 transition-all text-center whitespace-nowrap">
+                                                    {cat.ten_danhmuc}
+                                                </span>
+                                            </Link>
+                                        )) : (
+                                            <div className="w-full text-center text-slate-400 italic py-4">Sẵn sàng khám phá...</div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </section>

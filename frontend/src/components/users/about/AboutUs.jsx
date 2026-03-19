@@ -142,7 +142,7 @@ const AboutUs = () => {
                 <section className="py-32 bg-white">
                     <div className="container mx-auto px-6">
                         <div className="text-center mb-24 space-y-4">
-                            <span className="text-blue-600 font-black text-xs uppercase tracking-[0.3em]">DNA Của Chúng Tôi</span>
+                            <span className="text-blue-600 font-black text-xs uppercase tracking-[0.3em]">Tiêu Chí Của Chúng Tôi</span>
                             <h2 className="text-4xl md:text-5xl font-black text-slate-900 uppercase">Giá Trị Cốt Lõi</h2>
                         </div>
 

@@ -1,16 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ProductCard from '../products/ProductCard';
 
 const TopSellingSection = ({ products }) => {
     const scrollRef = useRef(null);
     const [isHovered, setIsHovered] = useState(false);
-    const originalTopProducts = products
-        .sort((a, b) => (b.gia_tri_giam || 0) - (a.gia_tri_giam || 0))
-        .slice(0, 14);
+    const originalTopProducts = useMemo(() => {
+        return [...products]
+            .sort((a, b) => (b.gia_tri_giam || 0) - (a.gia_tri_giam || 0))
+            .slice(0, 14);
+    }, [products]);
 
-    const topProducts = originalTopProducts.length > 4
-        ? [...originalTopProducts, ...originalTopProducts, ...originalTopProducts]
-        : originalTopProducts;
+    const topProducts = useMemo(() => {
+        if (originalTopProducts.length === 0) return [];
+        return originalTopProducts.length > 4
+            ? [...originalTopProducts, ...originalTopProducts, ...originalTopProducts]
+            : originalTopProducts;
+    }, [originalTopProducts]);
 
     const scroll = (direction) => {
         const { current } = scrollRef;

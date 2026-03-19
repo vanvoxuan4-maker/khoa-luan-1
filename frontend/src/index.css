@@ -142,9 +142,10 @@ input[type=number] {
 .blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.15;
+  filter: blur(40px); /* Reduced from 80px to save GPU */
+  opacity: 0.1; /* Reduced opacity for better performance */
   z-index: 0;
+  will-change: transform; /* Hint to browser */
 }
 
 .blob-1 {
@@ -364,6 +365,11 @@ input[type="password"]::-ms-clear {
   display: flex;
   width: max-content;
   animation: marquee 60s linear infinite;
+}
+
+.mask-fade-edges {
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
 }
 
 .hover-pause:hover {
