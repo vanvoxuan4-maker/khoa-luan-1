@@ -16,11 +16,11 @@ router = APIRouter()
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
     # 1. Kiểm tra trùng lặp
     if db.query(User).filter(User.email == user_in.email).first():
-        raise HTTPException(status_code=400, detail="Email này đã được sử dụng.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email này đã được sử dụng.")
     if db.query(User).filter(User.ten_user == user_in.ten_user).first():
-        raise HTTPException(status_code=400, detail="Tên đăng nhập đã tồn tại.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tên đăng nhập đã tồn tại.")
     if user_in.sdt and db.query(User).filter(User.sdt == user_in.sdt).first():
-        raise HTTPException(status_code=400, detail="Số điện thoại này đã được sử dụng.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Số điện thoại này đã được sử dụng.")
 
     # 2. Tạo User mới
     new_user = User(
@@ -108,7 +108,7 @@ def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db
             detail_msg = "⛔ Tài khoản đã bị KHÓA do vi phạm chính sách. Vui lòng liên hệ Hotline: 0961.178.265 để được hỗ trợ."
         else:
             detail_msg = "⏳ Tài khoản đang chờ kích hoạt. Vui lòng liên hệ Admin qua Hotline: 0961.178.265 để xác thực."
-        raise HTTPException(status_code=403, detail=detail_msg)
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail_msg)
     
     from datetime import timedelta
     

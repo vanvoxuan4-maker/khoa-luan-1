@@ -284,7 +284,6 @@ const ProductDetail = () => {
                                                         alt={`Thumbnail ${idx}`}
                                                         className="w-full h-full object-cover"
                                                         onError={(e) => {
-                                                            console.warn("Thumbnail load failed:", thumbUrl);
                                                             e.target.src = 'https://via.placeholder.com/100?text=Error';
                                                         }}
                                                     />

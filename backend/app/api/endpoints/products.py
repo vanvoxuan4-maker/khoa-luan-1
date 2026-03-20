@@ -1,5 +1,3 @@
-# app/api/endpoints/products.py
-import shutil
 import os
 import uuid
 import unicodedata
@@ -147,13 +145,13 @@ def create_sanpham(item: SanphamCreate, db: Session = Depends(get_db), admin: Us
         return new_product
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Lỗi: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Lỗi: {str(e)}")
 
 @router.put("/sanpham/{ma_sanpham}", response_model=SanphamResponse)
 def update_sanpham(ma_sanpham: int, item_update: SanphamUpdate, db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
     db_product = db.query(Sanpham).filter(Sanpham.ma_sanpham == ma_sanpham).first()
     if not db_product:
-        raise HTTPException(status_code=404, detail="Không tìm thấy sản phẩm")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy sản phẩm")
     
     try:
         # --- SỬA LỖI TẠI ĐÂY ---
@@ -250,7 +248,6 @@ def delete_sanpham(ma_sanpham: int, db: Session = Depends(get_db), admin: User =
         
         db.query(Danhgia).filter(Danhgia.ma_sanpham == ma_sanpham).delete()
         db.query(Dsyeuthich).filter(Dsyeuthich.ma_sanpham == ma_sanpham).delete()
-        db.query(Hinhanh).filter(Hinhanh.ma_sanpham == ma_sanpham).delete()
         db.query(ChiTietGioHang).filter(ChiTietGioHang.ma_sanpham == ma_sanpham).delete()
         db.query(ChiTietDonHang).filter(ChiTietDonHang.ma_sanpham == ma_sanpham).delete()
         

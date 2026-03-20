@@ -324,8 +324,3 @@ def set_default_address_admin(ma_dia_chi: int, db: Session = Depends(get_db), ad
     db.commit()
     db.refresh(address)
     return address
-
-# =================================================================
-# 3. CHATBOT ADMIN đã được chuyển sang chat_admin.py
-# Endpoints: /admin/chat và /admin/chat-history
-# =================================================================

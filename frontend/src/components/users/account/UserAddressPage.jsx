@@ -104,27 +104,4 @@ const UserAddressPage = () => {
     );
 };
 
-const BackBtn = ({ onClick }) => {
-    const [h, setH] = React.useState(false);
-    return (
-        <button
-            onClick={onClick}
-            onMouseEnter={() => setH(true)}
-            onMouseLeave={() => setH(false)}
-            style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                marginBottom: '20px',
-                padding: '7px 14px',
-                background: h ? '#f1f5f9' : '#fff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                fontSize: '13px', fontWeight: '600', color: '#475569',
-                cursor: 'pointer',
-                transition: 'all .15s',
-            }}>
-            ← Quay lại hồ sơ
-        </button>
-    );
-};
-
 export default UserAddressPage;

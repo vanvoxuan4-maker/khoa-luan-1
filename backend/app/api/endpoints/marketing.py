@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
+import traceback
 from pydantic import BaseModel
 
 from app.db.session import get_db
@@ -410,7 +411,6 @@ def get_my_wishlist(
     """
     Lấy danh sách yêu thích của người dùng hiện tại
     """
-    import traceback
     try:
         items = db.query(Dsyeuthich).filter(Dsyeuthich.ma_user == current_user.ma_user).all()
         result = []

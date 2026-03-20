@@ -57,7 +57,7 @@ def checkout(
     user_cart = db.query(GioHang).filter(GioHang.ma_user == current_user.ma_user).first()
     
     if not user_cart or not user_cart.chitiet_giohang:
-        raise HTTPException(status_code=400, detail="Giỏ hàng trống! Hãy mua sắm thêm nhé.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Giỏ hàng trống! Hãy mua sắm thêm nhé.")
     
     # 1.2. Kiểm tra thông tin giao hàng bắt buộc
     required_fields = {
@@ -138,7 +138,7 @@ def checkout(
             
             if tong_tien_don < voucher.don_toithieu:
                 raise HTTPException(
-                    status_code=400, 
+                    status_code=status.HTTP_400_BAD_REQUEST, 
                     detail=f"Đơn hàng tối thiểu {voucher.don_toithieu:,.0f} VND để áp dụng mã này!"
                 )
             
@@ -318,7 +318,7 @@ def update_order_status(
 ):
     order = db.query(DonHang).filter(DonHang.ma_don_hang == ma_don_hang).first()
     if not order: 
-        raise HTTPException(status_code=404, detail="Không tìm thấy đơn hàng")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy đơn hàng")
     
     try:
         status_input = trang_thai_moi.lower()
@@ -329,7 +329,7 @@ def update_order_status(
         
         # Chặn thay đổi nếu đơn đã vào trạng thái kết thúc
         if old_status_val in ["delivered", "cancelled", "returned"]:
-             raise HTTPException(status_code=400, detail=f"Không thể thay đổi trạng thái khi đơn hàng đã ở trạng thái '{old_status_val}'")
+             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Không thể thay đổi trạng thái khi đơn hàng đã ở trạng thái '{old_status_val}'")
 
         new_status_val = status_input.lower()
 
@@ -430,7 +430,7 @@ def update_order_status(
         
         return {"message": "Cập nhật trạng thái thành công"}
     except ValueError:
-        raise HTTPException(status_code=400, detail="Trạng thái không hợp lệ")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Trạng thái không hợp lệ")
 
 # ---------------------------------------------------------
 # 2b. CẬP NHẬT TRẠNG THÁI THANH TOÁN (ADMIN)
@@ -446,7 +446,7 @@ def update_payment_status(
     """Cập nhật trạng thái thanh toán của đơn hàng"""
     order = db.query(DonHang).filter(DonHang.ma_don_hang == ma_don_hang).first()
     if not order:
-        raise HTTPException(status_code=404, detail="Không tìm thấy đơn hàng")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy đơn hàng")
     
     # 👇 THÊM LOGIC RÀNG BUỘC: Đơn COD đã hủy thì không đổi trạng thái thanh toán
     is_cod = (order.phuong_thuc.value == "cod") if hasattr(order.phuong_thuc, "value") else (str(order.phuong_thuc).lower() == "cod")
@@ -454,13 +454,13 @@ def update_payment_status(
     
     if is_cod and is_cancelled:
         raise HTTPException(
-            status_code=400, 
+            status_code=status.HTTP_400_BAD_REQUEST, 
             detail="Không thể thay đổi trạng thái thanh toán cho đơn hàng COD đã bị hủy."
         )
     
     valid_statuses = ["pending", "paid", "failed", "refunded"]
     if status not in valid_statuses:
-        raise HTTPException(status_code=400, detail=f"Trạng thái không hợp lệ. Chấp nhận: {valid_statuses}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Trạng thái không hợp lệ. Chấp nhận: {valid_statuses}")
     
     old_payment_status = order.trangthai_thanhtoan
     if hasattr(old_payment_status, 'value'):
@@ -598,7 +598,7 @@ def get_my_order_detail(
     ).first()
 
     if not order:
-        raise HTTPException(status_code=404, detail="Không tìm thấy đơn hàng")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy đơn hàng")
 
     if not order.ten_nguoi_nhan:
         order.ten_nguoi_nhan = current_user.hovaten or "Khách hàng"
@@ -652,7 +652,7 @@ def delete_my_order(ma_don_hang: int, db: Session = Depends(get_db), current_use
     ).first()
     
     if not order:
-        raise HTTPException(status_code=404, detail="Không tìm thấy đơn hàng")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy đơn hàng")
         
     current_status = order.trang_thai.value if hasattr(order.trang_thai, 'value') else str(order.trang_thai)
     current_status = current_status.lower()
@@ -696,7 +696,7 @@ def delete_my_order(ma_don_hang: int, db: Session = Depends(get_db), current_use
         db.commit()
         return {"message": "Đã xóa đơn hàng khỏi lịch sử của bạn"}
     
-    raise HTTPException(status_code=400, detail="Không thể hủy/xóa đơn hàng ở trạng thái này.")
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Không thể hủy/xóa đơn hàng ở trạng thái này.")
 
 # ---------------------------------------------------------
 # ADMIN DELETE ORDER
@@ -717,7 +717,7 @@ def delete_order_admin(
     current_status = order.trang_thai.value if hasattr(order.trang_thai, 'value') else str(order.trang_thai)
     
     if current_status != "cancelled":
-        raise HTTPException(status_code=400, detail="Chỉ có thể xóa đơn hàng khi đã ở trạng thái 'Đã hủy' (Cancelled).")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Chỉ có thể xóa đơn hàng khi đã ở trạng thái 'Đã hủy' (Cancelled).")
 
     # Lưu ý: Vì chỉ xóa đơn 'cancelled', mà trạng thái 'cancelled' đã được hoàn kho 
     # ở bước update_order_status, nên không cần hoàn kho ở đây nữa.

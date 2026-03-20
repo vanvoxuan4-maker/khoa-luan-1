@@ -14,11 +14,11 @@ router = APIRouter()
 def add_to_cart(item: CartItemCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     product = db.query(Sanpham).filter(Sanpham.ma_sanpham == item.ma_sanpham).first()
     if not product:
-        raise HTTPException(status_code=404, detail="Sản phẩm không tồn tại")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sản phẩm không tồn tại")
     if hasattr(product, 'is_active') and not product.is_active:
-        raise HTTPException(status_code=400, detail="Sản phẩm ngừng kinh doanh")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sản phẩm ngừng kinh doanh")
     if item.so_luong > product.ton_kho:
-        raise HTTPException(status_code=400, detail=f"Kho chỉ còn {product.ton_kho} sản phẩm.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Kho chỉ còn {product.ton_kho} sản phẩm.")
 
     user_cart = db.query(GioHang).filter(GioHang.ma_user == current_user.ma_user).first()
     if not user_cart:
@@ -37,7 +37,7 @@ def add_to_cart(item: CartItemCreate, db: Session = Depends(get_db), current_use
 
     if cart_item:
         if (cart_item.so_luong + item.so_luong) > product.ton_kho:
-            raise HTTPException(status_code=400, detail="Vượt quá tồn kho")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Vượt quá tồn kho")
         cart_item.so_luong += item.so_luong
         cart_item.gia_hien_tai = final_price
     else:
@@ -114,10 +114,10 @@ def view_cart(db: Session = Depends(get_db), current_user: User = Depends(get_cu
 @router.put("/{ma_sanpham}")
 def update_cart_quantity(ma_sanpham: int, so_luong_moi: int, mau_sac: str = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if so_luong_moi <= 0:
-        raise HTTPException(status_code=400, detail="Số lượng phải > 0")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Số lượng phải > 0")
     
     user_cart = db.query(GioHang).filter(GioHang.ma_user == current_user.ma_user).first()
-    if not user_cart: raise HTTPException(status_code=404, detail="Giỏ hàng trống")
+    if not user_cart: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Giỏ hàng trống")
 
     query = db.query(ChiTietGioHang).filter(
         ChiTietGioHang.ma_gio == user_cart.ma_gio, 
@@ -127,11 +127,11 @@ def update_cart_quantity(ma_sanpham: int, so_luong_moi: int, mau_sac: str = None
         query = query.filter(ChiTietGioHang.mau_sac == mau_sac)
         
     cart_item = query.first()
-    if not cart_item: raise HTTPException(status_code=404, detail="Không tìm thấy sản phẩm trong giỏ hàng")
+    if not cart_item: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy sản phẩm trong giỏ hàng")
 
     product = db.query(Sanpham).filter(Sanpham.ma_sanpham == ma_sanpham).first()
     if so_luong_moi > product.ton_kho:
-        raise HTTPException(status_code=400, detail=f"Kho chỉ còn {product.ton_kho}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Kho chỉ còn {product.ton_kho}")
 
     cart_item.so_luong = so_luong_moi
     db.commit()

@@ -10,6 +10,8 @@ class LichSuChat(Base):
     role = Column(String(20))   
     message = Column(Text)
     context_type = Column(String(50), default="admin_ai")
+    session_id = Column(String(50), index=True, nullable=True) # ✅ Thêm session_id
+    title = Column(String(200), nullable=True)                  # ✅ Thêm tiêu đề chat
     thoi_gian = Column(DateTime, default=func.now())
 
     # Relationship (Tùy chọn, để truy ngược user nếu cần)

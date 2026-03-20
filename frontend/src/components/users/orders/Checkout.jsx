@@ -143,7 +143,7 @@ const Checkout = () => {
                     if (pendingRes.data.has_pending) {
                         addToast(`Bạn có đơn hàng chưa thanh toán (${pendingRes.data.total?.toLocaleString('vi-VN')} VND). Hệ thống sẽ cập nhật đơn này khi bạn thanh toán.`, "info");
                     }
-                } catch (err) { console.log('Không thể kiểm tra đơn pending:', err); }
+                } catch (err) { /* Silently fail for pending check */ }
             } catch (err) { navigate('/cart'); }
             finally { setLoading(false); }
         };

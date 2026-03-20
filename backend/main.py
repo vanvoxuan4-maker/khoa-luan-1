@@ -7,7 +7,7 @@ from sqlalchemy.sql import text
 from app.db.session import engine
 from app.db.base import Base
 # Import router
-from app.api.endpoints import products, auth, cart, orders, marketing, admin, dashboard, chat_admin, users, audit
+from app.api.endpoints import products, auth, cart, orders, marketing, admin, dashboard, chat_admin, chat_customer, users, audit
 from app.api.endpoints import payment, addresses
 from app.api.endpoints import vnpay
 from app.utils.image_hooks import init_image_hooks
@@ -18,11 +18,21 @@ import asyncio
 def init_db_structure():
     try:
         with engine.connect() as conn:
+            # 1. Chạy SQL init gốc (nếu có)
             sql_path = "app/db/sql/init_db.sql" 
             if os.path.exists(sql_path):
                 with open(sql_path, "r", encoding="utf-8") as f:
                     conn.execute(text(f.read()))
                 conn.commit()
+            
+            # 2. Migration thủ công: Thêm cột cho LichSuChat nếu chưa có
+            conn.execute(text("""
+                ALTER TABLE lichsuchat ADD COLUMN IF NOT EXISTS session_id VARCHAR(50);
+                ALTER TABLE lichsuchat ADD COLUMN IF NOT EXISTS title VARCHAR(200);
+                CREATE INDEX IF NOT EXISTS ix_lichsuchat_session_id ON lichsuchat (session_id);
+            """))
+            conn.commit()
+            print("✅ DB Migration: lichsuchat columns added.")
     except Exception as e:
         print(f"💡 DB Info: {e}")
 
@@ -61,6 +71,7 @@ app.include_router(marketing.router, tags=["Admin - Marketing"])
 app.include_router(admin.router, prefix="/admin", tags=["Admin - General"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard - Thống kê"])
 app.include_router(chat_admin.router, tags=["Admin - Chat AI"])
+app.include_router(chat_customer.router, tags=["Customer - Chat AI"])
 app.include_router(payment.router, prefix="/payment", tags=["Thanh toán"])
 app.include_router(vnpay.router, prefix="/vnpay", tags=["VNPay"])
 # Thêm router Users mới

@@ -28,7 +28,7 @@ def update_user_me(
     if item.email is not None and item.email != current_user.email:
         existing_user = db.query(User).filter(User.email == item.email).first()
         if existing_user:
-            raise HTTPException(status_code=400, detail="Email này đã được sử dụng bởi tài khoản khác!")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email này đã được sử dụng bởi tài khoản khác!")
         current_user.email = item.email
     
     if item.hovaten is not None:
@@ -52,11 +52,11 @@ def change_password(
     """
     # 1. Kiểm tra mật khẩu cũ
     if not verify_password(item.old_password, current_user.password_hash):
-        raise HTTPException(status_code=400, detail="Mật khẩu cũ không chính xác!")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mật khẩu cũ không chính xác!")
     
     # 2. Kiểm tra mật khẩu mới trùng cũ
     if item.old_password == item.new_password:
-        raise HTTPException(status_code=400, detail="Mật khẩu mới không được trùng mật khẩu cũ!")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mật khẩu mới không được trùng mật khẩu cũ!")
 
     # 3. Cập nhật
     current_user.password_hash = get_password_hash(item.new_password)

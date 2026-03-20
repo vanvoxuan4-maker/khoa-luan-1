@@ -60,7 +60,7 @@ def update_address(
     """
     address = db.query(Address).filter(Address.ma_dia_chi == ma_dia_chi, Address.ma_user == current_user.ma_user).first()
     if not address:
-        raise HTTPException(status_code=404, detail="Không tìm thấy địa chỉ!")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy địa chỉ!")
 
     if address_in.is_mac_dinh:
         db.query(Address).filter(Address.ma_user == current_user.ma_user).update({"is_mac_dinh": False})
@@ -85,7 +85,7 @@ def delete_address(
     """
     address = db.query(Address).filter(Address.ma_dia_chi == ma_dia_chi, Address.ma_user == current_user.ma_user).first()
     if not address:
-        raise HTTPException(status_code=404, detail="Không tìm thấy địa chỉ!")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy địa chỉ!")
     
     was_default = address.is_mac_dinh
     db.delete(address)
@@ -112,7 +112,7 @@ def set_default_address(
     """
     address = db.query(Address).filter(Address.ma_dia_chi == ma_dia_chi, Address.ma_user == current_user.ma_user).first()
     if not address:
-        raise HTTPException(status_code=404, detail="Không tìm thấy địa chỉ!")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy địa chỉ!")
 
     db.query(Address).filter(Address.ma_user == current_user.ma_user).update({"is_mac_dinh": False})
     address.is_mac_dinh = True
