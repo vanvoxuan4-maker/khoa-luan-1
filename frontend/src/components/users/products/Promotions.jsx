@@ -64,8 +64,8 @@ const Promotions = () => {
     const promoBanners = [
         "/images/voucher/banner-ctkm-1-scaled.jpg",
         "/images/voucher/raptor-taka-banner-web-1958-x-745_2.jpg",
-        "/images/banner-tung-dong-xe-2025-02_2.jpg",
-        "/images/banner-tung-dong-xe-2025-04.jpg",
+        "/images/voucher/banner-tung-dong-xe-2025-02_2.jpg",
+        "/images/voucher/banner-tung-dong-xe-2025-04.jpg",
     ];
 
     useEffect(() => {

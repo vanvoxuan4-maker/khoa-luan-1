@@ -12,7 +12,10 @@ from app.models.user import User
 from app.models.chatbot import LichSuChat
 from app.schemas.chatbot import ChatRequest, ChatResponse
 from app.models.order import DonHang, ChiTietDonHang
-from app.models.product import Sanpham, Danhmuc, Thuonghieu
+from app.models.history import LichSuDonHang
+from app.models.product import Sanpham
+from app.models.payment import ThanhToan
+from app.models.marketing import Makhuyenmai
 from app.core.config import settings
 
 router = APIRouter()
@@ -107,23 +110,52 @@ def tra_cuu_don_hang(ma_user: int, ma_don_hang: Optional[str] = None):
 def huy_don_hang(ma_user: int, ma_don_hang: int):
     """
     Hủy đơn hàng nếu đơn vẫn ở trạng thái 'pending'.
+    LOGIC: Hủy đơn + Hoàn kho ngay, nhưng nếu đã thanh toán thì giữ trạng thái PAID chờ Admin hoàn tiền.
     """
     db = SessionLocal()
     try:
         order = db.query(DonHang).filter(DonHang.ma_don_hang == ma_don_hang, DonHang.ma_user == ma_user).first()
         if not order: return "Không tìm thấy đơn hàng này."
-        if str(order.trang_thai).lower() != "pending":
-            return "Đơn hàng đã được xử lý, không thể hủy tự động. Vui lòng liên hệ hotline."
+        
+        current_status = str(order.trang_thai).lower()
+        current_payment = str(order.trangthai_thanhtoan).lower()
+
+        if current_status != "pending":
+            return f"⚠️ Đơn hàng hiện đang ở trạng thái '{current_status}', không thể tự động hủy qua chatbot. Vui lòng liên hệ Hotline: 0961.178.265 để được hỗ trợ."
+        
+        # 1. Chuyển sang ĐÃ HỦY (Cho phép hủy cả đơn đã thanh toán)
         order.trang_thai = "cancelled"
-        # Cập nhật trạng thái thanh toán nếu chưa trả tiền
-        if str(order.trangthai_thanhtoan).lower() == "pending":
-            order.trangthai_thanhtoan = "failed" # "Thanh toán đã hủy"
+        
+        # 2. HOÀN KHO NGAY LẬP TỨC
+        for item in order.chitiet_donhang:
+            p = db.query(Sanpham).filter(Sanpham.ma_sanpham == item.ma_sanpham).first()
+            if p:
+                p.ton_kho += item.so_luong
+        
+        # 3. Xử lý Trạng thái Thanh toán & Ghi lịch sử
+        if current_payment == "paid":
+            # NẾU ĐÃ THANH TOÁN -> Giữ nguyên 'paid' + Ghi chú cho Admin
+            new_h = LichSuDonHang(
+                ma_don_hang=ma_don_hang,
+                trang_thai="cancelled",
+                mo_ta="Đơn hàng đã được khách hủy qua Chatbot. Yêu cầu Admin kiểm tra và hoàn tiền VNPay thủ công."
+            )
+            db.add(new_h)
+            db.commit()
+            return f"✅ Đơn hàng #{ma_don_hang} đã được hủy thành công và sản phẩm đã được hoàn lại vào kho. Tuy nhiên, vì bạn đã thanh toán qua VNPay, vui lòng liên hệ Admin qua Hotline/Chat để được thực hiệu hoàn trả tiền sớm nhất nhé!"
+        else:
+            # NẾU CHƯA THANH TOÁN (COD/FAIL) -> Chuyển thành 'failed'
+            order.trangthai_thanhtoan = "failed"
+            db.query(ThanhToan).filter(
+                ThanhToan.ma_don_hang == ma_don_hang,
+                ThanhToan.trang_thai == "pending"
+            ).update({"trang_thai": "failed"})
+            db.commit()
+            return f"✅ Đã hủy đơn hàng #{ma_don_hang} thành công. Cảm ơn bạn!"
             
-        db.commit()
-        return f"✅ Đã hủy đơn hàng #{ma_don_hang}. Trạng thái thanh toán cũng đã được cập nhật."
     except Exception as e:
         db.rollback()
-        return f"Lỗi: {str(e)}"
+        return f"Lỗi hệ thống khi hủy đơn: {str(e)}"
     finally: db.close()
 
 def thong_tin_chinh_sach(loai: str):
@@ -137,7 +169,73 @@ def thong_tin_chinh_sach(loai: str):
     }
     return policies.get(loai, "Vui lòng liên hệ 1900xxxx để biết thêm chi tiết.")
 
-my_tools = [tim_kiem_san_pham, tu_van_size_xe, tra_cuu_don_hang, huy_don_hang, thong_tin_chinh_sach]
+def lay_thong_tin_khuyen_mai():
+    """
+    Lấy danh sách các mã giảm giá (voucher) đang hoạt động và các sản phẩm đang giảm giá sốc.
+    """
+    db = SessionLocal()
+    try:
+        now = datetime.now()
+        # 1. Lấy Vouchers active
+        vouchers = db.query(Makhuyenmai).filter(
+            Makhuyenmai.is_active == True,
+            (Makhuyenmai.ngay_ketthuc == None) | (Makhuyenmai.ngay_ketthuc >= now),
+            Makhuyenmai.solan_hientai < Makhuyenmai.solandung
+        ).order_by(Makhuyenmai.giatrigiam.desc()).all()
+
+        voucher_list = [{
+            "ma_code": v.ma_giamgia,
+            "loai": "Giảm theo %" if v.kieu_giamgia == "percentage" else "Giảm tiền mặt",
+            "gia_tri": f"{v.giatrigiam}%" if v.kieu_giamgia == "percentage" else f"{v.giatrigiam:,} VND",
+            "don_toithieu": f"{v.don_toithieu:,} VND",
+            "giam_toida": f"{v.giam_toida:,} VND" if v.giam_toida else "Không giới hạn",
+            "han_dung": v.ngay_ketthuc.strftime("%d/%m/%Y") if v.ngay_ketthuc else "Vĩnh viễn"
+        } for v in vouchers]
+
+        # 2. Lấy Top sản phẩm giảm giá
+        sale_products = db.query(Sanpham).filter(
+            Sanpham.gia_tri_giam > 0,
+            Sanpham.is_active == True
+        ).order_by(Sanpham.gia_tri_giam.desc()).limit(5).all()
+
+        product_list = [{
+            "ten_sanpham": p.ten_sanpham,
+            "gia_giam": f"{p.gia_tri_giam}%" if p.kieu_giam_gia == "percentage" else f"{p.gia_tri_giam:,} VND",
+            "link": f"/products/{p.ma_sanpham}"
+        } for p in sale_products]
+
+        return {
+            "vouchers": voucher_list,
+            "san_pham_giam_gia": product_list
+        }
+    except Exception as e: return f"Lỗi: {str(e)}"
+    finally: db.close()
+
+def lay_thong_tin_cua_hang():
+    """
+    Cung cấp thông tin giới thiệu, địa chỉ, số điện thoại và giờ làm việc của hệ thống BikeStore.
+    """
+    return {
+        "ten_cua_hang": "BikeStore - Premium Bicycles",
+        "gioi_thieu": "Hệ thống bán lẻ xe đạp chuyên nghiệp hàng đầu Việt Nam, cam kết Chất lượng - Uy tín - Chuyên nghiệp.",
+        "dia_chi": "Xã Thượng Đức, TP. Đà Nẵng",
+        "hotline": "0961.178.265",
+        "email": "vanvoxuan4@gmail.com",
+        "gio_lam_viec": "Thứ 2 - Thứ 7: 8:00 - 20:00 | Chủ Nhật: 9:00 - 18:00",
+        "chinh_sach_noi_bat": [
+            "Bảo hành khung sườn 5 năm",
+            "Bảo hành phụ tùng 1 năm",
+            "Miễn phí vận chuyển nội thành cho đơn hàng trên 5 triệu",
+            "Đổi trả miễn phí trong vòng 7 ngày"
+        ],
+        "mang_xa_hoi": {
+            "Facebook": "facebook.com",
+            "Zalo": "0961178265",
+            "Telegram": "t.me/+84961178265"
+        }
+    }
+
+my_tools = [tim_kiem_san_pham, tu_van_size_xe, tra_cuu_don_hang, huy_don_hang, thong_tin_chinh_sach, lay_thong_tin_khuyen_mai, lay_thong_tin_cua_hang]
 
 # ---------------- SYSTEM INSTRUCTION ----------------
 sys_instruct = """
@@ -149,24 +247,21 @@ Bạn là Trợ lý ảo của 'Bike Shop'. Hãy hỗ trợ khách hàng mua s�
 1. Tìm sản phẩm: 
    - Hỗ trợ sắp xếp theo giá (`sap_xep='gia_giam'/'gia_tang'`) hoặc đánh giá (`sap_xep='top_rated'`).
    - Có thể lọc theo tầm giá (`gia_min`, `gia_max`).
-   - Khi khách hỏi so sánh: **KHÔNG dùng bảng Markdown**. Hãy liệt kê theo dạng:
-     **Tên xe A**
-     - Giá: ...
-     - Phanh: ...
-     ---
-     **Tên xe B**
-     - Giá: ...
+   - Khi khách hỏi so sánh: **Hãy sử dụng bảng Markdown** để trình bày rõ ràng. Bảng nên có các cột như: **Tên sản phẩm, Giá, Ưu điểm nổi bật/Thông số**.
 2. Tư vấn Size: Khi khách hỏi 'mình nên chọn xe nào' hoặc 'size gì', hãy hỏi chiều cao của họ và dùng `tu_van_size_xe`. 
 3. Quản lý Đơn hàng: 
    - Tra cứu: Luôn cung cấp chi tiết sản phẩm, địa chỉ và ngày giao dự kiến khi khách hỏi về một đơn hàng cụ thể.
    - Hủy đơn: Nếu khách muốn hủy, hãy kiểm tra trạng thái đơn trước (`tra_cuu_don_hang`). Nếu là 'pending', hãy **xác nhận lại với khách một lần nữa** trước khi dùng `huy_don_hang`.
 4. Chính sách: Đáp ứng nhanh về bảo hành, vận chuyển.
+5. Khuyến mãi: Khi khách hỏi về khuyến mãi, giảm giá, voucher, hãy dùng `lay_thong_tin_khuyen_mai`. Trình bày danh sách voucher bằng **Bảng Markdown** (Mã, Loại, Giá trị, Đơn tối thiểu, Hạn dùng). Nếu có sản phẩm giảm giá sốc, hãy liệt kê kèm đường dẫn.
+6. Thông tin cửa hàng: Khi khách hỏi 'giới thiệu về shop', 'địa chỉ ở đâu', 'liên hệ thế nào', hãy dùng `lay_thong_tin_cua_hang` để trả lời đầy đủ và chuyên nghiệp.
 
 💡 LƯU Ý:
 - LUÔN in đậm (**text**) Giá tiền, Tên sản phẩm, Trạng thái đơn.
 - Chỉ sử dụng Link tương đối (ví dụ: `/products/1`), KHÔNG dùng tên miền.
 - Khi nhắc đến mã đơn hàng, hãy LUÔN gắn link theo định dạng: `[Đơn hàng #21](/my-orders/21)`.
 - **KHÔNG TỰ ĐOÁN MÃ SẢN PHẨM / LINK**: Chỉ sử dụng Link chính xác mà các công cụ (`tra_cuu_don_hang`, `tim_kiem_san_pham`) cung cấp.
+- Giao diện chat đã được nâng cấp để hiển thị bảng Markdown rất đẹp, hãy tự tin sử dụng bảng cho các nội dung cần đối chiếu.
 
 Mục tiêu: Đảm bảo khách hàng luôn nắm rõ thông tin và cảm thấy an tâm!
 """

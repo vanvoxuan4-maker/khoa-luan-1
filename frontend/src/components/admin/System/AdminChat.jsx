@@ -3,6 +3,8 @@ import axios from 'axios';
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 import { UserCircleIcon } from '@heroicons/react/24/outline';
 import API_BASE_URL from '../../../utils/apiConfig';
+import { Link } from 'react-router-dom';
+import TypewriterText from '../../users/chat/TypewriterText';
 
 const AdminChat = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -12,12 +14,28 @@ const AdminChat = () => {
   const [sessions, setSessions] = useState([]);
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [showSessions, setShowSessions] = useState(false);
+  const [isWide, setIsWide] = useState(false);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const scrollRef = useRef(null);
   const messagesEndRef = useRef(null);
   const isFirstLoad = useRef(true);
   const token = localStorage.getItem('admin_access_token');
 
   const scrollToBottom = (behavior = "smooth") => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
+    const scrollBehavior = typeof behavior === 'string' ? behavior : "smooth";
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: scrollBehavior
+      });
+    }
+    setShowScrollBtn(false);
+  };
+
+  const handleScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.target;
+    const isFarFromBottom = scrollHeight - scrollTop - clientHeight > 100;
+    setShowScrollBtn(isFarFromBottom);
   };
 
   useEffect(() => {
@@ -52,10 +70,9 @@ const AdminChat = () => {
   };
 
   const fetchHistory = async (sessionId) => {
+    if (!token || !sessionId) return; // Chỉ tải nếu có sessionId cụ thể
     try {
-      const url = sessionId 
-        ? `${API_BASE_URL}/admin/chat-history?session_id=${sessionId}`
-        : `${API_BASE_URL}/admin/chat-history`;
+      const url = `${API_BASE_URL}/admin/chat-history?session_id=${sessionId}`;
       const res = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -98,11 +115,13 @@ const AdminChat = () => {
     }
   };
 
-  const sendMessage = async () => {
-    if (!input.trim()) return;
-    const userMsg = { role: 'user', message: input, thoi_gian: new Date() };
+  const sendMessage = async (overrideMessage = null) => {
+    const messageToSend = overrideMessage || input;
+    if (!messageToSend.trim()) return;
+    
+    if (!overrideMessage) setInput('');
+    const userMsg = { role: 'user', message: messageToSend, thoi_gian: new Date() };
     setMessages(prev => [...prev, userMsg]);
-    setInput('');
     setIsLoading(true);
 
     try {
@@ -111,11 +130,11 @@ const AdminChat = () => {
         : `${API_BASE_URL}/admin/chat`;
       
       const res = await axios.post(url,
-        { message: userMsg.message },
+        { message: messageToSend },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      const aiReply = res.data;
+      const aiReply = { ...res.data, isNew: true };
       setMessages(prev => [...prev, aiReply]);
       
       if (!activeSessionId && aiReply.session_id) {
@@ -128,6 +147,102 @@ const AdminChat = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // --- RENDERING HELPERS (Tương tự ChatWidget) ---
+  const fixUrl = (url) => {
+    if (url && url.includes('bikeshop.vn')) {
+      return url.replace(/https?:\/\/bikeshop\.vn/, '');
+    }
+    return url;
+  };
+
+  const renderMessage = (text, role) => {
+    if (!text) return null;
+    if (text.includes('|') && text.includes('---')) {
+      const lines = text.split('\n');
+      const tableIndices = [];
+      let inTable = false;
+      lines.forEach((line, i) => {
+        if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+          if (!inTable) { tableIndices.push({ start: i, end: i }); inTable = true; }
+          else { tableIndices[tableIndices.length - 1].end = i; }
+        } else { inTable = false; }
+      });
+      if (tableIndices.length > 0) {
+        const result = [];
+        let lastIdx = 0;
+        tableIndices.forEach((range, tIdx) => {
+          if (range.start > lastIdx) {
+            result.push(<div key={`text-pre-${tIdx}`}>{renderTextContent(lines.slice(lastIdx, range.start).join('\n'), role)}</div>);
+          }
+          const tableLines = lines.slice(range.start, range.end + 1);
+          const headers = tableLines[0].split('|').filter(c => c.trim()).map(c => c.trim());
+          const rows = tableLines.slice(2).filter(l => l.includes('|')).map(l => l.split('|').filter(c => c.trim()).map(c => c.trim()));
+          result.push(
+            <div key={`table-${tIdx}`} className="my-3 overflow-x-auto border border-purple-100 rounded-lg bg-white shadow-inner">
+              <table className="min-w-full text-[12px] border-collapse">
+                <thead>
+                  <tr className="bg-purple-50 border-b border-purple-100">
+                    {headers.map((h, i) => (
+                      <th key={i} className="px-3 py-2 text-left font-black text-purple-700 border-r border-purple-100 last:border-0">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row, i) => (
+                    <tr key={i} className="border-b border-purple-50 last:border-0 hover:bg-purple-50/50 transition-colors">
+                      {row.map((cell, j) => (
+                        <td key={j} className="px-3 py-2 text-slate-600 border-r border-purple-50 last:border-0">{renderTextContent(cell, role)}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+          lastIdx = range.end + 1;
+        });
+        if (lastIdx < lines.length) {
+          result.push(<div key="text-post">{renderTextContent(lines.slice(lastIdx).join('\n'), role)}</div>);
+        }
+        return result;
+      }
+    }
+    return renderTextContent(text, role);
+  };
+
+  const renderTextContent = (text, role) => {
+    if (!text) return null;
+    const linkRegex = /(\[.*?\]\((?:https?:\/\/[^\s]+?|\/(?:products|my-orders)\/\d+)\)|https?:\/\/[^\s]+?|\/(?:products|my-orders)\/\d+)/g;
+    const parts = text.split(linkRegex);
+    return parts.map((part, index) => {
+      if (!part) return null;
+      const mdLinkMatch = part.match(/^\[(.*?)\]\((https?:\/\/[^\s]+?|\/(?:products|my-orders)\/\d+)\)$/);
+      if (mdLinkMatch) {
+        const url = fixUrl(mdLinkMatch[2]);
+        const display = mdLinkMatch[1];
+        const isInternal = !url.startsWith('http');
+        return isInternal ? (
+          <Link key={index} to={url} className="text-purple-600 hover:text-purple-800 underline font-bold">{display}</Link>
+        ) : (
+          <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:text-purple-800 underline font-bold">{display}</a>
+        );
+      }
+      if (part.startsWith('/products/')) return <Link key={index} to={part} className="text-purple-600 hover:underline font-bold">{part}</Link>;
+      if (part.match(/^https?:\/\//)) {
+        const url = fixUrl(part);
+        return <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline font-bold">{url}</a>;
+      }
+      const boldRegex = /(\*\*.*?\*\*)/g;
+      const subParts = part.split(boldRegex);
+      return subParts.map((subPart, subIndex) => {
+        if (subPart.startsWith('**') && subPart.endsWith('**')) {
+          return <strong key={`${index}-${subIndex}`} className={`font-bold ${role === 'user' ? 'text-white' : 'text-purple-700'}`}>{subPart.slice(2, -2)}</strong>;
+        }
+        return subPart;
+      });
+    });
   };
 
   // --- LOGO SVG: Tinh vân Trí tuệ ---
@@ -183,7 +298,9 @@ const AdminChat = () => {
 
       {/* 2. CỬA SỔ CHAT */}
       {isOpen && (
-        <div className="w-[400px] h-[650px] bg-white border border-[#D8B4FE] rounded-2xl shadow-[0_20px_60px_rgba(76,29,149,0.25)] flex flex-col overflow-hidden animate-fade-in-up ring-1 ring-[#A78BFA]/40">
+        <div className={`fixed bottom-16 right-0 max-h-[calc(100vh-100px)] h-[650px] bg-white border border-[#D8B4FE] rounded-2xl shadow-[0_20px_60px_rgba(76,29,149,0.25)] flex flex-col overflow-hidden animate-fade-in-up ring-1 ring-[#A78BFA]/40 transition-all duration-500 ${
+          isWide ? "w-[800px] max-w-[90vw]" : "w-[400px]"
+        }`}>
 
           {/* VIEW CHÍNH / LỊCH SỬ */}
           {!showSessions ? (
@@ -211,6 +328,9 @@ const AdminChat = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 relative z-10">
+                   <button onClick={() => setIsWide(!isWide)} className={`p-1.5 rounded-lg transition-all ${isWide ? 'bg-white text-purple-600' : 'hover:bg-white/20 text-white'}`} title={isWide ? "Thu nhỏ" : "Mở rộng"}>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+                  </button>
                   <button onClick={handleNewChat} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors text-white" title="Chat mới">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
                   </button>
@@ -221,7 +341,13 @@ const AdminChat = () => {
               </div>
 
               {/* BODY (Messages) */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-[#FAF5FF] custom-scrollbar">
+              <div className="flex-1 relative overflow-hidden flex flex-col bg-[#FAF5FF]">
+                <div 
+                  ref={scrollRef}
+                  onScroll={handleScroll}
+                  className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar"
+                  style={{ overscrollBehavior: 'contain' }}
+                >
                 {messages.length === 0 && (
                   <div className="flex flex-col items-center justify-center h-full text-[#7C3AED] space-y-5 opacity-80">
                     <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg border border-[#E9D5FF]">
@@ -231,9 +357,11 @@ const AdminChat = () => {
                       <p className="text-md font-bold text-[#5B21B6]">Xin chào Admin!</p>
                       <button onClick={() => setShowSessions(true)} className="mt-2 text-xs text-purple-600 hover:underline">Xem lịch sử chat cũ</button>
                     </div>
-                    <div className="flex flex-wrap justify-center gap-2 w-full px-4">
-                      <button onClick={() => setInput("Doanh thu hôm nay")} className="px-3 py-2 bg-white rounded-lg text-[10px] font-semibold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF]">Doanh thu hôm nay?</button>
-                      <button onClick={() => setInput("Sản phẩm nào bán chạy nhất?")} className="px-3 py-2 bg-white rounded-lg text-[10px] font-semibold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF]">Top sản phẩm</button>
+                    <div className="grid grid-cols-2 gap-3 w-full px-4 mb-6">
+                      <button onClick={() => sendMessage("Báo cáo doanh thu hôm nay")} className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">💰 Doanh thu hôm nay</button>
+                      <button onClick={() => sendMessage("Sản phẩm nào bán chạy nhất gần đây?")} className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">🏆 Top sản phẩm</button>
+                      <button onClick={() => sendMessage("Sản phẩm nào sắp hết hàng (tồn kho < 5)?")} className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">📦 Tình trạng kho</button>
+                      <button onClick={() => sendMessage("Có đơn hàng nào đang chờ xác nhận không?")} className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">🚨 Đơn chưa xử lý</button>
                     </div>
                   </div>
                 )}
@@ -248,11 +376,23 @@ const AdminChat = () => {
                         </div>
                       )}
                       
-                      <div className={`max-w-[75%] p-3 rounded-xl text-[14px] leading-relaxed whitespace-pre-line shadow-sm ${isUser
+                      <div className={`max-w-[75%] p-3 rounded-xl text-[14px] leading-relaxed shadow-md transition-all duration-300 ${isUser
                         ? 'bg-gradient-to-r from-[#6D28D9] to-[#9333EA] text-white rounded-br-none'
-                        : 'bg-white text-slate-700 border border-[#E9D5FF] rounded-bl-none'
+                        : 'bg-white text-slate-700 border border-[#DDD6FE] rounded-bl-none'
                         }`}>
-                        {msg.message}
+                        {msg.role === 'assistant' && msg.isNew ? (
+                          <TypewriterText 
+                            text={msg.message} 
+                            renderContent={(txt) => renderMessage(txt, msg.role)}
+                            onCharTyped={() => { if (!showScrollBtn) scrollToBottom("auto"); }}
+                            onComplete={() => {
+                              msg.isNew = false;
+                              if (!showScrollBtn) scrollToBottom("smooth");
+                            }}
+                          />
+                        ) : (
+                          renderMessage(msg.message, msg.role)
+                        )}
                       </div>
 
                       {isUser && (
@@ -263,16 +403,32 @@ const AdminChat = () => {
                     </div>
                   );
                 })}
-                {isLoading && (
-                   <div className="flex justify-start gap-2">
-                     <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center shrink-0 border border-[#E9D5FF]">...</div>
-                     <div className="bg-white px-4 py-2 rounded-xl rounded-bl-none border border-[#E9D5FF] shadow-sm flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce"></span>
-                        <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                     </div>
-                   </div>
+                 {isLoading && (
+                    <div className="flex justify-start gap-2 animate-pulse-slow">
+                      <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center shrink-0 border border-purple-100 shadow-sm mt-1">
+                        <CosmicLogoPurple className="w-4 h-4" />
+                      </div>
+                      <div className="bg-white px-4 py-2.5 rounded-xl rounded-bl-none border border-purple-100 shadow-md flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce [animation-duration:0.8s]"></span>
+                        <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.2s]"></span>
+                        <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.4s]"></span>
+                        <span className="ml-1 text-[10px] font-bold text-purple-400 tracking-tighter uppercase">AI Galaxy</span>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* NÚT CUỘN XUỐNG NHANH */}
+                {showScrollBtn && (
+                  <button
+                    onClick={scrollToBottom}
+                    className="absolute bottom-4 right-4 w-10 h-10 bg-white border border-purple-100 rounded-full shadow-xl flex items-center justify-center text-purple-600 hover:bg-purple-50 transition-all hover:scale-110 active:scale-95 animate-fade-in z-20 group/scroll"
+                    title="Cuộn xuống cuối"
+                  >
+                    <svg className="w-6 h-6 group-hover/scroll:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </button>
                 )}
-                <div ref={messagesEndRef} />
               </div>
 
               {/* FOOTER */}
@@ -345,11 +501,15 @@ const AdminChat = () => {
       <style>{`
         @keyframes ripple { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2.2); opacity: 0; } }
         .animate-ripple { animation: ripple 3s infinite cubic-bezier(0, 0, 0.2, 1); }
-        .animate-fade-in-up { animation: fade-in-up 0.4s ease-out; }
+        .animate-fade-in-up { animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes fade-in-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        @keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; } }
+        .animate-pulse-slow { animation: pulse-slow 2s infinite ease-in-out; }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #E9D5FF; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #DDD6FE; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #C4B5FD; }
       `}</style>
     </div>
   );

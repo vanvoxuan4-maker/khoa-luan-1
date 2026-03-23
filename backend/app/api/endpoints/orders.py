@@ -354,19 +354,17 @@ def update_order_status(
             if current_payment_status != "paid":
                 # 1. Cập nhật field trangthai_thanhtoan trong bảng don_hang
                 order.trangthai_thanhtoan = "failed"
-                print(f"Order {ma_don_hang}: Payment status updated to 'failed' (was '{current_payment_status}')")
                 
-                # 2. CẬP NHẬT BẢNG THANH_TOAN (QUAN TRỌNG!)
-                # Tìm record payment của đơn này
-                payment_record = db.query(ThanhToan).filter(ThanhToan.ma_don_hang == ma_don_hang).first()
-                if payment_record:
-                    payment_record.trang_thai = "failed"
-                    print(f"Payment record #{payment_record.ma_thanhtoan}: Status updated to 'failed'")
-                else:
-                    print(f"Warning: No payment record found for order {ma_don_hang}")
+                # 2. CẬP NHẬT TẤT CẢ BẢN GHI TRONG BẢNG THANH_TOAN (QUAN TRỌNG!)
+                db.query(ThanhToan).filter(
+                    ThanhToan.ma_don_hang == ma_don_hang,
+                    ThanhToan.trang_thai == "pending"
+                ).update({"trang_thai": "failed"})
+                db.flush() # Sync with DB session
             else:
-                # Đơn đã thanh toán -> Giữ nguyên, admin cần xử lý hoàn tiền
-                print(f"Order {ma_don_hang}: Payment status kept as 'paid' - requires admin refund handling")
+                # Đơn đã thanh toán -> Giữ nguyên trạng thái thanh toán là 'paid'
+                # LƯU Ý: Admin vẫn phải hoàn tiền thực tế cho khách qua portal của VNPay/Ngân hàng
+                mo_ta = mo_ta or "Đơn hàng đã được quản trị viên hủy. Vui lòng chờ xử lý hoàn tiền nếu bạn đã thanh toán trước đó."
 
         # 👇 LOGIC COD: Giao thành công -> Đã thanh toán
         if status_input == "delivered":
@@ -446,7 +444,7 @@ def update_payment_status(
     """Cập nhật trạng thái thanh toán của đơn hàng"""
     order = db.query(DonHang).filter(DonHang.ma_don_hang == ma_don_hang).first()
     if not order:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy đơn hàng")
+        raise HTTPException(status_code=404, detail="Không tìm thấy đơn hàng")
     
     # 👇 THÊM LOGIC RÀNG BUỘC: Đơn COD đã hủy thì không đổi trạng thái thanh toán
     is_cod = (order.phuong_thuc.value == "cod") if hasattr(order.phuong_thuc, "value") else (str(order.phuong_thuc).lower() == "cod")
@@ -454,13 +452,13 @@ def update_payment_status(
     
     if is_cod and is_cancelled:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
+            status_code=400, 
             detail="Không thể thay đổi trạng thái thanh toán cho đơn hàng COD đã bị hủy."
         )
     
     valid_statuses = ["pending", "paid", "failed", "refunded"]
     if status not in valid_statuses:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Trạng thái không hợp lệ. Chấp nhận: {valid_statuses}")
+        raise HTTPException(status_code=400, detail=f"Trạng thái không hợp lệ. Chấp nhận: {valid_statuses}")
     
     old_payment_status = order.trangthai_thanhtoan
     if hasattr(old_payment_status, 'value'):
@@ -475,9 +473,10 @@ def update_payment_status(
     if payment_record:
         if status == "paid":
             payment_record.trang_thai = "success"
-            payment_record.ngay_thanhtoan = datetime.now()
+            payment_record.ngay_thanhtoan = func.now()
         elif status == "refunded":
             payment_record.trang_thai = "refunded"
+            order.ngay_hoan_tien = func.now()
         elif status == "failed":
             payment_record.trang_thai = "failed"
         else:
@@ -487,27 +486,32 @@ def update_payment_status(
     if status == "refunded":
         current_order_status = (order.trang_thai.value if hasattr(order.trang_thai, 'value') else str(order.trang_thai)).lower()
         
+        # CHỈ HOÀN KHO KHI ĐƠN CHƯA BỊ HỦY/TRẢ TRƯỚC ĐÓ (Tránh double-refund stock)
+        needs_stock_return = current_order_status not in ["cancelled", "returned"]
+        
         # 1. Nếu đã giao hàng -> Chuyển thành TRẢ HÀNG (returned)
         if current_order_status == "delivered":
             order.trang_thai = TrangThaiOrder.RETURNED
             print(f"Order {ma_don_hang}: Delivery status auto-updated to 'returned' due to refund.")
             
-            # HOÀN KHO CHO TRẢ HÀNG
-            for item in order.chitiet_donhang:
-                product = db.query(Sanpham).filter(Sanpham.ma_sanpham == item.ma_sanpham).first()
-                if product:
-                    product.ton_kho += item.so_luong
+            if needs_stock_return:
+                for item in order.chitiet_donhang:
+                    product = db.query(Sanpham).filter(Sanpham.ma_sanpham == item.ma_sanpham).first()
+                    if product:
+                        product.ton_kho += item.so_luong
         
         # 2. Nếu đơn đang xử lý hoặc đang giao -> Chuyển thành ĐÃ HỦY (cancelled)
         elif current_order_status in ["confirmed", "shipping", "pending"]:
             order.trang_thai = TrangThaiOrder.CANCELLED
             print(f"Order {ma_don_hang}: Delivery status auto-updated to 'cancelled' due to refund.")
             
-            # HOÀN KHO CHO ĐÃ HỦY (Nếu chưa được hoàn trước đó)
-            for item in order.chitiet_donhang:
-                product = db.query(Sanpham).filter(Sanpham.ma_sanpham == item.ma_sanpham).first()
-                if product:
-                    product.ton_kho += item.so_luong
+            if needs_stock_return:
+                for item in order.chitiet_donhang:
+                    product = db.query(Sanpham).filter(Sanpham.ma_sanpham == item.ma_sanpham).first()
+                    if product:
+                        product.ton_kho += item.so_luong
+        else:
+            print(f"Order {ma_don_hang}: Already in '{current_order_status}' status. Skipping stock return during refund.")
 
         # 👇 GHI LỊCH SỬ TỰ ĐỘNG KHI HOÀN TIỀN
         new_status_v = (order.trang_thai.value if hasattr(order.trang_thai, 'value') else str(order.trang_thai)).lower()
@@ -523,12 +527,13 @@ def update_payment_status(
     # Audit log
     try:
         from app.api.endpoints.audit import create_audit_log
-        action_desc = {
+        action_descriptions = {
             "paid": f"Xác nhận đã thu tiền đơn #{ma_don_hang}",
             "refunded": f"Hoàn tiền đơn #{ma_don_hang}",
             "failed": f"Cập nhật lỗi thanh toán đơn #{ma_don_hang}",
             "pending": f"Chuyển về chưa thanh toán đơn #{ma_don_hang}"
-        }.get(status, f"Cập nhật thanh toán đơn #{ma_don_hang}")
+        }
+        action_desc = action_descriptions.get(status, f"Cập nhật thanh toán đơn #{ma_don_hang}")
         
         create_audit_log(
             db=db,
@@ -674,10 +679,11 @@ def delete_my_order(ma_don_hang: int, db: Session = Depends(get_db), current_use
             # 1. Cập nhật field trong bảng don_hang
             order.trangthai_thanhtoan = "failed"
             
-            # 2. Cập nhật bảng thanh_toan
-            payment_record = db.query(ThanhToan).filter(ThanhToan.ma_don_hang == ma_don_hang).first()
-            if payment_record:
-                payment_record.trang_thai = "failed"
+            # 2. Cập nhật bảng thanh_toan (Tất cả bản ghi pending)
+            db.query(ThanhToan).filter(
+                ThanhToan.ma_don_hang == ma_don_hang,
+                ThanhToan.trang_thai == "pending"
+            ).update({"trang_thai": "failed"})
         
         # 👇 GHI LỊCH SỬ KHÁCH HỦY
         new_h = LichSuDonHang(

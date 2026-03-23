@@ -4,28 +4,28 @@ import { Link } from 'react-router-dom';
 const BannerSlider = () => {
     const banners = [
         {
-            src: "/images/banner-web-copy.jpg",
+            src: "/images/banner/banner-web-copy.jpg",
             title: "Đột Phá Tốc Độ",
             subtitle: "Khám phá các dòng xe đạp chuyên nghiệp 2025"
         },
         {
 
-            src: "/images/Gemini_Generated_Image_gcxav3gcxav3gcxa.png",
+            src: "/images/banner/Gemini_Generated_Image_gcxav3gcxav3gcxa.png",
             title: "Chinh Phục Mọi Địa Hình",
             subtitle: "Dòng Mountain Bike mạnh mẽ, bền bỉ"
         },
         {
-            src: "/images/Gemini_Generated_Image_p0wo5np0wo5np0wo.png",
+            src: "/images/banner/Gemini_Generated_Image_p0wo5np0wo5np0wo.png",
             title: "Niềm Vui Cho Bé",
             subtitle: "Những chiếc xe đầu đời an toàn và màu sắc"
         },
         {
-            src: "/images/Gemini_Generated_Image_qy1do3qy1do3qy1d.png",
+            src: "/images/banner/Gemini_Generated_Image_qy1do3qy1do3qy1d.png",
             title: "Sức Mạnh Raptors",
             subtitle: "Vượt giới hạn cùng công nghệ khung Carbon"
         },
         {
-            src: "/images/vinbike.png",
+            src: "/images/banner/vinbike.png",
             title: "Phong Cách thiên nhiên",
             subtitle: "VINBIKE – Vững bước hành trình Việt."
         }

@@ -210,7 +210,7 @@ const HomePage = () => {
                         {/* Background Image with Overlay */}
                         <div className="absolute inset-0 z-0">
                             <img
-                                src="/images/retail_banner_d.jpg"
+                                src="/images/banner/retail_banner_d.jpg"
                                 alt="Retail Banner"
                                 loading="lazy"
                                 className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"

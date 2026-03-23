@@ -55,6 +55,7 @@ class DonHang(Base):
     trangthai_thanhtoan = Column(String(50), default="pending")
     phi_ship = Column(Float, default=0.0) # Phí vận chuyển
     xoa_don = Column(Boolean, default=False, nullable=False) # Soft delete: user ẩn đơn khỏi lịch sử
+    ngay_hoan_tien = Column(DateTime(timezone=True), nullable=True) # Thời điểm thực hiện hoàn tiền
     
     # Foreign key to voucher (optional)
     ma_khuyenmai = Column(Integer, ForeignKey("ma_khuyenmai.ma_khuyenmai"), nullable=True)

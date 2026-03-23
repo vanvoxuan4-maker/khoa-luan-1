@@ -64,27 +64,34 @@ const Dashboard = () => {
             date.setDate(date.getDate() - i);
             const dateStr = date.toISOString().split('T')[0];
 
-            const dayOrders = orders.filter(o => {
-                // Ưu tiên ngày giao thực tế nếu đơn đã hoàn thành
-                const dateToUse = (o.trang_thai === 'delivered' && o.ngay_giao_thuc_te) 
-                    ? o.ngay_giao_thuc_te 
+            let revenue = 0;
+            let refunded = 0;
+
+            orders.forEach(o => {
+                const ps = (o.trangthai_thanhtoan || '').toLowerCase();
+                const os = (o.trang_thai || '').toLowerCase();
+
+                // ── Revenue Logic: Counts if paid/delivered on this day ──
+                const revDateToUse = (os === 'delivered' && o.ngay_giao_thuc_te)
+                    ? o.ngay_giao_thuc_te
                     : (o.ngay_dat || o.created_at);
-                const d = new Date(dateToUse);
-                return d.toISOString().split('T')[0] === dateStr;
+                const revD = new Date(revDateToUse);
+                if (revD.toISOString().split('T')[0] === dateStr) {
+                    if (ps === 'paid' || ps === 'success' || ps === 'completed' || os === 'delivered') {
+                        revenue += (o.tong_tien || 0);
+                    }
+                }
+
+                // ── Refund Logic: Counts if refunded on this day ──
+                // Use ngay_hoan_tien if available, else fallback to original date for legacy data
+                const refDateToUse = o.ngay_hoan_tien || o.ngay_dat || o.created_at;
+                const refD = new Date(refDateToUse);
+                if (refD.toISOString().split('T')[0] === dateStr) {
+                    if (ps === 'refunded') {
+                        refunded += (o.tong_tien || 0);
+                    }
+                }
             });
-
-            const revenue = dayOrders
-                .filter(o => {
-                    const ps = (o.trangthai_thanhtoan || '').toLowerCase();
-                    const os = (o.trang_thai || '').toLowerCase();
-                    // Tính doanh thu nếu: Đã thanh toán HOẶC đơn đã hoàn thành (tự động coi là đã thu tiền)
-                    return ps === 'paid' || ps === 'success' || ps === 'completed' || os === 'delivered';
-                })
-                .reduce((s, o) => s + (o.tong_tien || 0), 0);
-
-            const refunded = dayOrders
-                .filter(o => (o.trangthai_thanhtoan || '').toLowerCase() === 'refunded')
-                .reduce((s, o) => s + (o.tong_tien || 0), 0);
 
             const label = days <= 7
                 ? `${date.getDate()}/${date.getMonth() + 1}`

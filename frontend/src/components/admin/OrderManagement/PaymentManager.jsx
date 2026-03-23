@@ -155,6 +155,7 @@ const PaymentManager = () => {
                   <th className="py-8 px-6 text-center">Ngân Hàng</th>
                   <th className="py-8 px-6 text-center">Mã Giao Dịch</th>
                   <th className="py-8 px-6 text-center">Thời gian</th>
+                  <th className="py-8 px-6 text-center">Ngày Hoàn Tiền</th>
                   <th className="py-8 px-6 text-center">Số tiền</th>
                   <th className="py-8 px-6 text-center">Mã Giảm Giá</th>
                   <th className="py-8 px-6 text-center">PT TT</th>
@@ -186,6 +187,20 @@ const PaymentManager = () => {
                     </td>
                     <td className="py-4 px-6 text-sm font-medium text-slate-600 whitespace-nowrap text-center">
                       {new Date(pay.ngay_thanhtoan).toLocaleString('vi-VN')}
+                    </td>
+                    <td className="py-4 px-6 text-center whitespace-nowrap">
+                      {pay.ngay_hoan_tien ? (
+                        <div className="flex flex-col items-center">
+                          <span className="text-xs font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">
+                            {new Date(pay.ngay_hoan_tien).toLocaleDateString('vi-VN')}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-bold mt-0.5">
+                            {new Date(pay.ngay_hoan_tien).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-300 text-[10px] italic">---</span>
+                      )}
                     </td>
                     <td className="py-4 px-6 text-center font-black text-blue-600 text-sm whitespace-nowrap">
                       {formatMoney(pay.thanh_tien)}

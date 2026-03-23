@@ -30,6 +30,13 @@ const PAYMENT_LABEL = {
     momo: { label: 'MoMo', icon: '💜' },
 };
 
+const PAYMENT_STATUS_CONFIG = {
+    paid: { label: 'Đã thanh toán', color: '#065F46', bg: '#ECFDF5', border: '#A7F3D0', icon: '✅' },
+    failed: { label: 'Thanh toán thất bại/Hủy', color: '#B91C1C', bg: '#FEF2F2', border: '#FECACA', icon: '❌' },
+    refunded: { label: 'Đã hoàn tiền', color: '#1E40AF', bg: '#EFF6FF', border: '#BFDBFE', icon: '💰' },
+    pending: { label: 'Chưa thanh toán', color: '#92400E', bg: '#FFFBEB', border: '#FDE68A', icon: '⏳' },
+};
+
 const fmt = (n) => (n ?? 0).toLocaleString('vi-VN');
 
 /* ─────────────────────────────────────────────
@@ -159,7 +166,12 @@ const OrderDetail = () => {
     const subtotal = itemsOnly.reduce((s, i) => s + (i.so_luong * i.gia_mua), 0);
     const discount = order.voucher_giam || 0;
     const payInfo = PAYMENT_LABEL[order.phuong_thuc?.toLowerCase()] || { label: order.phuong_thuc, icon: '💳' };
-    const isPaid = order.trangthai_thanhtoan?.toLowerCase() === 'paid';
+    
+    // Payment status config logic
+    const pStatusRaw = order.trangthai_thanhtoan?.toLowerCase();
+    const pCfg = PAYMENT_STATUS_CONFIG[pStatusRaw] || PAYMENT_STATUS_CONFIG.pending;
+    
+    const isPaid = pStatusRaw === 'paid';
     const canCancel = statusKey === 'pending';
 
     return (
@@ -410,17 +422,14 @@ const OrderDetail = () => {
                             </div>
                         </div>
                         {/* Payment status */}
-                        {isPaid ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 10 }}>
-                                <span style={{ fontSize: 18 }}>✅</span>
-                                <span style={{ fontWeight: 700, color: '#065F46', fontSize: 13 }}>Đã thanh toán</span>
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10 }}>
-                                <span style={{ fontSize: 18 }}>⏳</span>
-                                <span style={{ fontWeight: 700, color: '#92400E', fontSize: 13 }}>Chưa thanh toán</span>
-                            </div>
-                        )}
+                        <div style={{ 
+                            display: 'flex', alignItems: 'center', gap: 10, 
+                            padding: '12px 16px', background: pCfg.bg, 
+                            border: `1.5px solid ${pCfg.border}`, borderRadius: 10 
+                        }}>
+                            <span style={{ fontSize: 18 }}>{pCfg.icon}</span>
+                            <span style={{ fontWeight: 700, color: pCfg.color, fontSize: 13 }}>{pCfg.label}</span>
+                        </div>
                     </Card>
                 </div>
 

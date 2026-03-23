@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../../../utils/apiConfig';
-import { Link, useSearchParams, useNavigationType } from 'react-router-dom';
+import { useSearchParams, useNavigationType } from 'react-router-dom';
 import Breadcrumb from '../layouts/Breadcrumb';
 import useDebounce from '../../../hooks/useDebounce';
 
@@ -36,6 +36,36 @@ const ProductList = () => {
     const [totalItems, setTotalItems] = useState(0);
     const itemsPerPage = 12;
     const [shouldScrollToTop, setShouldScrollToTop] = useState(false);
+
+    // --- ✨ BANNER SLIDER LOGIC ---
+    const [activeBanner, setActiveBanner] = useState(0);
+    const banners = [
+        { 
+            url: "/images/banner/sanpham.png", 
+            title: "Bộ sưu tập", 
+            accent: "Sản phẩm", 
+            desc: "Khám phá tinh hoa công nghệ xe đạp thế giới. Đẳng cấp vượt trội." 
+        },
+        { 
+            url: "/images/banner/products-banner-2.png", 
+            title: "Đam mê", 
+            accent: "Tốc độ", 
+            desc: "Bứt phá mọi giới hạn cùng những mẫu xe chuyên nghiệp nhất 2025." 
+        },
+        { 
+            url: "/images/banner/products-banner-3.png", 
+            title: "Tuyệt phẩm", 
+            accent: "Road Bike", 
+            desc: "Tinh hoa thiết kế tối giản, hiệu suất đỉnh cao trên mọi cung đường." 
+        }
+    ];
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setActiveBanner((prev) => (prev + 1) % banners.length);
+        }, 6000);
+        return () => clearInterval(timer);
+    }, [banners.length]);
 
     // 4. Các hàm xử lý (Handlers) - Update URL instead of local state
     const handleFilterChange = (newFilters, isReset = false) => {
@@ -96,7 +126,7 @@ const ProductList = () => {
                     axios.get(`${API_BASE_URL}/sanpham`, { params: cleanParams }),
                     axios.get(`${API_BASE_URL}/sanpham/count`, { params: { search: debouncedSearch, ...filters } })
                 ]);
-
+                
                 setProducts(prodRes.data);
                 setTotalItems(countRes.data.total);
             } catch (err) {
@@ -147,43 +177,59 @@ const ProductList = () => {
         <>
             <Breadcrumb items={[{ label: 'Sản phẩm' }]} />
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
-                {/* Premium Product Banner */}
+                {/* Premium Product Banner Auto-Slider */}
                 <div className="relative h-[300px] md:h-[400px] lg:h-[450px] w-full overflow-hidden group">
-                    {/* Background Image with Zoom Effect */}
-                    <div className="absolute inset-0 w-full h-full animate-slow-zoom">
-                        <img
-                            src="/images/sanpham.png"
-                            alt="Product Banner"
-                            className="w-full h-full object-cover object-center transition-transform duration-1000 group-hover:scale-105"
-                        />
-                    </div>
-
-                    {/* Overlay Gradient - Centered for balanced look */}
-                    <div className="absolute inset-0 bg-black/40"></div>
+                    {/* Background Images with Cross-Fade */}
+                    {banners.map((banner, idx) => (
+                        <div 
+                            key={idx}
+                            className={`absolute inset-0 w-full h-full transition-all duration-1000 ease-in-out ${
+                                activeBanner === idx ? 'opacity-100 scale-100 translate-x-0' : 'opacity-0 scale-110 translate-x-10 pointer-events-none'
+                            }`}
+                        >
+                            <img
+                                src={banner.url}
+                                alt={`Banner ${idx}`}
+                                className="w-full h-full object-cover object-center"
+                            />
+                            {/* Overlay Gradient - Darker for readability */}
+                            <div className="absolute inset-0 bg-black/50"></div>
+                        </div>
+                    ))}
 
                     {/* Banner Content - Centered Alignment */}
                     <div className="absolute inset-0 flex items-center justify-center">
                         <div className="w-full max-w-7xl mx-auto px-4 md:px-8">
-                            <div className="max-w-4xl mx-auto text-white text-center animate-fade-in-blur">
-                                <div className="flex items-center justify-center gap-3 mb-4">
+                            <div className="max-w-4xl mx-auto text-white text-center">
+                                <div className="flex items-center justify-center gap-3 mb-4 animate-fade-in">
                                     <div className="h-px w-8 bg-blue-500"></div>
                                     <span className="text-blue-500 font-black uppercase text-[10px] tracking-[0.4em]">Collection 2025</span>
                                     <div className="h-px w-8 bg-blue-500"></div>
                                 </div>
-                                <h1 className="text-4xl md:text-6xl lg:text-7xl font-black mb-6 tracking-tight uppercase italic drop-shadow-2xl">
-                                    Bộ sưu tập <span className="text-blue-500">Sản phẩm</span>
+                                <h1 className="text-4xl md:text-6xl lg:text-7xl font-black mb-6 tracking-tight uppercase italic drop-shadow-2xl animate-fade-in-blur">
+                                    {banners[activeBanner].title} <span className="text-blue-500">{banners[activeBanner].accent}</span>
                                 </h1>
-                                <p className="text-base md:text-xl text-slate-200 font-medium max-w-2xl mx-auto leading-relaxed drop-shadow-lg">
-                                    Khám phá tinh hoa công nghệ xe đạp thế giới. <br className="hidden md:block" />
-                                    Đẳng cấp vượt trội, bứt phá mọi giới hạn.
+                                <p className="text-base md:text-xl text-slate-200 font-medium max-w-2xl mx-auto leading-relaxed drop-shadow-lg animate-fade-in-up">
+                                    {banners[activeBanner].desc}
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Bottom Decorative Edge */}
-                    <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white to-transparent"></div>
+                    {/* Slider Navigation Dots */}
+                    <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+                        {banners.map((_, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => setActiveBanner(idx)}
+                                className={`h-1.5 transition-all duration-500 rounded-full ${
+                                    activeBanner === idx ? 'w-8 bg-blue-500' : 'w-2 bg-white/30 hover:bg-white/50'
+                                }`}
+                            />
+                        ))}
+                    </div>
                 </div>
+
 
                 {/* Main Product Section */}
                 <div className="max-w-7xl mx-auto px-4 py-16 scroll-mt-24" id="product-results">

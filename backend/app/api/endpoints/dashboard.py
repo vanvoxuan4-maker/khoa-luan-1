@@ -13,14 +13,16 @@ def get_dashboard_stats(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.check_admin_role)
 ):
-    # 1. TÍNH DOANH THU THỰC (CHỈ TÍNH ĐƠN COMPLETED)
+    # 1. TÍNH DOANH THU THỰC (CHỈ TÍNH ĐƠN ĐÃ GIAO)
     total_revenue = db.query(func.sum(DonHang.tong_tien)).filter(
         DonHang.trang_thai == TrangThaiOrder.DELIVERED
     ).scalar() or 0
 
-    # 2. TÍNH CÔNG NỢ (Đơn đang xử lý hoặc đang giao)
+    # 2. TÍNH CÔNG NỢ (Đơn đang xác nhận, đang giao hoặc đơn hủy nhưng chưa hoàn tiền)
+    # Bao gồm các đơn Đã Hủy nhưng trạng thái thanh toán là 'paid' (VNPay) để tránh hụt doanh thu thống kê
     pending_revenue = db.query(func.sum(DonHang.tong_tien)).filter(
-        DonHang.trang_thai.in_([TrangThaiOrder.CONFIRMED, TrangThaiOrder.SHIPPING])
+        (DonHang.trang_thai.in_([TrangThaiOrder.CONFIRMED, TrangThaiOrder.SHIPPING])) |
+        ((DonHang.trang_thai == TrangThaiOrder.CANCELLED) & (DonHang.trangthai_thanhtoan == "paid"))
     ).scalar() or 0
 
     # 3. LẤY 5 ĐƠN HÀNG GẦN ĐÂY

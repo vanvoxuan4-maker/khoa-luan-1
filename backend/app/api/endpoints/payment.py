@@ -37,6 +37,7 @@ def get_all_payments(db: Session = Depends(get_db)):
             p_dict["dia_chi"] = p.donhang.dia_chi_giao
             p_dict["sdt"] = p.donhang.sdt_nguoi_nhan
             p_dict["trang_thai_don"] = p.donhang.trang_thai
+            p_dict["ngay_hoan_tien"] = p.donhang.ngay_hoan_tien # 👇 Thêm trường ngày hoàn tiền
             p_dict["ma_giamgia"] = p.ma_giamgia or p.donhang.ma_giamgia # 👇 Fallback lấy từ đơn hàng
         else:
             p_dict["ten_khach_hang"] = "Khách vãng lai"
