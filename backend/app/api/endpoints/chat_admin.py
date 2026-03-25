@@ -1,5 +1,6 @@
 import google.generativeai as genai
 import json
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -308,8 +309,8 @@ def run_admin_tool(tool_call) -> str:
 # ---------------- STREAMING ENDPOINT ----------------
 
 @router.post("/admin/chat/stream")
-def stream_chat_with_admin_ai(item: ChatRequest, session_id: Optional[str] = None, db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
-    """Trả lời dạng stream (SSE) – manual tool-calling loop để tránh lỗi SDK."""
+async def stream_chat_with_admin_ai(item: ChatRequest, session_id: Optional[str] = None, db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
+    """Trả lời dạng stream (SSE) – hỗ trợ hiệu ứng gõ văn bản."""
     s_id = session_id or str(uuid.uuid4())
 
     # ✅ Tải lịch sử CŨ trước khi lưu tin nhắn mới
@@ -341,11 +342,12 @@ def stream_chat_with_admin_ai(item: ChatRequest, session_id: Optional[str] = Non
     ma_user = admin.ma_user
     message_text = item.message
 
-    def generate():
+    async def generate():
         full_reply = ""
         try:
             if not model:
                 yield f"data: {json.dumps({'chunk': 'AI Offline.', 'session_id': s_id})}\n\n"
+                await asyncio.sleep(0.04)
                 full_reply = "AI Offline."
             else:
                 # ✅ FIX #1: Dùng model cố định, truyền ngày qua prompt (không tạo model mới mỗi request)
@@ -395,6 +397,7 @@ def stream_chat_with_admin_ai(item: ChatRequest, session_id: Optional[str] = Non
                     for i, word in enumerate(words):
                         chunk = word if i == 0 else " " + word
                         yield f"data: {json.dumps({'chunk': chunk, 'session_id': s_id})}\n\n"
+                        await asyncio.sleep(0.04) # Tạo hiệu ứng gõ mượt mà
 
         except Exception as e:
             import traceback
@@ -405,6 +408,7 @@ def stream_chat_with_admin_ai(item: ChatRequest, session_id: Optional[str] = Non
                 f.write(f"[{dt.now()}] Admin AI Error: {e}\n{err_msg}\n")
             full_reply = intelligent_fallback(message_text, db)
             yield f"data: {json.dumps({'chunk': full_reply, 'session_id': s_id})}\n\n"
+            await asyncio.sleep(0.04)
 
 
         # ✅ FIX #3: Yield done TRƯỚC khi lưu DB

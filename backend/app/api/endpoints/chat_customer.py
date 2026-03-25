@@ -1,5 +1,6 @@
 import google.generativeai as genai
 import json
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -296,8 +297,8 @@ def run_customer_tool(tool_call) -> str:
 # ---------------- STREAMING ENDPOINT ----------------
 
 @router.post("/chat/customer/stream")
-def stream_chat_with_customer_ai(item: ChatRequest, session_id: Optional[str] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Trả lời dạng stream (SSE) – manual tool-calling loop để tránh lỗi SDK."""
+async def stream_chat_with_customer_ai(item: ChatRequest, session_id: Optional[str] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Trả lời dạng stream (SSE) – hỗ trợ hiệu ứng gõ văn bản."""
     s_id = session_id or str(uuid.uuid4())[:18]
 
     # ✅ Tải lịch sử CŨ trước khi lưu tin nhắn mới
@@ -329,13 +330,14 @@ def stream_chat_with_customer_ai(item: ChatRequest, session_id: Optional[str] = 
     ma_user = current_user.ma_user
     message_text = item.message
 
-    def generate():
+    async def generate():
         full_reply = ""
         try:
             if not model:
                 reply = customer_fallback(message_text, ma_user)
                 full_reply_ref = [reply]
                 yield f"data: {json.dumps({'chunk': reply, 'session_id': s_id})}\n\n"
+                await asyncio.sleep(0.04)
                 return
 
             # ✅ FIX #1: Dùng model cố định, truyền ngày qua prompt (không tạo model mới mỗi request)
@@ -385,6 +387,7 @@ def stream_chat_with_customer_ai(item: ChatRequest, session_id: Optional[str] = 
                 for i, word in enumerate(words):
                     chunk = word if i == 0 else " " + word
                     yield f"data: {json.dumps({'chunk': chunk, 'session_id': s_id})}\n\n"
+                    await asyncio.sleep(0.04) # Tạo hiệu ứng gõ mượt mà
 
         except Exception as e:
             import traceback
@@ -394,6 +397,7 @@ def stream_chat_with_customer_ai(item: ChatRequest, session_id: Optional[str] = 
                 f.write(f"[{datetime.now()}] Customer AI Error: {e}\n{err_msg}\n")
             full_reply = customer_fallback(message_text, ma_user)
             yield f"data: {json.dumps({'chunk': full_reply, 'session_id': s_id})}\n\n"
+            await asyncio.sleep(0.04)
 
 
         # ✅ FIX #3: Yield done TRƯỚC khi lưu DB
