@@ -14,7 +14,8 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 
 # 👇 Import deps chuẩn từ package cha
-from app.api import deps 
+from app.api import deps
+from app.utils.text_utils import normalize_str
 
 router = APIRouter()
 
@@ -555,13 +556,29 @@ def update_payment_status(
 # 3. LẤY TẤT CẢ ĐƠN HÀNG (ADMIN)
 # ---------------------------------------------------------
 @router.get("/all", response_model=List[OrderResponse])
-def get_all_orders_admin(db: Session = Depends(get_db), current_user: User = Depends(deps.check_admin_role)):
+def get_all_orders_admin(
+    search: Optional[str] = None,
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(deps.check_admin_role)
+):
     orders = db.query(DonHang).options(
         joinedload(DonHang.chitiet_donhang),
         joinedload(DonHang.user)
     ).order_by(DonHang.ma_don_hang.desc()).all()
+
     for o in orders:
-        if not o.ten_nguoi_nhan: o.ten_nguoi_nhan = o.user.hovaten if o.user else "Khách hàng"
+        if not o.ten_nguoi_nhan:
+            o.ten_nguoi_nhan = o.user.hovaten if o.user else "Khách hàng"
+
+    if search:
+        norm_search = normalize_str(search)
+        def match_order(o):
+            if norm_search in str(o.ma_don_hang): return True
+            if norm_search in normalize_str(o.ten_nguoi_nhan or ""): return True
+            if norm_search in (o.sdt_nguoi_nhan or ""): return True
+            return False
+        orders = [o for o in orders if match_order(o)]
+
     return orders
 
 # ---------------------------------------------------------

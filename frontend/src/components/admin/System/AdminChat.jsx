@@ -3,10 +3,12 @@ import axios from 'axios';
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 import { UserCircleIcon } from '@heroicons/react/24/outline';
 import API_BASE_URL from '../../../utils/apiConfig';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import TypewriterText from '../../users/chat/TypewriterText';
+import CosmicLogo from '../../common/CosmicLogo';
 
 const AdminChat = () => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -126,24 +128,93 @@ const AdminChat = () => {
 
     try {
       const url = activeSessionId 
-        ? `${API_BASE_URL}/admin/chat?session_id=${activeSessionId}`
-        : `${API_BASE_URL}/admin/chat`;
+        ? `${API_BASE_URL}/admin/chat/stream?session_id=${activeSessionId}`
+        : `${API_BASE_URL}/admin/chat/stream`;
       
-      const res = await axios.post(url,
-        { message: messageToSend },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      const aiReply = { ...res.data, isNew: true };
-      setMessages(prev => [...prev, aiReply]);
-      
-      if (!activeSessionId && aiReply.session_id) {
-        setActiveSessionId(aiReply.session_id);
-        localStorage.setItem('admin_chat_session_id', aiReply.session_id);
-        fetchSessions();
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ message: messageToSend })
+      });
+
+      if (!response.ok) throw new Error('Network response was not ok');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = '';
+      let streamStarted = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              if (data.session_id && !activeSessionId) {
+                setActiveSessionId(data.session_id);
+                localStorage.setItem('admin_chat_session_id', data.session_id);
+                fetchSessions();
+              }
+
+              if (data.chunk) {
+                fullContent += data.chunk;
+                
+                if (!streamStarted) {
+                    streamStarted = true;
+                    setIsLoading(false); // Tắt loading dots ngay khi có chữ
+                    setMessages(prev => [...prev, {
+                        role: 'assistant',
+                        message: fullContent,
+                        isStreaming: true,
+                        thoi_gian: new Date()
+                    }]);
+                } else {
+                    setMessages(prev => {
+                        const newMsgs = [...prev];
+                        const lastIdx = newMsgs.length - 1;
+                        if (lastIdx >= 0 && newMsgs[lastIdx].role === 'assistant') {
+                            newMsgs[lastIdx] = { ...newMsgs[lastIdx], message: fullContent };
+                        }
+                        return newMsgs;
+                    });
+                }
+                if (!showScrollBtn) scrollToBottom("auto");
+              }
+
+              if (data.done) {
+                setMessages(prev => {
+                    const newMsgs = [...prev];
+                    const lastIdx = newMsgs.length - 1;
+                    if (lastIdx >= 0) newMsgs[lastIdx].isStreaming = false;
+                    return newMsgs;
+                });
+              }
+            } catch (e) {
+              console.error("Error parsing SSE data", e);
+            }
+          }
+        }
       }
     } catch (err) {
-      alert("AI đang bận hoặc lỗi kết nối!");
+      console.error("Stream error:", err);
+      setMessages(prev => {
+        const newMsgs = [...prev];
+        const lastIdx = newMsgs.length - 1;
+        if (lastIdx >= 0 && newMsgs[lastIdx].isStreaming) {
+            newMsgs[lastIdx].message = "Xin lỗi, đã có lỗi xảy ra khi kết nối với AI.";
+            newMsgs[lastIdx].isStreaming = false;
+        }
+        return newMsgs;
+      });
     } finally {
       setIsLoading(false);
     }
@@ -151,10 +222,13 @@ const AdminChat = () => {
 
   // --- RENDERING HELPERS (Tương tự ChatWidget) ---
   const fixUrl = (url) => {
-    if (url && url.includes('bikeshop.vn')) {
-      return url.replace(/https?:\/\/bikeshop\.vn/, '');
+    if (!url) return '';
+    let finalUrl = url;
+    if (finalUrl.includes('bikeshop.vn')) {
+      finalUrl = finalUrl.replace(/https?:\/\/bikeshop\.vn/, '');
     }
-    return url;
+    if (finalUrl.startsWith('http')) return finalUrl;
+    return finalUrl.startsWith('/') ? finalUrl : `/${finalUrl}`;
   };
 
   const renderMessage = (text, role) => {
@@ -214,22 +288,48 @@ const AdminChat = () => {
 
   const renderTextContent = (text, role) => {
     if (!text) return null;
-    const linkRegex = /(\[.*?\]\((?:https?:\/\/[^\s]+?|\/(?:products|my-orders)\/\d+)\)|https?:\/\/[^\s]+?|\/(?:products|my-orders)\/\d+)/g;
+    const linkRegex = /(\[.*?\]\((?:https?:\/\/[^\s)]+|(?:\/admin|\/products|\/my-orders)[^\s)]+)\)|https?:\/\/[^\s]+|(?:\/admin|\/products|\/my-orders)[^\s]+)/g;
     const parts = text.split(linkRegex);
     return parts.map((part, index) => {
       if (!part) return null;
-      const mdLinkMatch = part.match(/^\[(.*?)\]\((https?:\/\/[^\s]+?|\/(?:products|my-orders)\/\d+)\)$/);
+      const mdLinkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
       if (mdLinkMatch) {
         const url = fixUrl(mdLinkMatch[2]);
         const display = mdLinkMatch[1];
         const isInternal = !url.startsWith('http');
         return isInternal ? (
-          <Link key={index} to={url} className="text-purple-600 hover:text-purple-800 underline font-bold">{display}</Link>
+          <span 
+            key={index} 
+            onClick={() => {
+              setIsOpen(false);
+              navigate(url);
+            }}
+            className="text-purple-600 hover:text-purple-800 underline font-bold cursor-pointer transition-all active:scale-95"
+          >
+            {display}
+          </span>
         ) : (
           <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:text-purple-800 underline font-bold">{display}</a>
         );
       }
-      if (part.startsWith('/products/')) return <Link key={index} to={part} className="text-purple-600 hover:underline font-bold">{part}</Link>;
+      const lowerPart = part.toLowerCase();
+      if (lowerPart.startsWith('/admin/') || lowerPart.startsWith('admin/') || 
+          lowerPart.startsWith('/products/') || lowerPart.startsWith('products/') ||
+          lowerPart.startsWith('/my-orders/') || lowerPart.startsWith('my-orders/')) {
+        const targetUrl = part.startsWith('/') ? part : `/${part}`;
+        return (
+          <span 
+            key={index} 
+            onClick={() => {
+              setIsOpen(false);
+              navigate(targetUrl);
+            }}
+            className="text-purple-600 hover:text-purple-800 underline font-extrabold cursor-pointer transition-all active:scale-95"
+          >
+            {part}
+          </span>
+        );
+      }
       if (part.match(/^https?:\/\//)) {
         const url = fixUrl(part);
         return <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline font-bold">{url}</a>;
@@ -245,30 +345,6 @@ const AdminChat = () => {
     });
   };
 
-  // --- LOGO SVG: Tinh vân Trí tuệ ---
-  const CosmicLogoWhite = ({ className }) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="3 3" opacity="0.6" />
-      <path d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M12 14L10 12L12 10L14 12L12 14Z" fill="currentColor" />
-      <path d="M12 2V6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M12 18V22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M2 12H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M18 12H22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-
-  const CosmicLogoPurple = ({ className }) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#A78BFA" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="3 3" />
-      <path d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18Z" stroke="#8B5CF6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M12 14L10 12L12 10L14 12L12 14Z" fill="#6D28D9" />
-      <path d="M12 2V6" stroke="#A78BFA" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M12 18V22" stroke="#A78BFA" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M2 12H6" stroke="#A78BFA" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M18 12H22" stroke="#A78BFA" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
 
   return (
     <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end font-sans antialiased">
@@ -291,7 +367,7 @@ const AdminChat = () => {
             }}
             className="group w-16 h-16 bg-gradient-to-br from-[#4C1D95] via-[#7C3AED] to-[#D946EF] rounded-full shadow-[0_4px_20px_rgba(124,58,237,0.5)] flex items-center justify-center hover:scale-110 transition-all duration-300 cursor-pointer border-[3px] border-[#E9D5FF] overflow-hidden relative z-10"
           >
-            <CosmicLogoWhite className="h-9 w-9 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] group-hover:rotate-[20deg] transition-transform duration-500" />
+            <CosmicLogo className="h-9 w-9 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] group-hover:rotate-[20deg] transition-transform duration-500" color="white" />
           </button>
         </>
       )}
@@ -314,7 +390,7 @@ const AdminChat = () => {
                   </button>
                   <div className="flex items-center gap-2">
                     <div className="w-9 h-9 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30">
-                      <CosmicLogoWhite className="w-5 h-5 text-[#E9D5FF]" />
+                      <CosmicLogo className="w-5 h-5 text-[#E9D5FF]" color="white" />
                     </div>
                     <div>
                       <h3 className="font-bold text-white text-[14px] truncate max-w-[150px]">
@@ -351,17 +427,17 @@ const AdminChat = () => {
                 {messages.length === 0 && (
                   <div className="flex flex-col items-center justify-center h-full text-[#7C3AED] space-y-5 opacity-80">
                     <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg border border-[#E9D5FF]">
-                      <CosmicLogoPurple className="w-12 h-12" />
+                      <CosmicLogo className="w-12 h-12" color="purple" />
                     </div>
                     <div className="text-center">
                       <p className="text-md font-bold text-[#5B21B6]">Xin chào Admin!</p>
                       <button onClick={() => setShowSessions(true)} className="mt-2 text-xs text-purple-600 hover:underline">Xem lịch sử chat cũ</button>
                     </div>
                     <div className="grid grid-cols-2 gap-3 w-full px-4 mb-6">
-                      <button onClick={() => sendMessage("Báo cáo doanh thu hôm nay")} className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">💰 Doanh thu hôm nay</button>
-                      <button onClick={() => sendMessage("Sản phẩm nào bán chạy nhất gần đây?")} className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">🏆 Top sản phẩm</button>
-                      <button onClick={() => sendMessage("Sản phẩm nào sắp hết hàng (tồn kho < 5)?")} className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">📦 Tình trạng kho</button>
-                      <button onClick={() => sendMessage("Có đơn hàng nào đang chờ xác nhận không?")} className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">🚨 Đơn chưa xử lý</button>
+                      <button onClick={() => sendMessage("Thống kê doanh thu hôm nay")} className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">📊 Doanh thu hôm nay</button>
+                      <button onClick={() => sendMessage("Sản phẩm nào sắp hết hàng?")} className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">📦 Kiểm tra tồn kho</button>
+                      <button onClick={() => sendMessage("Cập nhật giá sản phẩm ID 1 sang 15.000.000 VNĐ")} className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">💰 Cập nhật giá bán</button>
+                      <button onClick={() => sendMessage("Vô hiệu hóa mã giảm giá KM2025")} className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">🎟️ Quản lý voucher</button>
                     </div>
                   </div>
                 )}
@@ -369,10 +445,10 @@ const AdminChat = () => {
                 {messages.map((msg, index) => {
                   const isUser = msg.role === 'user';
                   return (
-                    <div key={index} className={`flex gap-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
+                    <div key={index} className={`flex gap-2 ${isUser ? 'justify-end' : 'justify-start'} items-end`}>
                       {!isUser && (
-                        <div className="w-7 h-7 rounded-full bg-white border border-[#C4B5FD] flex items-center justify-center shrink-0 shadow-sm mt-1">
-                          <CosmicLogoPurple className="w-4 h-4" />
+                        <div className="w-7 h-7 rounded-full bg-white border border-[#C4B5FD] flex items-center justify-center shrink-0 shadow-sm">
+                          <CosmicLogo className="w-4 h-4" color="purple" />
                         </div>
                       )}
                       
@@ -380,7 +456,12 @@ const AdminChat = () => {
                         ? 'bg-gradient-to-r from-[#6D28D9] to-[#9333EA] text-white rounded-br-none'
                         : 'bg-white text-slate-700 border border-[#DDD6FE] rounded-bl-none'
                         }`}>
-                        {msg.role === 'assistant' && msg.isNew ? (
+                        {msg.role === 'assistant' && msg.isStreaming ? (
+                          <div className="relative">
+                            {renderMessage(msg.message, msg.role)}
+                            <span className="inline-block w-1.5 h-4 bg-purple-500 ml-1 animate-blink align-middle"></span>
+                          </div>
+                        ) : msg.role === 'assistant' && msg.isNew ? (
                           <TypewriterText 
                             text={msg.message} 
                             renderContent={(txt) => renderMessage(txt, msg.role)}
@@ -396,7 +477,7 @@ const AdminChat = () => {
                       </div>
 
                       {isUser && (
-                        <div className="w-7 h-7 rounded-full bg-[#6D28D9] flex items-center justify-center shrink-0 mt-1 shadow-sm border border-white/20">
+                        <div className="w-7 h-7 rounded-full bg-[#6D28D9] flex items-center justify-center shrink-0 shadow-sm border border-white/20">
                           <UserCircleIcon className="w-5 h-5 text-white" />
                         </div>
                       )}
@@ -404,9 +485,9 @@ const AdminChat = () => {
                   );
                 })}
                  {isLoading && (
-                    <div className="flex justify-start gap-2 animate-pulse-slow">
-                      <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center shrink-0 border border-purple-100 shadow-sm mt-1">
-                        <CosmicLogoPurple className="w-4 h-4" />
+                    <div className="flex justify-start gap-2 items-end animate-pulse-slow">
+                      <div className="w-7 h-7 rounded-full bg-white border border-purple-100 flex items-center justify-center shrink-0 shadow-sm">
+                        <CosmicLogo className="w-4 h-4" color="purple" />
                       </div>
                       <div className="bg-white px-4 py-2.5 rounded-xl rounded-bl-none border border-purple-100 shadow-md flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce [animation-duration:0.8s]"></span>
@@ -473,9 +554,9 @@ const AdminChat = () => {
                    >
                      <button 
                       onClick={() => loadSession(s.session_id)}
-                      className={`flex-grow text-left p-4 rounded-xl transition-all border ${activeSessionId === s.session_id ? 'bg-purple-600 text-white border-purple-600 shadow-lg' : 'bg-white text-slate-700 border-slate-100 hover:border-purple-200 hover:shadow-sm'}`}
+                      className={`flex-grow min-w-0 text-left p-4 rounded-xl transition-all border overflow-hidden ${activeSessionId === s.session_id ? 'bg-purple-600 text-white border-purple-600 shadow-lg' : 'bg-white text-slate-700 border-slate-100 hover:border-purple-200 hover:shadow-sm'}`}
                      >
-                       <p className="font-bold text-[13px] truncate pr-8">{s.title || "Cuộc trò chuyện"}</p>
+                       <p className="font-bold text-[13px] truncate pr-10 block">{s.title || "Cuộc trò chuyện"}</p>
                        <p className={`text-[10px] mt-1 ${activeSessionId === s.session_id ? 'text-purple-100' : 'text-slate-400'}`}>
                           {new Date(s.last_active).toLocaleString('vi-VN')}
                        </p>
@@ -505,6 +586,9 @@ const AdminChat = () => {
         @keyframes fade-in-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; } }
         .animate-pulse-slow { animation: pulse-slow 2s infinite ease-in-out; }
+
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .animate-blink { animation: blink 1s step-end infinite; }
         
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }

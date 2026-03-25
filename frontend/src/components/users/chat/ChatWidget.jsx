@@ -16,6 +16,7 @@ import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 import API_BASE_URL from '../../../utils/apiConfig';
 import { getBestToken } from '../../../utils/auth';
 import TypewriterText from './TypewriterText';
+import CosmicLogo from '../../common/CosmicLogo';
 
 const ChatWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -23,7 +24,9 @@ const ChatWidget = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessions, setSessions] = useState([]);
-  const [activeSessionId, setActiveSessionId] = useState(null); 
+  const [activeSessionId, setActiveSessionId] = useState(
+    localStorage.getItem('chat_session_id') || null
+  );
   const [showSessions, setShowSessions] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [isWide, setIsWide] = useState(false);
@@ -64,22 +67,27 @@ const ChatWidget = () => {
     if (isOpen) {
       isFirstLoad.current = true;
       if (token) {
-        if (messages.length === 0) fetchHistory(activeSessionId);
+        // Khôi phục phiên chat từ localStorage nếu có
+        const savedSession = localStorage.getItem('chat_session_id');
+        if (savedSession && messages.length === 0) {
+          fetchHistory(savedSession);
+        }
         fetchSessions();
       }
     }
   }, [isOpen]);
 
   useEffect(() => {
-    if (messages.length > 0) {
+    if (messages.length > 0 && isOpen) {
         if (isFirstLoad.current) {
-            scrollToBottom("auto");
+            // Sử dụng setTimeout 0 để đảm bảo container đã render xong chiều cao
+            setTimeout(() => scrollToBottom("auto"), 0);
             isFirstLoad.current = false;
         } else {
             scrollToBottom("smooth");
         }
     }
-  }, [messages]);
+  }, [messages, isOpen]);
 
   const fetchSessions = async () => {
     if (!token) return;
@@ -147,16 +155,15 @@ const ChatWidget = () => {
     const messageToSend = overrideMessage || input;
     if (!messageToSend.trim() || isLoading) return;
     
-    // Clear input if sending from input box
     if (!overrideMessage) setInput('');
 
     if (!token) {
-        setMessages(prev => [...prev, {
-            role: 'assistant',
-            message: 'Chào bạn! Bạn vui lòng đăng nhập để mình có thể hỗ trợ tra cứu đơn hàng và tư vấn kỹ hơn nhé! 😊',
-            thoi_gian: new Date().toISOString()
-        }]);
-        return;
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        message: 'Chào bạn! Bạn vui lòng đăng nhập để mình có thể hỗ trợ tra cứu đơn hàng và tư vấn kỹ hơn nhé! 😊',
+        thoi_gian: new Date().toISOString()
+      }]);
+      return;
     }
 
     const userMsg = { role: 'user', message: messageToSend, thoi_gian: new Date().toISOString() };
@@ -165,22 +172,80 @@ const ChatWidget = () => {
 
     try {
       const url = activeSessionId 
-        ? `${API_BASE_URL}/chat/customer?session_id=${activeSessionId}`
-        : `${API_BASE_URL}/chat/customer`;
-      
-      const res = await axios.post(url, { message: messageToSend }, {
-        headers: { Authorization: `Bearer ${token}` }
+        ? `${API_BASE_URL}/chat/customer/stream?session_id=${activeSessionId}`
+        : `${API_BASE_URL}/chat/customer/stream`;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: messageToSend }),
       });
-      
-      const aiReply = { ...res.data, isNew: true };
-      setMessages(prev => [...prev, aiReply]);
-      
-      // Nếu là session mới, cập nhật activeSessionId và reload sessions list
-      if (!activeSessionId && aiReply.session_id) {
-        setActiveSessionId(aiReply.session_id);
-        localStorage.setItem('chat_session_id', aiReply.session_id);
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let streamStarted = false;
+      let newSessionId = activeSessionId;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const raw = decoder.decode(value, { stream: true });
+        const lines = raw.split('\n');
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.session_id) newSessionId = data.session_id;
+            if (data.done) break;
+            if (data.chunk) {
+              fullText += data.chunk;
+              if (!streamStarted) {
+                // Chunk đầu tiên → ẩn loading dots, thêm tin nhắn AI đang stream
+                streamStarted = true;
+                setIsLoading(false);
+                setMessages(prev => [...prev, {
+                  role: 'assistant',
+                  message: fullText,
+                  thoi_gian: new Date().toISOString(),
+                  isStreaming: true,
+                }]);
+              } else {
+                // Cập nhật tin nhắn cuối (đang stream)
+                setMessages(prev => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = { ...updated[updated.length - 1], message: fullText };
+                  return updated;
+                });
+              }
+            }
+          } catch {}
+        }
+      }
+
+      // Đánh dấu stream hoàn thành
+      setMessages(prev => {
+        const updated = [...prev];
+        if (updated[updated.length - 1]?.isStreaming) {
+          updated[updated.length - 1] = { ...updated[updated.length - 1], isStreaming: false };
+        }
+        return updated;
+      });
+
+      // Cập nhật session mới
+      if (!activeSessionId && newSessionId) {
+        setActiveSessionId(newSessionId);
+        localStorage.setItem('chat_session_id', newSessionId);
         fetchSessions();
       }
+
     } catch (error) {
       setMessages(prev => [...prev, { 
         role: 'assistant', 
@@ -234,7 +299,7 @@ const ChatWidget = () => {
                 const rows = tableLines.slice(2).filter(l => l.includes('|')).map(l => l.split('|').filter(c => c.trim()).map(c => c.trim()));
 
                 result.push(
-                    <div key={`table-${tIdx}`} className="my-3 overflow-x-auto border border-slate-200 rounded-lg bg-white shadow-inner">
+                    <div key={`table-${tIdx}`} className="my-3 overflow-x-auto border border-blue-200 rounded-lg bg-white shadow-sm">
                         <table className="min-w-full text-[12px] border-collapse">
                             <thead>
                                 <tr className="bg-slate-100 border-b border-slate-200">
@@ -356,10 +421,7 @@ const ChatWidget = () => {
           </div>
 
           <button
-            onClick={() => {
-              handleNewChat(); // Bắt đầu phiên mới mỗi khi mở chatbot
-              setIsOpen(true);
-            }}
+            onClick={() => setIsOpen(true)}
             className="relative w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 transform hover:scale-110 active:scale-95 z-10 bg-blue-600 hover:bg-blue-700"
           >
             <ChatBubbleLeftRightIcon className="w-8 h-8 text-white" />
@@ -461,7 +523,6 @@ const ChatWidget = () => {
 
                   {messages.map((msg, idx) => (
                     <div key={idx} className={`flex items-end gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} animate-fade-in`}>
-                      {/* Ảnh đại diện (Avatar) */}
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden ${
                         msg.role === 'user' ? 'bg-blue-100 border border-blue-200' : 'bg-slate-100 border border-slate-200'
                       }`}>
@@ -475,21 +536,25 @@ const ChatWidget = () => {
                       {/* Khung tin nhắn */}
                       <div className={`${isWide ? 'max-w-[90%]' : 'max-w-[85%]'} px-4 py-2.5 rounded-2xl text-sm shadow-md transition-all duration-300 ${
                           msg.role === 'user'
-                            ? 'bg-blue-600 text-white rounded-br-none'
-                            : 'bg-white border border-slate-100 text-slate-700 rounded-bl-none'
+                            ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-br-none'
+                            : 'bg-white border border-blue-100 text-slate-700 rounded-bl-none shadow-sm'
                         }`}>
                         <div className="whitespace-pre-wrap leading-relaxed">
-                          {msg.role === 'assistant' && msg.isNew ? (
+                          {msg.role === 'assistant' && msg.isStreaming ? (
+                            // Đang stream: hiển thị nội dung đã có + con trỏ nhấp nháy
+                            <>
+                              {renderMessage(msg.message, msg.role)}
+                              <span className="inline-block w-0.5 h-4 bg-blue-500 ml-0.5 animate-blink align-middle" />
+                            </>
+                          ) : msg.role === 'assistant' && msg.isNew ? (
                             <TypewriterText 
                               text={msg.message} 
                               renderContent={(txt) => renderMessage(txt, msg.role)}
                               onCharTyped={() => {
-                                // Tự động cuộn nếu người dùng đang ở đáy
                                 if (!showScrollBtn) scrollToBottom("auto");
                               }}
                               onComplete={() => {
                                 msg.isNew = false;
-                                // Cuộn mượt một lần cuối khi gõ xong
                                 if (!showScrollBtn) scrollToBottom("smooth");
                               }}
                             />
@@ -509,7 +574,7 @@ const ChatWidget = () => {
                       <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
                         <img src="/images/banner/ai-avatar.png" alt="AI" className="w-full h-full object-cover" />
                       </div>
-                      <div className="bg-white border border-slate-100 px-4 py-3 rounded-2xl rounded-bl-none shadow-md flex gap-1.5 items-center">
+                      <div className="bg-white border border-blue-100 px-4 py-3 rounded-2xl rounded-bl-none shadow-sm flex gap-1.5 items-center">
                         <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-duration:0.8s]"></span>
                         <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.2s]"></span>
                         <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.4s]"></span>
@@ -579,32 +644,32 @@ const ChatWidget = () => {
                     <button
                       key={s.session_id}
                       onClick={() => loadSession(s.session_id)}
-                      className={`w-full text-left p-3 rounded-xl transition-all flex items-center gap-3 group ${
+                      className={`w-full text-left p-3 rounded-xl transition-all flex items-center gap-3 group relative overflow-hidden ${
                         activeSessionId === s.session_id 
                           ? 'bg-blue-600 text-white shadow-md' 
-                          : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+                          : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-100'
                       }`}
                     >
-                      <div className={`p-2 rounded-lg ${activeSessionId === s.session_id ? 'bg-white/20' : 'bg-blue-50 group-hover:bg-blue-100'}`}>
+                      <div className={`p-2 rounded-lg flex-shrink-0 ${activeSessionId === s.session_id ? 'bg-white/20' : 'bg-blue-50 group-hover:bg-blue-100'}`}>
                         <ChatBubbleLeftRightIcon className={`w-4 h-4 ${activeSessionId === s.session_id ? 'text-white' : 'text-blue-600'}`} />
                       </div>
-                      <div className="overflow-hidden flex-grow">
-                        <p className="text-sm font-medium truncate">{s.title || "Cuộc trò chuyện mới"}</p>
+                      <div className="overflow-hidden flex-grow min-w-0 pr-8">
+                        <p className="text-sm font-bold truncate">{s.title || "Cuộc trò chuyện mới"}</p>
                         <p className={`text-[10px] mt-0.5 ${activeSessionId === s.session_id ? 'text-blue-100' : 'text-slate-400'}`}>
                            Gần đây
                         </p>
                       </div>
-                      <button
-                        onClick={(e) => handleDeleteSession(e, s.session_id)}
-                        className={`p-1.5 rounded-lg transition-colors ${
-                          activeSessionId === s.session_id 
-                            ? 'hover:bg-white/20 text-white/70 hover:text-white' 
-                            : 'hover:bg-red-50 text-slate-300 hover:text-red-500'
-                        }`}
-                        title="Xóa cuộc trò chuyện"
-                      >
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
+                        <button
+                          onClick={(e) => handleDeleteSession(e, s.session_id)}
+                          className={`absolute right-3 p-1.5 rounded-lg transition-colors ${
+                            activeSessionId === s.session_id 
+                              ? 'hover:bg-white/20 text-white/70 hover:text-white' 
+                              : 'text-slate-300 hover:bg-red-50 hover:text-red-500 opacity-0 group-hover:opacity-100'
+                          }`}
+                          title="Xóa cuộc trò chuyện"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
                     </button>
                   ))
                 )}
@@ -620,11 +685,13 @@ const ChatWidget = () => {
         @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes ripple { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2.2); opacity: 0; } }
         @keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
         .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         .animate-slide-left { animation: slide-left 0.3s ease-out; }
         .animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
         .animate-ripple { animation: ripple 3s infinite cubic-bezier(0, 0, 0.2, 1); }
         .animate-pulse-slow { animation: pulse-slow 2s infinite ease-in-out; }
+        .animate-blink { animation: blink 0.8s step-end infinite; }
         
         /* Custom scrollbar cho cửa sổ chat */
         .overflow-y-auto::-webkit-scrollbar { width: 4px; }

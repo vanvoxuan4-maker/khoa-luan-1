@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
+from app.utils.text_utils import normalize_str
 import traceback
 from pydantic import BaseModel
 
@@ -46,6 +47,7 @@ class ReviewStatusUpdate(BaseModel):
 def get_admin_reviews(
     status: Optional[str] = None,
     stars: Optional[int] = None,
+    search: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     query = db.query(Danhgia)
@@ -55,7 +57,24 @@ def get_admin_reviews(
     if stars:
         query = query.filter(Danhgia.diem_danhgia == stars)
         
-    return query.order_by(Danhgia.ngay_lap.desc()).all()
+    reviews = query.order_by(Danhgia.ngay_lap.desc()).all()
+
+    if search:
+        norm_search = normalize_str(search)
+        filtered = []
+        for r in reviews:
+            # Check content
+            content_match = norm_search in normalize_str(r.viet_danhgia or "")
+            # Check user
+            user_match = norm_search in normalize_str(r.user.hovaten or "") if r.user else False
+            # Check product
+            product_match = norm_search in normalize_str(r.sanpham.ten_sanpham or "") if r.sanpham else False
+            
+            if content_match or user_match or product_match:
+                filtered.append(r)
+        return filtered
+
+    return reviews
 
 @router.put("/admin/reviews/{id}/status")
 def update_review_status(id: int, status_data: ReviewStatusUpdate, db: Session = Depends(get_db)):
@@ -152,8 +171,15 @@ class VoucherOut(BaseModel):
         from_attributes = True
 
 @router.get("/admin/vouchers", response_model=List[VoucherOut])
-def get_vouchers(db: Session = Depends(get_db)):
-    return db.query(Makhuyenmai).order_by(Makhuyenmai.ma_khuyenmai.desc()).all()
+def get_vouchers(search: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(Makhuyenmai).order_by(Makhuyenmai.ma_khuyenmai.desc())
+    vouchers = query.all()
+
+    if search:
+        norm_search = normalize_str(search)
+        vouchers = [v for v in vouchers if norm_search in normalize_str(v.ma_giamgia or "")]
+    
+    return vouchers
 
 # --- PUBLIC VOUCHERS FOR USERS ---
 @router.get("/vouchers/public", response_model=List[VoucherOut])

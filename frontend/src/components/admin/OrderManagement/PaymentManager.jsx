@@ -6,21 +6,42 @@ import { useNavigate } from 'react-router-dom';
 const PaymentManager = () => {
   const navigate = useNavigate();
   const [payments, setPayments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
 
   const [filterStatus, setFilterStatus] = useState('all');
 
+  // ─── DEBOUNCE SEARCH TERM (500ms) ──────────────────────────────────────────
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
   const fetchPayments = async () => {
+    setLoading(true);
     setRefreshing(true);
     try {
       const token = localStorage.getItem('admin_access_token');
-      const res = await axios.get(`${API_BASE_URL}/payment/all`, {
+      const params = new URLSearchParams();
+      if (debouncedSearch) params.append('search', debouncedSearch);
+      if (filterStatus !== 'all') {
+        // Map 'success' to include 'paid' for server-side filtering if needed,
+        // or ensure backend handles 'success' as 'success' OR 'paid'.
+        // For now, sending as is.
+        params.append('status', filterStatus);
+      }
+      
+      const res = await axios.get(`${API_BASE_URL}/payment/all?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPayments(res.data);
     } catch (err) {
-      console.error("Lỗi tải lịch sử thanh toán:", err);
+      console.error("Lỗi tải thanh toán:", err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -29,7 +50,7 @@ const PaymentManager = () => {
 
   useEffect(() => {
     fetchPayments();
-  }, []);
+  }, [debouncedSearch, filterStatus]); // Re-fetch when search term or filter status changes
 
   const formatMoney = (amount) => {
     return `${amount?.toLocaleString('vi-VN')} VND`;
@@ -40,14 +61,10 @@ const PaymentManager = () => {
     .filter(p => p.trang_thai === 'success' || p.trang_thai === 'paid')
     .reduce((sum, p) => sum + Number(p.thanh_tien), 0);
 
-  // Filter Logic
-  const filteredPayments = payments.filter(p => {
-    if (filterStatus === 'all') return true;
-    if (filterStatus === 'success') return p.trang_thai === 'success' || p.trang_thai === 'paid';
-    if (filterStatus === 'failed') return p.trang_thai === 'failed';
-    if (filterStatus === 'refunded') return p.trang_thai === 'refunded';
-    return p.trang_thai === filterStatus;
-  });
+  // Filter Logic - now primarily server-side, this is just for display if needed
+  // or if the server doesn't handle all filter types.
+  // Given the instruction to remove client-side logic, this will be simplified.
+  const filteredPayments = payments;
 
   const StatusBadge = ({ status }) => {
     const configs = {
@@ -129,45 +146,46 @@ const PaymentManager = () => {
           <FilterButton statusKey="refunded" label="Hoàn tiền" icon="↩️" />
           <FilterButton statusKey="failed" label="Đã hủy" icon="🚫" />
           {/* Refresh Button */}
-          <button
-            onClick={fetchPayments}
-            disabled={refreshing}
-            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all flex items-center gap-2 border bg-green-500 text-white border-green-500 hover:bg-green-600 shadow-md transform hover:scale-105 active:scale-95 shrink-0 ${refreshing ? 'opacity-70 cursor-not-allowed' : ''}`}
-            title="Làm mới danh sách"
-          >
-            <span className={refreshing ? 'animate-spin' : ''}>🔄</span>
-            <span className="whitespace-nowrap font-black">{refreshing ? 'Đang tải...' : 'Làm mới'}</span>
-          </button>
+        <button
+          onClick={fetchPayments}
+          disabled={refreshing || loading}
+          className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap shadow-sm bg-green-500 text-white hover:bg-green-600 hover:shadow-lg hover:scale-105 active:scale-95 ${refreshing || loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+          title="Làm mới danh sách"
+        >
+          <span className={`text-sm ${refreshing || loading ? 'animate-spin' : ''}`}>🔄</span>
+          {refreshing || loading ? 'Đang tải...' : 'Làm mới'}
+        </button>
         </div>
       </div>
 
       {/* TABLE */}
-      <div className="bg-white/80 backdrop-blur-md rounded-[3rem] shadow-xl shadow-blue-500/5 border border-white overflow-hidden">
-        {loading ? (
-          <div className="p-10 text-center text-blue-500 font-bold animate-pulse">🚀 Đang tải dữ liệu giao dịch...</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-separate border-spacing-0">
-              <thead className="bg-gradient-to-r from-amber-600 to-yellow-700 text-amber-50 text-[11px] uppercase font-black tracking-widest">
-                <tr className="divide-x divide-amber-200/40">
-                  <th className="py-8 px-6 text-center">ID_GD</th>
-                  <th className="py-8 px-6 text-center">Đơn Hàng</th>
-                  <th className="py-8 px-6 text-center">Ngân Hàng</th>
-                  <th className="py-8 px-6 text-center">Mã Giao Dịch</th>
-                  <th className="py-8 px-6 text-center">Thời gian</th>
-                  <th className="py-8 px-6 text-center">Ngày Hoàn Tiền</th>
-                  <th className="py-8 px-6 text-center">Số tiền</th>
-                  <th className="py-8 px-6 text-center">Mã Giảm Giá</th>
-                  <th className="py-8 px-6 text-center">PT TT</th>
-                  <th className="py-8 px-10 text-center">Trạng thái</th>
+      <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.07)] overflow-hidden border border-slate-100 relative min-h-[400px]">
+        {loading && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex flex-col items-center justify-center gap-3">
+             <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+             <span className="text-blue-600 font-black text-[10px] uppercase tracking-widest animate-pulse">Đang tìm kiếm giao dịch...</span>
+          </div>
+        )}
+        <div className="overflow-x-auto">
+            <table className="w-full text-left min-w-[1200px]">
+              <thead>
+                <tr className="bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[13px] font-semibold uppercase tracking-wide">
+                  <th className="py-4 px-4 text-center rounded-tl-xl w-24">ID_GD</th>
+                  <th className="py-4 px-4 text-center w-28">Đơn Hàng</th>
+                  <th className="py-4 px-4 text-center w-24">Ngân Hàng</th>
+                  <th className="py-4 px-4 text-center w-40">Mã Giao Dịch</th>
+                  <th className="py-4 px-4 text-center w-44">Thời gian</th>
+                  <th className="py-4 px-4 text-center w-36">Hoàn Tiền</th>
+                  <th className="py-4 px-4 text-center w-32">Số tiền</th>
+                  <th className="py-4 px-4 text-center w-32">Mã Giảm</th>
+                  <th className="py-4 px-4 text-center w-24">PT TT</th>
+                  <th className="py-4 px-4 text-center rounded-tr-xl w-36">Trạng thái</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filteredPayments.length > 0 ? filteredPayments.map((pay) => (
-                  <tr key={pay.ma_thanhtoan} className="hover:bg-blue-50/30 transition-colors">
-                    <td className="py-4 px-6 font-mono font-bold text-slate-400 text-xs whitespace-nowrap text-center">
-                      #{pay.ma_thanhtoan}
-                    </td>
+                  <tr key={pay.ma_thanhtoan} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group">
+                    <td className="py-4 px-4 text-center align-middle font-black text-blue-600 text-[13px]">{pay.ma_thanhtoan}</td>
                     <td className="py-4 px-6 whitespace-nowrap text-center">
                       <button
                         onClick={(e) => {
@@ -233,8 +251,7 @@ const PaymentManager = () => {
                 )}
               </tbody>
             </table>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );

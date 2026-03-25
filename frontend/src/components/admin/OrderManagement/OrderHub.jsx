@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import OrderManager from './OrderManager';
 import PaymentManager from './PaymentManager';
 import ReviewList from './ReviewList';
 
 const OrderHub = () => {
     const [searchParams, setSearchParams] = useSearchParams();
+    const location = useLocation();
     const activeTab = searchParams.get('tab') || 'orders';
     const [highlightOrderId, setHighlightOrderId] = useState(null);
 
@@ -17,7 +18,7 @@ const OrderHub = () => {
         } else {
             setHighlightOrderId(null);
         }
-    }, [searchParams]);
+    }, [searchParams, location.search]);
 
     const handleTabChange = (tabId) => {
         setSearchParams({ tab: tabId });

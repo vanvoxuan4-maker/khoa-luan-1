@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../../../utils/apiConfig';
-import { useLocation } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import OrderDetailModal from './OrderDetailModal';
 
 // --- THÔNG TIN SHOP & LOGO ---
@@ -71,26 +71,43 @@ export const PAYMENT_STATUS_MAP = {
 
 
 const OrderManager = ({ highlightOrderId }) => {
-  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [filterStatus, setFilterStatus] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [highlightedId, setHighlightedId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   const token = localStorage.getItem('admin_access_token');
 
-  const fetchOrders = async () => {
+  // ─── DEBOUNCE SEARCH TERM (500ms) ──────────────────────────────────────────
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  const fetchOrders = async (search = debouncedSearch) => {
     setRefreshing(true);
+    setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE_URL}/orders/all`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      
+      const res = await axios.get(`${API_BASE_URL}/orders/all?${params.toString()}`, { 
+        headers: { 'Authorization': `Bearer ${token}` } 
+      });
       setOrders(res.data);
     } catch (err) {
       console.error("❌ Lỗi tải đơn hàng:", err);
     } finally {
       setRefreshing(false);
+      setLoading(false);
     }
   };
 
@@ -155,63 +172,50 @@ const OrderManager = ({ highlightOrderId }) => {
 
   useEffect(() => {
     const init = async () => {
-      await fetchOrders();
+      await fetchOrders(debouncedSearch);
       await fetchProducts();
     };
     init();
-  }, []);
+  }, [debouncedSearch]);
 
-  // đŸ”„ UNIFIED: Handle both prop-based (from OrderHub) and URL-based (direct route) highlighting
+  // --- UNIFIED: Handle both prop-based (from OrderHub) and URL-based (direct route) highlighting ---
   useEffect(() => {
     if (orders.length > 0) {
+      const urlOrderId = searchParams.get('id');
       let targetId = null;
-      let shouldOpenModal = false;
 
-      // Priority 1: highlightOrderId prop (from OrderHub navigation)
-      if (highlightOrderId) {
-        targetId = highlightOrderId;
-        shouldOpenModal = false; // Only highlight, don't open modal
-      }
-      // Priority 2: URL query param (direct route /admin/orders?id=...)
-      else {
-        const params = new URLSearchParams(location.search);
-        const urlOrderId = params.get('id');
-        if (urlOrderId) {
-          targetId = parseInt(urlOrderId);
-          shouldOpenModal = true; // Open modal for direct URL access
-
-          // Clean URL to avoid re-opening on refresh
-          window.history.replaceState({}, '', '/admin/orders');
+      if (urlOrderId) {
+        targetId = parseInt(urlOrderId);
+        const order = orders.find(o => o.ma_don_hang === targetId);
+        if (order) {
+          setSelectedOrder(order);
+          setHighlightedId(targetId);
+          // Scroll to the order row
+          setTimeout(() => {
+            const element = document.querySelector(`[data-order-id="${targetId}"]`);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 300);
+          
+          // Clear ID from URL so next click on same ID triggers change
+          const newParams = new URLSearchParams(searchParams);
+          newParams.delete('id');
+          setSearchParams(newParams, { replace: true });
         }
-      }
-
-      // Execute highlight and scroll if we have a target
-      if (targetId) {
-        setHighlightedId(targetId);
-
-        // Open modal if needed (only for URL query params)
-        if (shouldOpenModal && products.length > 0) {
-          const order = orders.find(o => o.ma_don_hang === targetId);
-          if (order) {
+      } else if (highlightOrderId) {
+        setHighlightedId(highlightOrderId);
+        const order = orders.find(o => o.ma_don_hang === highlightOrderId);
+        if (order) {
             setSelectedOrder(order);
-          }
         }
-
-        // Scroll to the order row
-        setTimeout(() => {
-          const element = document.querySelector(`[data-order-id="${targetId}"]`);
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }, 300);
       }
     }
-  }, [highlightOrderId, orders, products]);
+  }, [highlightOrderId, orders, searchParams]);
 
   const filteredOrders = orders.filter(order => {
     const matchStatus = filterStatus === 'all' ? true : order.trang_thai === filterStatus;
-    const matchSearch = order.ma_don_hang.toString().includes(searchTerm) || order.ten_nguoi_nhan?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchStatus && matchSearch;
+    return matchStatus;
   });
 
   const FilterButton = ({ statusKey, label, icon }) => (
@@ -250,13 +254,13 @@ const OrderManager = ({ highlightOrderId }) => {
           <FilterButton statusKey="cancelled" label="Đã hủy" icon="❌" />
           {/* Refresh Button */}
           <button
-            onClick={fetchOrders}
-            disabled={refreshing}
-            className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap shadow-sm bg-green-500 text-white hover:bg-green-600 hover:shadow-lg hover:scale-105 active:scale-95 ${refreshing ? 'opacity-70 cursor-not-allowed' : ''}`}
+            onClick={() => fetchOrders(debouncedSearch)}
+            disabled={refreshing || loading}
+            className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap shadow-sm bg-green-500 text-white hover:bg-green-600 hover:shadow-lg hover:scale-105 active:scale-95 ${refreshing || loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             title="Làm mới danh sách"
           >
-            <span className={`text-sm ${refreshing ? 'animate-spin' : ''}`}>🔄</span>
-            {refreshing ? 'Đang làm mới...' : 'Làm mới'}
+            <span className={`text-sm ${refreshing || loading ? 'animate-spin' : ''}`}>🔄</span>
+            {refreshing || loading ? 'Đang tải...' : 'Làm mới'}
           </button>
         </div>
       </div>
@@ -273,7 +277,13 @@ const OrderManager = ({ highlightOrderId }) => {
       </div>
 
       {/* TABLE */}
-      <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.07)] overflow-hidden border border-slate-100">
+      <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.07)] overflow-hidden border border-slate-100 relative min-h-[400px]">
+        {loading && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex flex-col items-center justify-center gap-3">
+             <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+             <span className="text-blue-600 font-black text-[10px] uppercase tracking-widest animate-pulse">Đang tìm kiếm đơn hàng...</span>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-left min-w-[900px]">
             <thead>

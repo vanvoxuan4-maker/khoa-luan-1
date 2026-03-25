@@ -1,7 +1,7 @@
 import os
 import uuid
 import unicodedata
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case, or_
@@ -24,6 +24,7 @@ from app.schemas.product import (
     SanphamCreate, SanphamResponse, SanphamUpdate
 )
 from app.utils.product_utils import generate_random_product_code
+from app.utils.text_utils import normalize_str
 
 router = APIRouter()
 
@@ -277,20 +278,52 @@ def delete_sanpham(ma_sanpham: int, db: Session = Depends(get_db), admin: User =
 from typing import Optional
 
 
-# ---------- HELPER: chuẩn hóa chuỗi (bỏ dấu + lowercase) ----------
-def normalize_str(s: str) -> str:
-    """Chuyển 'Xe Đạp Raptor' → 'xe dap raptor' để so sánh không phân biệt dấu."""
-    return unicodedata.normalize('NFD', s).encode('ascii', 'ignore').decode('ascii').lower()
 
-def product_matches_search(product, keywords: list[str]) -> bool:
-    """Kiểm tra sản phẩm có khớp tất cả từ khóa không (không phân biệt dấu/hoa/thường)."""
-    fields = [
-        normalize_str(product.ten_sanpham or ''),
-        normalize_str(product.sanpham_code or ''),
-        normalize_str(product.mo_ta or ''),
-    ]
-    combined = ' '.join(fields)
-    return all(kw in combined for kw in keywords)
+def product_search_relevance(product, keywords: list[str]) -> tuple[bool, int]:
+    """
+    Tính điểm liên quan (Relevance Score) cực kỳ chính xác.
+    Ưu tiên: Khớp từ đầu > Khớp nguyên từ > Khớp một phần.
+    """
+    title_norm = normalize_str(product.ten_sanpham or '')
+    code_norm = normalize_str(product.sanpham_code or '')
+    desc_norm = normalize_str(product.mo_ta or '')
+    id_str = str(product.ma_sanpham)
+    
+    score = 0
+    all_matched = True
+    
+    for kw in keywords:
+        kw_matched = False
+        
+        # 1. ƯU TIÊN CAO NHẤT: Khớp trong Tiêu đề
+        if kw in title_norm:
+            kw_matched = True
+            score += 10 # Điểm cơ bản cho tiêu đề
+            # Thưởng nếu khớp từ đầu tiêu đề
+            if title_norm.startswith(kw):
+                score += 15
+            # Thưởng nếu khớp nguyên một từ (tránh khớp kiểu 'xe' trong 'xem')
+            if f" {kw} " in f" {title_norm} ":
+                score += 10
+
+        # 2. ƯU TIÊN TRUNG BÌNH: Mã xe & ID
+        if kw == code_norm or kw == id_str:
+            score += 30 # Khớp chính xác mã/ID thì đẩy lên đầu luôn
+            kw_matched = True
+        elif kw in code_norm:
+            score += 15
+            kw_matched = True
+
+        # 3. ƯU TIÊN THẤP: Mô tả
+        if kw in desc_norm:
+            score += 1
+            kw_matched = True
+            
+        if not kw_matched:
+            all_matched = False
+            break
+            
+    return all_matched, score
 
 @router.get("/sanpham/count")
 def count_sanphams(
@@ -306,17 +339,7 @@ def count_sanphams(
     query = db.query(Sanpham).filter(Sanpham.is_active == True)
     if discounted_only:
         query = query.filter(Sanpham.gia_tri_giam > 0)
-    if search and search.strip():
-        # B1: SQL ilike trên tên + mã xe (lọc sơ bộ, nhanh)
-        words = search.strip().split()
-        for word in words:
-            word_pat = f"%{word}%"
-            query = query.filter(
-                or_(
-                    Sanpham.ten_sanpham.ilike(word_pat),
-                    Sanpham.sanpham_code.ilike(word_pat),
-                )
-            )
+    # (Lưu ý: Lọc từ khóa search sẽ được thực hiện bằng Python ở bước sau để đảm bảo khớp dấu tiếng Việt)
     if category_id is not None:
         query = query.filter(Sanpham.ma_danhmuc == category_id)
     if brand_id is not None:
@@ -341,7 +364,7 @@ def count_sanphams(
     # B2: Python-level lọc để khớp dấu tiếng Việt (đap → đạp)
     if search and search.strip():
         keywords = [normalize_str(w) for w in search.strip().split() if w]
-        all_products = [p for p in all_products if product_matches_search(p, keywords)]
+        all_products = [p for p in all_products if product_search_relevance(p, keywords)[0]]
 
     return {"total": len(all_products)}
 
@@ -368,18 +391,7 @@ def get_sanphams(
     if discounted_only:
         query = query.filter(Sanpham.gia_tri_giam > 0)
 
-    # 1. Tìm kiếm theo tên + mã xe (SQL ilike để lọc sơ bộ)
-    if search and search.strip():
-        words = search.strip().split()
-        for word in words:
-            word_pat = f"%{word}%"
-            query = query.filter(
-                or_(
-                    Sanpham.ten_sanpham.ilike(word_pat),
-                    Sanpham.sanpham_code.ilike(word_pat),
-                )
-            )
-
+    # 1. (Bỏ qua SQL ilike để Python xử lý chuẩn hóa tiếng Việt chính xác hơn ở bước sau)
     # 2. Lọc theo Danh mục
     if category_id is not None:
         query = query.filter(Sanpham.ma_danhmuc == category_id)
@@ -418,11 +430,22 @@ def get_sanphams(
         query = query.order_by(Sanpham.ngay_lap.desc())
 
     if search and search.strip():
-        # Khi có tìm kiếm: lấy toàn bộ kết quả SQL (không limit) để Python lọc dấu
+        # Khi có tìm kiếm: lấy toàn bộ kết quả SQL (không limit) để Python lọc dấu và tính điểm
         keywords = [normalize_str(w) for w in search.strip().split() if w]
         all_results = query.all()
-        filtered = [p for p in all_results if product_matches_search(p, keywords)]
-        # Áp dụng phân trang SAU KHI lọc Python
+        
+        # Lọc và tính điểm liên quan
+        scored = []
+        for p in all_results:
+            matched, score = product_search_relevance(p, keywords)
+            if matched:
+                scored.append((p, score))
+        
+        # Sắp xếp theo điểm Score giảm dần (Độ liên quan cao nhất lên đầu)
+        # Nếu điểm bằng nhau thì xếp theo ngày mới nhất
+        scored.sort(key=lambda x: (x[1], x[0].ngay_lap if x[0].ngay_lap else 0), reverse=True)
+        
+        filtered = [x[0] for x in scored]
         results = filtered[skip: skip + limit]
     else:
         # Không có tìm kiếm: dùng DB-level offset/limit (nhanh hơn)

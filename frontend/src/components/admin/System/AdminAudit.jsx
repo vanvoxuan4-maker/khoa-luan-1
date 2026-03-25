@@ -12,7 +12,8 @@ const AdminAudit = () => {
         action_filter: '',
         resource_filter: '',
         date_from: '',
-        date_to: ''
+        date_to: '',
+        search: ''
     });
     const [pagination, setPagination] = useState({
         skip: 0,
@@ -80,7 +81,8 @@ const AdminAudit = () => {
                 ...(debouncedFilters.action_filter && { action_filter: debouncedFilters.action_filter }),
                 ...(debouncedFilters.resource_filter && { resource_filter: debouncedFilters.resource_filter }),
                 ...(debouncedFilters.date_from && { date_from: debouncedFilters.date_from }),
-                ...(debouncedFilters.date_to && { date_to: debouncedFilters.date_to })
+                ...(debouncedFilters.date_to && { date_to: debouncedFilters.date_to }),
+                ...(debouncedFilters.search && { search: debouncedFilters.search })
             });
 
             const res = await axios.get(`${API_BASE_URL}/audit/my-logs?${params}`, {
@@ -172,8 +174,18 @@ const AdminAudit = () => {
 
             {/* Filters */}
             <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-                <h2 className="text-lg font-bold text-gray-800 mb-4">🔍 Bộ lọc</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <h2 className="text-lg font-bold text-gray-800 mb-4">🔍 Bộ lọc & Tìm kiếm</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Từ khóa</label>
+                        <input
+                            type="text"
+                            placeholder="Tìm trong mô tả..."
+                            value={filters.search}
+                            onChange={(e) => handleFilterChange('search', e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">Hành động</label>
                         <select
@@ -231,8 +243,8 @@ const AdminAudit = () => {
 
                 <button
                     onClick={() => {
-                        setFilters({ action_filter: '', resource_filter: '', date_from: '', date_to: '' });
-                        setPagination({ skip: 0, limit: 5 });
+                        setFilters({ action_filter: '', resource_filter: '', date_from: '', date_to: '', search: '' });
+                        setPagination({ skip: 0, limit: 8 });
                     }}
                     className="mt-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold"
                 >
@@ -240,94 +252,123 @@ const AdminAudit = () => {
                 </button>
             </div>
 
-            {/* Logs List */}
-            {auditLogs.length === 0 ? (
-                <div className="bg-white rounded-2xl p-12 text-center border-2 border-dashed border-gray-200">
-                    <div className="text-6xl mb-4">📝</div>
-                    <h2 className="text-xl font-bold text-gray-800 mb-2">Chưa có hoạt động nào</h2>
-                    <p className="text-gray-500">Các hành động của bạn sẽ được ghi lại tại đây</p>
-                </div>
-            ) : (
-                <>
-                    <div className="space-y-4 mb-6">
-                        {auditLogs.map((log, idx) => (
-                            <div
-                                key={idx}
-                                className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all border border-gray-100 cursor-pointer"
-                                onClick={() => openDetailModal(log)}
-                            >
-                                <div className="flex items-start justify-between gap-4">
-                                    <div className="flex items-start gap-4 flex-grow">
-                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${getActionColor(log.action)}`}>
-                                            {getActionIcon(log.action)}
-                                        </div>
-                                        <div className="flex-grow">
-                                            <div className="flex items-center gap-3 mb-2 flex-wrap">
-                                                <span className={`px-3 py-1 rounded-lg text-xs font-black uppercase ${getActionColor(log.action)}`}>
-                                                    {log.action}
-                                                </span>
-                                                {log.resource_type && (
-                                                    <span className="px-3 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-600">
+            {/* Logs List Table */}
+            <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.07)] overflow-hidden border border-slate-100 mb-6">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left min-w-[1000px]">
+                        <thead>
+                            <tr className="bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[13px] font-semibold uppercase tracking-wide">
+                                <th className="py-4 px-4 text-center rounded-tl-xl w-44">Thời gian</th>
+                                <th className="py-4 px-4 text-center w-32">Hành động</th>
+                                <th className="py-4 px-4 text-center w-36">Tài nguyên</th>
+                                <th className="py-4 px-4 text-left">Mô tả hoạt động</th>
+                                <th className="py-4 px-4 text-center w-32">IP Address</th>
+                                <th className="py-4 px-4 text-center rounded-tr-xl w-32">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {auditLogs.length === 0 ? (
+                                <tr>
+                                    <td colSpan="6" className="py-20 text-center text-slate-400 font-bold uppercase tracking-widest opacity-50">
+                                        Chưa có hoạt động nào
+                                    </td>
+                                </tr>
+                            ) : (
+                                auditLogs.map((log, idx) => (
+                                    <tr 
+                                        key={idx} 
+                                        className="border-b border-slate-100 hover:bg-slate-50 transition-colors group cursor-pointer"
+                                        onClick={() => openDetailModal(log)}
+                                    >
+                                        <td className="py-4 px-4 text-center align-middle whitespace-nowrap">
+                                            <div className="text-[13px] font-bold text-slate-600">
+                                                {new Date(log.timestamp).toLocaleDateString('vi-VN')}
+                                            </div>
+                                            <div className="text-[11px] font-medium text-slate-400">
+                                                {new Date(log.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                            </div>
+                                        </td>
+                                        <td className="py-4 px-4 text-center align-middle">
+                                            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border shadow-sm inline-block ${getActionColor(log.action)}`}>
+                                                {getActionIcon(log.action)} {log.action}
+                                            </span>
+                                        </td>
+                                        <td className="py-4 px-4 text-center align-middle">
+                                            {log.resource_type && (
+                                                <div className="flex flex-col items-center">
+                                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 text-purple-600 border border-purple-100 uppercase">
                                                         {log.resource_type}
                                                     </span>
-                                                )}
-                                                <span className="text-sm text-gray-500 font-medium">
-                                                    {new Date(log.timestamp).toLocaleString('vi-VN')}
-                                                </span>
-                                            </div>
-                                            <p className="text-base font-bold text-gray-800 mb-1">{log.description}</p>
-                                            {log.ip_address && (
-                                                <p className="text-xs text-gray-400 mt-2">IP: {log.ip_address}</p>
+                                                    {log.resource_id && (
+                                                        <span className="text-[9px] font-mono text-slate-400 mt-1">ID: {log.resource_id}</span>
+                                                    )}
+                                                </div>
                                             )}
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        <button
-                                            onClick={(e) => deleteLog(e, log.ma_log)}
-                                            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                                            title="Xóa bản ghi này"
-                                        >
-                                            🗑️
-                                        </button>
-                                        <button className="text-blue-600 hover:text-blue-800 font-semibold text-sm whitespace-nowrap">
-                                            Chi tiết →
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                                        </td>
+                                        <td className="py-4 px-4 align-middle text-left">
+                                            <p className="text-[13px] font-semibold text-slate-700 leading-snug line-clamp-1 group-hover:text-blue-600 transition-colors">
+                                                {log.description}
+                                            </p>
+                                        </td>
+                                        <td className="py-4 px-4 text-center align-middle font-mono text-[11px] text-slate-400">
+                                            {log.ip_address || "---"}
+                                        </td>
+                                        <td className="py-4 px-4 text-center align-middle">
+                                            <div className="flex justify-center items-center gap-2">
+                                                <button 
+                                                    className="w-8 h-8 rounded-lg bg-white border border-slate-100 text-blue-600 hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center font-bold text-sm"
+                                                    title="Chi tiết"
+                                                >
+                                                    👁️
+                                                </button>
+                                                <button
+                                                    onClick={(e) => deleteLog(e, log.ma_log)}
+                                                    className="w-8 h-8 rounded-lg bg-white border border-slate-100 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center font-bold text-sm"
+                                                    title="Xóa"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
 
-                    {/* Pagination */}
-                    <div className="flex justify-between items-center bg-white rounded-xl shadow-md p-4">
-                        <button
-                            onClick={() => handlePageChange('prev')}
-                            disabled={pagination.skip === 0}
-                            className={`px-4 py-2 rounded-lg font-semibold ${pagination.skip === 0
-                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                : 'bg-blue-600 text-white hover:bg-blue-700'
-                                }`}
-                        >
-                            ← Trang trước
-                        </button>
+                {/* Pagination (Inside container) */}
+                <div className="flex justify-between items-center bg-slate-50/50 border-t border-slate-100 p-4">
+                    <button
+                        onClick={() => handlePageChange('prev')}
+                        disabled={pagination.skip === 0}
+                        className={`group flex items-center gap-2 px-4 py-2 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all border ${pagination.skip === 0
+                            ? 'bg-white text-slate-300 border-slate-100 cursor-not-allowed'
+                            : 'bg-white text-blue-600 border-blue-200 hover:bg-blue-600 hover:text-white hover:border-blue-600 shadow-sm'
+                            }`}
+                    >
+                        <span className="text-sm">←</span> Trước
+                    </button>
 
-                        <span className="text-gray-600 font-medium">
-                            Hiển thị {pagination.skip + 1} - {pagination.skip + auditLogs.length}
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                        <span className="text-slate-500 font-bold text-xs uppercase tracking-widest">
+                            {pagination.skip + 1} - {pagination.skip + auditLogs.length}
                         </span>
-
-                        <button
-                            onClick={() => handlePageChange('next')}
-                            disabled={auditLogs.length < pagination.limit}
-                            className={`px-4 py-2 rounded-lg font-semibold ${auditLogs.length < pagination.limit
-                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                : 'bg-blue-600 text-white hover:bg-blue-700'
-                                }`}
-                        >
-                            Trang sau →
-                        </button>
                     </div>
-                </>
-            )}
+
+                    <button
+                        onClick={() => handlePageChange('next')}
+                        disabled={auditLogs.length < pagination.limit}
+                        className={`group flex items-center gap-2 px-4 py-2 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all border ${auditLogs.length < pagination.limit
+                            ? 'bg-white text-slate-300 border-slate-100 cursor-not-allowed'
+                            : 'bg-white text-blue-600 border-blue-200 hover:bg-blue-600 hover:text-white hover:border-blue-600 shadow-sm'
+                            }`}
+                    >
+                        Sau <span className="text-sm">→</span>
+                    </button>
+                </div>
+            </div>
 
             {/* Detail Modal */}
             {showDetailModal && selectedLog && (

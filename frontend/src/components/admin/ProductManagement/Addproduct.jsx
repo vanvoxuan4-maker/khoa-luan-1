@@ -24,19 +24,19 @@ const CinemaSelect = ({ label, options, value, onChange, placeholder, icon }) =>
 
   return (
     <div className="relative" ref={containerRef}>
-      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block px-1">{label}</label>
+      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block px-1">{label}</label>
       <div
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full h-11 px-4 bg-[#0b1120] border ${isOpen ? 'border-orange-500 shadow-lg shadow-orange-500/20' : 'border-slate-800'} rounded-lg font-bold text-white cursor-pointer transition-all flex items-center justify-between group active:scale-[0.98] text-sm`}
+        className={`w-full h-11 px-4 bg-white border ${isOpen ? 'border-orange-500 shadow-md shadow-orange-500/10' : 'border-slate-200'} rounded-lg font-bold text-slate-800 cursor-pointer transition-all flex items-center justify-between group active:scale-[0.98] text-sm hover:border-slate-300`}
       >
         <span className="truncate uppercase tracking-wider">
           {selectedOption ? selectedOption.label : placeholder}
         </span>
-        <span className={`transition-transform duration-300 ${isOpen ? 'rotate-180 text-orange-500' : 'text-slate-500'}`}>▼</span>
+        <span className={`transition-transform duration-300 ${isOpen ? 'rotate-180 text-orange-500' : 'text-slate-400'}`}>▼</span>
       </div>
 
       {isOpen && (
-        <div className="absolute top-[calc(100%+8px)] left-0 w-full bg-[#111827] border border-slate-800 rounded-xl shadow-2xl z-[100] overflow-hidden animate-fade-in-down origin-top custom-scrollbar-dark max-h-[250px] overflow-y-auto">
+        <div className="absolute top-[calc(100%+8px)] left-0 w-full bg-white border border-slate-200 rounded-xl shadow-2xl z-[100] overflow-hidden animate-fade-in-down origin-top custom-scrollbar-light max-h-[250px] overflow-y-auto">
           <div className="py-2">
             {options.map((opt) => (
               <div
@@ -45,14 +45,14 @@ const CinemaSelect = ({ label, options, value, onChange, placeholder, icon }) =>
                   onChange(opt.value);
                   setIsOpen(false);
                 }}
-                className={`px-4 py-2.5 text-xs font-bold uppercase tracking-widest cursor-pointer transition-all border-b border-white/[0.02] last:border-none
-                  ${value === opt.value ? 'bg-orange-500/10 text-orange-500 border-l-2 border-l-orange-500' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
+                className={`px-4 py-2.5 text-xs font-bold uppercase tracking-widest cursor-pointer transition-all border-b border-slate-50 last:border-none
+                  ${value === opt.value ? 'bg-orange-50 text-orange-600 border-l-2 border-l-orange-500' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
               >
                 {opt.label}
               </div>
             ))}
             {options.length === 0 && (
-              <div className="px-4 py-8 text-center text-[10px] font-bold text-slate-600 uppercase tracking-widest italic opacity-50">
+              <div className="px-4 py-8 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest italic opacity-50">
                 Không có dữ liệu
               </div>
             )}
@@ -364,22 +364,22 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
   }, [formData.gia, formData.gia_tri_giam]);
 
   return (
-    <div className="min-h-screen bg-[#0b1120] text-slate-200 font-sans pb-24 relative">
+    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-24 relative">
       {/* HEADER */}
       <div className="max-w-[1400px] mx-auto px-6 py-8 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
             <span className="text-orange-500">🚲</span>
             {isEditMode ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-slate-500 text-sm mt-1">
             {isEditMode ? `Đang chỉnh sửa mã: ${editProduct.sanpham_code}` : 'Quản lý kho hàng và thông tin xe đạp của bạn'}
           </p>
         </div>
         <button
           type="button"
           onClick={onCancel}
-          className="p-2 hover:bg-white/5 rounded-lg transition-colors text-slate-400 hover:text-white"
+          className="p-2 hover:bg-slate-200 rounded-lg transition-colors text-slate-400 hover:text-slate-900"
         >
           <span className="text-2xl">✕</span>
         </button>
@@ -390,15 +390,15 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
           {/* LEFT COLUMN (70%) */}
           <div className="lg:col-span-7 space-y-8">
             {/* Basic Info Card */}
-            <div className="bg-[#111827] border border-slate-800 rounded-xl p-6 shadow-xl shadow-black/20">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-orange-500 mb-6 flex items-center gap-2">
+            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-orange-600 mb-6 flex items-center gap-2">
                 📦 Thông tin cơ bản
               </h2>
               <div className="space-y-6">
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Tên Sản Phẩm <span className="text-orange-500">*</span></label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Tên Sản Phẩm <span className="text-orange-500">*</span></label>
                   <input
-                    className="w-full h-11 px-4 bg-[#0b1120] border border-slate-800 rounded-lg text-white outline-none focus:border-orange-500 transition-all placeholder:text-slate-600"
+                    className="w-full h-11 px-4 bg-white border border-slate-200 rounded-lg text-slate-900 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/5 transition-all placeholder:text-slate-300"
                     value={formData.ten_sanpham}
                     onChange={(e) => setFormData({ ...formData, ten_sanpham: e.target.value })}
                     required
@@ -408,10 +408,10 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="md:col-span-1">
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Mã Sản Phẩm <span className="text-orange-500">*</span></label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Mã Sản Phẩm <span className="text-orange-500">*</span></label>
                     <div className="relative">
                       <input
-                        className="w-full h-11 px-4 bg-[#0b1120] border border-slate-800 rounded-lg text-white outline-none focus:border-orange-500 transition-all uppercase"
+                        className="w-full h-11 px-4 bg-white border border-slate-200 rounded-lg text-slate-900 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/5 transition-all uppercase"
                         value={formData.sanpham_code}
                         onChange={(e) => setFormData({ ...formData, sanpham_code: (e.target.value || '').toUpperCase() })}
                         required
@@ -419,7 +419,7 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
                       <button
                         type="button"
                         onClick={fetchGeneratedCode}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-500 hover:text-orange-500 transition-colors"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-orange-500 transition-colors"
                         title="Tạo mã ngẫu nhiên"
                       >
                         🔄
@@ -449,34 +449,34 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
             </div>
 
             {/* Bicycle Attributes Card */}
-            <div className="bg-[#111827] border border-slate-800 rounded-xl p-6 shadow-xl shadow-black/20">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-orange-500 mb-6 flex items-center gap-2">
+            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-orange-600 mb-6 flex items-center gap-2">
                 🚲 Đặc tính kỹ thuật
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Size Bánh (Inch)</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Size Bánh (Inch)</label>
                   <input
                     type="number"
-                    className="w-full h-11 px-4 bg-[#0b1120] border border-slate-800 rounded-lg text-white outline-none focus:border-orange-500 transition-all"
+                    className="w-full h-11 px-4 bg-white border border-slate-200 rounded-lg text-slate-900 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/5 transition-all placeholder:text-slate-300"
                     value={formData.size_banh_xe}
                     onChange={(e) => setFormData({ ...formData, size_banh_xe: e.target.value })}
                     placeholder="24, 26, 29..."
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Loại Khung</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Loại Khung</label>
                   <input
-                    className="w-full h-11 px-4 bg-[#0b1120] border border-slate-800 rounded-lg text-white outline-none focus:border-orange-500 transition-all uppercase"
+                    className="w-full h-11 px-4 bg-white border border-slate-200 rounded-lg text-slate-900 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/5 transition-all uppercase placeholder:text-slate-300"
                     value={formData.size_khung}
                     onChange={(e) => setFormData({ ...formData, size_khung: e.target.value })}
-                    placeholder="XS, S, M, L..."
+                    placeholder="Thép, Carbon, ..."
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Bảng Màu</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Bảng Màu</label>
                   <input
-                    className="w-full h-11 px-4 bg-[#0b1120] border border-slate-800 rounded-lg text-white outline-none focus:border-orange-500 transition-all uppercase"
+                    className="w-full h-11 px-4 bg-white border border-slate-200 rounded-lg text-slate-900 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/5 transition-all uppercase placeholder:text-slate-300"
                     value={formData.mau}
                     onChange={(e) => setFormData({ ...formData, mau: e.target.value })}
                     placeholder="Đỏ, Đen, Xanh..."
@@ -485,16 +485,16 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
               </div>
 
               {/* Specs Grid */}
-              <div className="mt-8 pt-8 border-t border-slate-800 px-1">
+              <div className="mt-8 pt-8 border-t border-slate-100 px-1">
                 <div
                   className="flex items-center justify-between mb-6 cursor-pointer group/spec-header select-none"
                   onClick={() => setIsTechOpen(!isTechOpen)}
                 >
                   <div className="flex items-center gap-3">
-                    <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 group-hover/spec-header:text-orange-500 transition-colors flex items-center gap-2">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 group-hover/spec-header:text-orange-500 transition-colors flex items-center gap-2">
                       Thông số lắp ráp
                     </h3>
-                    <span className={`text-[10px] transition-transform duration-300 ${isTechOpen ? 'rotate-180 text-orange-500' : 'text-slate-500'}`}>
+                    <span className={`text-[10px] transition-transform duration-300 ${isTechOpen ? 'rotate-180 text-orange-500' : 'text-slate-300'}`}>
                       ▼
                     </span>
                   </div>
@@ -506,7 +506,7 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
                         e.stopPropagation();
                         setSpecs([...specs, { ten: '', gia_tri: '' }]);
                       }}
-                      className="text-[10px] font-black uppercase tracking-widest text-orange-500 hover:text-orange-400 transition-colors bg-orange-500/10 px-3 py-1 rounded-md"
+                      className="text-[10px] font-black uppercase tracking-widest text-orange-600 hover:text-orange-500 transition-colors bg-orange-50 px-3 py-1.5 rounded-md"
                     >
                       + Thêm dòng mới
                     </button>
@@ -519,7 +519,7 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
                       <div key={index} className="flex flex-col gap-1 group/spec">
                         <div className="flex items-center justify-between">
                           <input
-                            className="w-full bg-transparent border-none text-[10px] font-black text-slate-500 uppercase tracking-widest p-0 focus:ring-0 placeholder:text-slate-700"
+                            className="w-full bg-transparent border-none text-[10px] font-black text-slate-400 uppercase tracking-widest p-0 focus:ring-0 placeholder:text-slate-200"
                             placeholder="TÊN THÔNG SỐ"
                             value={spec.ten}
                             onChange={(e) => {
@@ -528,10 +528,10 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
                               setSpecs(n);
                             }}
                           />
-                          <button type="button" onClick={() => setSpecs(specs.filter((_, i) => i !== index))} className="text-slate-700 hover:text-red-500 opacity-0 group-hover/spec:opacity-100 transition-all text-xs">✕</button>
+                          <button type="button" onClick={() => setSpecs(specs.filter((_, i) => i !== index))} className="text-slate-300 hover:text-red-500 opacity-0 group-hover/spec:opacity-100 transition-all text-xs">✕</button>
                         </div>
                         <input
-                          className="w-full bg-transparent border-b border-slate-800 py-1 text-sm font-medium text-slate-300 focus:border-orange-500/50 outline-none transition-all placeholder:text-slate-800"
+                          className="w-full bg-transparent border-b border-slate-100 py-1.5 text-sm font-medium text-slate-700 focus:border-orange-500/50 outline-none transition-all placeholder:text-slate-300"
                           placeholder="Giá trị chi tiết..."
                           value={spec.gia_tri}
                           onChange={(e) => {
@@ -546,21 +546,21 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
                 ) : (
                   <div
                     onClick={() => setIsTechOpen(true)}
-                    className="py-4 bg-[#0b1120] border border-dashed border-slate-800 rounded-lg flex items-center justify-center cursor-pointer hover:border-orange-500/50 transition-all"
+                    className="py-5 bg-slate-50 border border-dashed border-slate-200 rounded-lg flex items-center justify-center cursor-pointer hover:border-orange-300 transition-all group/expand"
                   >
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Nhấn để nhập Chi tiết phụ tùng ({specs.length} mục)</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover/expand:text-orange-500">Nhấn để nhập Chi tiết phụ tùng ({specs.length} mục)</span>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Description Card */}
-            <div className="bg-[#111827] border border-slate-800 rounded-xl p-6 shadow-xl shadow-black/20">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-orange-500 mb-6 flex items-center gap-2">
+            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-orange-600 mb-6 flex items-center gap-2">
                 🖋️ Mô tả sản phẩm
               </h2>
               <textarea
-                className="w-full min-h-[160px] bg-[#0b1120] border border-slate-800 rounded-lg p-4 text-slate-300 text-sm leading-relaxed outline-none focus:border-orange-500 transition-all placeholder:text-slate-700"
+                className="w-full min-h-[160px] bg-white border border-slate-100 rounded-lg p-4 text-slate-700 text-sm leading-relaxed outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/5 transition-all placeholder:text-slate-200 shadow-inner"
                 placeholder="Mô tả các đặc điểm nổi bật và trải nghiệm lái xe..."
                 value={formData.mo_ta}
                 onChange={(e) => setFormData({ ...formData, mo_ta: e.target.value })}
@@ -571,36 +571,36 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
           {/* RIGHT COLUMN (30%) */}
           <div className="lg:col-span-3 space-y-8">
             {/* Pricing Card */}
-            <div className="bg-[#111827] border border-slate-800 rounded-xl p-6 shadow-xl shadow-black/20">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-orange-500 mb-6 flex items-center gap-2">
+            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-orange-600 mb-6 flex items-center gap-2">
                 💰 Giá bán
               </h2>
               <div className="space-y-6">
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Giá Niêm Yết (VND)</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Giá Niêm Yết (VND)</label>
                   <input
                     type="text"
-                    className="w-full h-11 px-4 bg-[#0b1120] border border-slate-800 rounded-lg text-white font-bold outline-none focus:border-orange-500 transition-all text-lg"
+                    className="w-full h-11 px-4 bg-white border border-slate-200 rounded-lg text-slate-900 font-bold outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/5 transition-all text-lg shadow-sm"
                     value={formData.gia}
                     onChange={(e) => setFormData({ ...formData, gia: e.target.value })}
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Giảm Giá (%)</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Giảm Giá (%)</label>
                   <input
                     type="number"
-                    className="w-full h-11 px-4 bg-[#0b1120] border border-slate-800 rounded-lg text-white font-bold outline-none focus:border-orange-500 transition-all"
+                    className="w-full h-11 px-4 bg-white border border-slate-200 rounded-lg text-slate-900 font-bold outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/5 transition-all"
                     value={formData.gia_tri_giam}
                     onChange={(e) => setFormData({ ...formData, gia_tri_giam: e.target.value })}
                   />
                 </div>
-                <div className="pt-4 border-t border-slate-800">
+                <div className="pt-4 border-t border-slate-100">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Giá cuối cùng</span>
-                    <span className="text-[10px] px-2 py-0.5 bg-orange-500/10 text-orange-500 rounded font-bold">SALE</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Giá cuối cùng</span>
+                    <span className="text-[10px] px-2 py-0.5 bg-orange-100 text-orange-600 rounded font-bold">SALE</span>
                   </div>
-                  <div className="text-2xl font-black text-orange-500">
+                  <div className="text-2xl font-black text-orange-600">
                     {finalPrice.toLocaleString('vi-VN')} <span className="text-sm font-bold">VND</span>
                   </div>
                 </div>
@@ -608,23 +608,23 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
             </div>
 
             {/* Status & Inventory Card */}
-            <div className="bg-[#111827] border border-slate-800 rounded-xl p-6 shadow-xl shadow-black/20">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-orange-500 mb-6 flex items-center gap-2">
+            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-orange-600 mb-6 flex items-center gap-2">
                 ⚙️ Trạng thái & Kho
               </h2>
               <div className="space-y-6">
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Số Lượng Tồn Kho</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Số Lượng Tồn Kho</label>
                   <input
                     type="number"
-                    className="w-full h-11 px-4 bg-[#0b1120] border border-slate-800 rounded-lg text-white font-bold outline-none focus:border-orange-500 transition-all"
+                    className="w-full h-11 px-4 bg-white border border-slate-200 rounded-lg text-slate-900 font-bold outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/5 transition-all"
                     value={formData.ton_kho}
                     onChange={(e) => setFormData({ ...formData, ton_kho: e.target.value })}
                     required
                   />
                 </div>
                 <div className="pt-4 flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Hiển thị sản phẩm</span>
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Hiển thị sản phẩm</span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -632,7 +632,7 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
                       checked={formData.is_active}
                       onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                     />
-                    <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500 shadow-inner"></div>
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-200 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500 shadow-inner"></div>
                   </label>
                 </div>
               </div>
@@ -641,18 +641,18 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
         </div>
 
         {/* BOTTOM SECTION: IMAGE UPLOAD */}
-        <div className="mt-8 mb-12 bg-[#111827] border border-slate-800 rounded-xl p-8 shadow-xl shadow-black/20">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-orange-500 mb-8 flex items-center gap-2">
+        <div className="mt-8 mb-12 bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-orange-600 mb-8 flex items-center gap-2">
             📸 Hình ảnh sản phẩm
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="md:col-span-1">
-              <label htmlFor="imageInput" className="cursor-pointer h-full min-h-[160px] border-2 border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center gap-3 hover:border-orange-500/50 hover:bg-orange-500/5 transition-all group">
-                <div className="text-3xl grayscale group-hover:grayscale-0 transition-all">🖼️</div>
+              <label htmlFor="imageInput" className="cursor-pointer h-full min-h-[160px] border-2 border-dashed border-slate-100 rounded-xl flex flex-col items-center justify-center gap-3 hover:border-orange-300 hover:bg-orange-50 transition-all group">
+                <div className="text-3xl grayscale-[0.5] group-hover:grayscale-0 transition-all">🖼️</div>
                 <div className="text-center">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-orange-500">Tải ảnh lên</span>
-                  <p className="text-[8px] text-slate-600 font-bold uppercase mt-1">PNG, JPG, WEBP</p>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-orange-600">Tải ảnh lên</span>
+                  <p className="text-[8px] text-slate-300 font-bold uppercase mt-1">PNG, JPG, WEBP</p>
                 </div>
               </label>
               <input id="imageInput" type="file" className="hidden" onChange={handleImageChange} accept="image/*" multiple />
@@ -661,18 +661,18 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
             <div className="md:col-span-3">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {imagePreviews.map((preview, index) => (
-                  <div key={index} className={`relative aspect-square rounded-xl overflow-hidden border ${preview.isMain ? 'border-orange-500 shadow-lg shadow-orange-500/20' : 'border-slate-800'} bg-[#0b1120] group/img`}>
+                  <div key={index} className={`relative aspect-square rounded-xl overflow-hidden border ${preview.isMain ? 'border-orange-500 shadow-md shadow-orange-500/10' : 'border-slate-100'} bg-slate-50 group/img`}>
                     <img src={preview.url} alt="Xe" className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110" />
 
                     {/* Hover Actions */}
-                    <div className="absolute inset-0 bg-slate-900/80 opacity-0 group-hover/img:opacity-100 transition-all flex flex-col items-center justify-center gap-2 z-20 backdrop-blur-sm">
-                      <button type="button" onClick={() => handleRemoveImage(index)} className="w-8 h-8 rounded-lg bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all text-xs">🗑️</button>
+                    <div className="absolute inset-0 bg-white/90 opacity-0 group-hover/img:opacity-100 transition-all flex flex-col items-center justify-center gap-2 z-20 backdrop-blur-sm">
+                      <button type="button" onClick={() => handleRemoveImage(index)} className="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all text-xs">🗑️</button>
                       {!preview.isMain && (
-                        <button type="button" onClick={() => handleSetMainImage(index)} className="w-8 h-8 rounded-lg bg-orange-500/20 text-orange-500 hover:bg-orange-500 hover:text-white transition-all text-xs">⭐</button>
+                        <button type="button" onClick={() => handleSetMainImage(index)} className="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-500 hover:text-white transition-all text-xs">⭐</button>
                       )}
 
                       <select
-                        className="w-20 bg-slate-800 text-[8px] font-black text-white border border-slate-700 rounded px-1 py-1 outline-none uppercase"
+                        className="w-20 bg-white text-[8px] font-black text-slate-900 border border-slate-200 rounded px-1 py-1 outline-none uppercase shadow-sm"
                         value={preview.mau || ''}
                         onClick={(e) => e.stopPropagation()}
                         onChange={(e) => {
@@ -691,10 +691,10 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
                     {/* Badges */}
                     <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
                       {preview.isMain && (
-                        <span className="px-2 py-0.5 bg-orange-500 text-white text-[7px] font-black uppercase rounded shadow-lg">CHÍNH</span>
+                        <span className="px-2 py-1 bg-orange-500 text-white text-[7px] font-black uppercase rounded shadow-lg">CHÍNH</span>
                       )}
                       {preview.mau && (
-                        <span className="px-2 py-0.5 bg-slate-900 border border-slate-700 text-white text-[7px] font-black uppercase rounded shadow-lg">{preview.mau}</span>
+                        <span className="px-2 py-1 bg-white/90 border border-slate-200 text-slate-900 text-[7px] font-black uppercase rounded shadow-lg backdrop-blur-sm">{preview.mau}</span>
                       )}
                     </div>
                   </div>
@@ -711,21 +711,21 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
         </div>
 
         {/* STICKY BOTTOM ACTION BAR */}
-        <div className="fixed bottom-0 left-0 right-0 bg-[#0b1120]/80 backdrop-blur-xl border-t border-slate-800 py-4 px-6 z-50">
+        <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-slate-200 py-4 px-6 z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
           <div className="max-w-[1400px] mx-auto flex justify-end items-center gap-4">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mr-auto hidden sm:block">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-auto hidden sm:block">
               {isEditMode ? 'Đang chỉnh sửa sản phẩm hiện có' : 'Tạo mới sản phẩm xe đạp'}
             </span>
             <button
               type="button"
               onClick={onCancel}
-              className="px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors"
+              className="px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 transition-colors"
             >
               Hủy bỏ
             </button>
             <button
               type="submit"
-              className="px-8 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-xs font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all active:scale-95"
+              className="px-8 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-xs font-black uppercase tracking-widest shadow-lg shadow-orange-600/20 transition-all active:scale-95"
             >
               {isEditMode ? 'Lưu sản phẩm' : 'Đăng sản phẩm'}
             </button>

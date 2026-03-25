@@ -3,7 +3,7 @@
 # ==========================================
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from app.db.session import get_db
 from datetime import datetime
@@ -15,6 +15,7 @@ from app.models.order import DonHang, TrangThaiOrder, TrangThaiPayment
 from app.schemas.user import UserUpdate 
 from app.models.address import Address
 from app.schemas.address import AddressCreate, AddressUpdate, AddressResponse
+from app.utils.text_utils import normalize_str
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -46,12 +47,25 @@ def get_dashboard_stats(db: Session = Depends(get_db), admin: User = Depends(che
 
 # 2. API QUẢN LÝ USER
 from app.schemas.user import UserUpdate, UserResponse
-from typing import List
+from typing import List, Optional
 
 @router.get("/users", response_model=List[UserResponse])
-def get_all_users(db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
-    from sqlalchemy.orm import joinedload
-    return db.query(User).options(joinedload(User.addresses)).all()
+def get_all_users(
+    search: Optional[str] = None,
+    db: Session = Depends(get_db), 
+    admin: User = Depends(check_admin_role)
+):
+    users = db.query(User).options(joinedload(User.addresses)).all()
+
+    if search:
+        norm_search = normalize_str(search)
+        users = [u for u in users if (
+            norm_search in normalize_str(u.hovaten or "") or
+            norm_search in normalize_str(u.email or "") or
+            norm_search in (u.sdt or "")
+        )]
+        
+    return users
 
 @router.get("/users/{user_id}", response_model=UserResponse)
 def get_user_detail(user_id: int, db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):

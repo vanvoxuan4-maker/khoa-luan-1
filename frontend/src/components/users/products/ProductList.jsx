@@ -3,7 +3,6 @@ import axios from 'axios';
 import API_BASE_URL from '../../../utils/apiConfig';
 import { useSearchParams, useNavigationType } from 'react-router-dom';
 import Breadcrumb from '../layouts/Breadcrumb';
-import useDebounce from '../../../hooks/useDebounce';
 
 import FilterSidebar from './FilterSidebar'; // Import Sidebar
 import ProductCard from './ProductCard'; // Import ProductCard
@@ -14,7 +13,6 @@ const ProductList = () => {
     const navType = useNavigationType();
     const [searchParams, setSearchParams] = useSearchParams();
     const searchTerm = searchParams.get('search') || '';
-    const debouncedSearch = useDebounce(searchTerm, 500);
 
     const categoryId = searchParams.get('category_id') ? parseInt(searchParams.get('category_id')) : null;
     const brandId = searchParams.get('brand_id') ? parseInt(searchParams.get('brand_id')) : null;
@@ -111,7 +109,7 @@ const ProductList = () => {
             try {
                 const skip = (currentPage - 1) * itemsPerPage;
                 const params = {
-                    search: debouncedSearch || undefined,
+                    search: searchTerm || undefined,
                     skip,
                     limit: itemsPerPage,
                     sort_by: sortBy,
@@ -124,7 +122,7 @@ const ProductList = () => {
 
                 const [prodRes, countRes] = await Promise.all([
                     axios.get(`${API_BASE_URL}/sanpham`, { params: cleanParams }),
-                    axios.get(`${API_BASE_URL}/sanpham/count`, { params: { search: debouncedSearch, ...filters } })
+                    axios.get(`${API_BASE_URL}/sanpham/count`, { params: { search: searchTerm, ...filters } })
                 ]);
                 
                 setProducts(prodRes.data);
@@ -137,7 +135,7 @@ const ProductList = () => {
         };
 
         fetchItems();
-    }, [debouncedSearch, categoryId, brandId, minPrice, maxPrice, minRating, sortBy, currentPage]);
+    }, [searchTerm, categoryId, brandId, minPrice, maxPrice, minRating, sortBy, currentPage]);
 
     // KHÔI PHỤC VỊ TRÍ CUỘN: Khi load xong và là Back (POP) - Dùng useLayoutEffect để tránh chớp nháy
     useLayoutEffect(() => {

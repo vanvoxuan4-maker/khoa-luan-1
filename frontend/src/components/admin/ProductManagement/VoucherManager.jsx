@@ -14,15 +14,30 @@ const VoucherManager = () => {
   const [renewalData, setRenewalData] = useState({ ngay_ketthuc: '', solandung: '', giam_toida: '', giatrigiam: '' });
   const [isAdding, setIsAdding] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const fetchVouchers = async () => {
+  // ─── DEBOUNCE SEARCH TERM (500ms) ───────────────────
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  const fetchVouchers = async (search = debouncedSearch) => {
+    setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE_URL}/admin/vouchers`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.get(`${API_BASE_URL}/admin/vouchers`, { 
+        headers: { Authorization: `Bearer ${token}` },
+        params: { search: search || undefined }
+      });
       setVouchers(res.data);
     } catch (err) { console.error("Lỗi tải voucher"); }
+    finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchVouchers(); }, []);
+  useEffect(() => { fetchVouchers(); }, [debouncedSearch]);
 
   const handleCreate = async () => {
     if (!formData.ma_giamgia || !formData.giatrigiam) return alert("Vui lòng nhập đủ Mã Code và Giá Trị Giảm!");
@@ -85,9 +100,6 @@ const VoucherManager = () => {
 
   const blockInvalidChar = e => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault();
 
-  const filteredVouchers = vouchers.filter(v =>
-    v.ma_giamgia.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="animate-fade-in-up min-h-screen p-6 rounded-[2rem] relative overflow-hidden bg-[#f0f4ff]">
@@ -248,14 +260,20 @@ const VoucherManager = () => {
             </h4>
           </div>
           <div className="ml-auto bg-slate-200 px-3 py-1 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-tighter">
-            {filteredVouchers.length} Items
+            {vouchers.length} Items
           </div>
         </div>
 
-        {/* LƯỚI THẺ VOUCHER */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-20 items-start">
-          {filteredVouchers.length > 0 ? (
-            filteredVouchers.map(v => {
+        <div className="relative min-h-[400px] mb-20">
+          {loading && (
+            <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center gap-3 rounded-[2.5rem]">
+               <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+               <span className="text-indigo-600 font-black text-[11px] uppercase tracking-[0.2em] animate-pulse">Đang truy vấn kho voucher...</span>
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
+            {vouchers.length > 0 ? (
+              vouchers.map(v => {
               const expiryDate = v.ngay_ketthuc ? new Date(v.ngay_ketthuc) : null;
               if (expiryDate) expiryDate.setHours(23, 59, 59, 999);
               const isExpired = expiryDate && expiryDate.getTime() < Date.now();
@@ -449,6 +467,7 @@ const VoucherManager = () => {
               </p>
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>

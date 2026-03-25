@@ -10,6 +10,7 @@ from app.api.deps import get_current_user, check_admin_role
 from app.models.user import User
 from app.models.audit import AuditLog
 from app.schemas.audit import AuditLogCreate, AuditLogResponse
+from app.utils.text_utils import normalize_str
 
 router = APIRouter()
 
@@ -49,6 +50,7 @@ def get_my_audit_logs(
     resource_filter: Optional[str] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
+    search: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -80,9 +82,14 @@ def get_my_audit_logs(
     # Order by timestamp descending (newest first)
     query = query.order_by(AuditLog.timestamp.desc())
     
+    logs = query.all()
+
+    if search:
+        norm_search = normalize_str(search)
+        logs = [log for log in logs if norm_search in normalize_str(log.description or "")]
+
     # Pagination
-    logs = query.offset(skip).limit(limit).all()
-    return logs
+    return logs[skip : skip + limit]
 
 @router.get("/all-logs", response_model=List[AuditLogResponse])
 def get_all_audit_logs(
@@ -93,6 +100,7 @@ def get_all_audit_logs(
     resource_filter: Optional[str] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
+    search: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(check_admin_role)
 ):
@@ -127,9 +135,14 @@ def get_all_audit_logs(
     # Order by timestamp descending
     query = query.order_by(AuditLog.timestamp.desc())
     
+    logs = query.all()
+
+    if search:
+        norm_search = normalize_str(search)
+        logs = [log for log in logs if norm_search in normalize_str(log.description or "")]
+
     # Pagination
-    logs = query.offset(skip).limit(limit).all()
-    return logs
+    return logs[skip : skip + limit]
 
 @router.post("/log", response_model=AuditLogResponse)
 def create_log(

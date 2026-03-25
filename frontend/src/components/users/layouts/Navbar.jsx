@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, NavLink, Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, NavLink, Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import API_BASE_URL from '../../../utils/apiConfig';
 import { useWishlist } from '../../../context/WishlistContext';
 import { useCart } from '../../../context/CartContext';
 import { getBestToken } from '../../../utils/auth';
+import useDebounce from '../../../hooks/useDebounce';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -14,6 +15,23 @@ const Navbar = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { wishlistItems } = useWishlist();
+
+  // Search Logic
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const debouncedSearch = useDebounce(searchTerm, 300);
+  const searchRef = useRef(null);
+  const location = useLocation();
+  
+  // Promotion Slider State
+  const [currentPromoIdx, setCurrentPromoIdx] = useState(0);
+  const promos = [
+    "🚚 Miễn phí vận chuyển cho đơn từ 25.000.000đ",
+    "🔥 Giảm trực tiếp tới 39% cho nhiều sản phẩm",
+    "🎯 Freeship nội thành Đà Nẵng từ 15.000.000đ",
+    "📞 Hotline: 0961 178 265"
+  ];
 
   const navigate = useNavigate();
 
@@ -49,8 +67,57 @@ const Navbar = () => {
       setIsScrolled(window.scrollY > 0);
     };
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    // Promotion Auto-Slide Timer
+    const promoTimer = setInterval(() => {
+      setCurrentPromoIdx(prev => (prev + 1) % promos.length);
+    }, 4000);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearInterval(promoTimer);
+    };
   }, []);
+
+  // --- LIVE SUGGESTIONS LOGIC ---
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (debouncedSearch.trim().length <= 1) {
+        setSuggestions([]);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const res = await axios.get(`${API_BASE_URL}/sanpham`, {
+          params: { search: debouncedSearch, limit: 5 }
+        });
+        setSuggestions(res.data);
+      } catch (err) {
+        console.error('Error fetching suggestions:', err);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    fetchSuggestions();
+  }, [debouncedSearch]);
+
+  // Click outside to close suggestions
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Close suggestions on route change
+  useEffect(() => {
+    setShowSuggestions(false);
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     setShowLogoutConfirm(false);
@@ -68,75 +135,58 @@ const Navbar = () => {
   };
 
   const handleSearch = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (searchTerm.trim()) {
-      navigate(`/products?search=${searchTerm}`);
+      setShowSuggestions(false);
+      navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
     }
   };
 
   return (
     <header className={`sticky top-0 z-50 w-full transition-all duration-300 shadow-xl ${isScrolled ? 'py-0' : 'py-0'}`}>
 
-      {/* 0️⃣ PROMOTION BAR */}
+      {/* 0️⃣ TOP BAR - MINIMALIST PROMOTION SLIDER */}
       <div
+        className="bg-blue-800 text-white w-full flex items-center h-[36px] overflow-hidden"
         style={{
-          background: 'linear-gradient(90deg, #E65C00, #F9D423, #E65C00)',
-          backgroundSize: '200% 100%',
-          animation: 'promoSlide 4s linear infinite',
-          height: '34px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '13px',
-          fontWeight: 600,
-          color: '#fff',
-          letterSpacing: '0.02em',
-          gap: '24px',
-          padding: '6px 16px',
+          padding: '0 16px',
           userSelect: 'none',
         }}
       >
         <style>{`
-          @keyframes promoSlide {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+          .fade-up-anim {
+            animation: minimalistFadeIn 0.4s ease-out forwards;
           }
-          .nav-item-underline {
-            position: relative;
+          @keyframes minimalistFadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
           }
-          .nav-item-underline::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            right: 50%;
-            height: 2px;
-            background: #1d4ed8;
-            transition: left 0.3s ease, right 0.3s ease;
+          .top-bar-link {
+            font-size: 11px;
+            font-weight: 500;
+            opacity: 0.8;
+            transition: opacity 0.2s;
           }
-          .nav-item-underline:hover::after {
-            left: 0;
-            right: 0;
-          }
-          .nav-item-underline.active-nav::after {
-            left: 0;
-            right: 0;
-          }
-          .icon-btn {
-            transition: transform 0.2s ease, background-color 0.2s ease;
-          }
-          .icon-btn:hover {
-            transform: scale(1.15);
+          .top-bar-link:hover {
+            opacity: 1;
           }
         `}</style>
-        <span>🚚 Miễn phí vận chuyển cho đơn từ 25.000.000đ</span>
-        <span style={{ opacity: 0.6 }}>|</span>
-        <span>🔥 Giảm giá trực tiếp tới 39% cho nhiều sản phẩm</span>
-        <span style={{ opacity: 0.6 }}>|</span>
-        <span>🎯 Freeship nội thành Đà Nẵng từ 15.000.000đ</span>
-        <span style={{ opacity: 0.6 }}>|</span>
-        <span>📞 Hotline: <strong>0961 178 265</strong></span>
+
+        <div className="container mx-auto flex items-center justify-between">
+          {/* Left Side: Main Promotion (Auto Scroll) */}
+          <div key={currentPromoIdx} className="fade-up-anim flex items-center gap-2">
+             <span className="text-[12px] font-medium tracking-wide">
+                {promos[currentPromoIdx]}
+             </span>
+          </div>
+
+          {/* Right Side: Help & FAQ Links */}
+          <div className="flex items-center gap-4">
+             <Link to="/help" className="top-bar-link hover:underline">Help</Link>
+             <span className="opacity-30 text-[10px]">|</span>
+             <Link to="/faq" className="top-bar-link hover:underline">FAQ</Link>
+          </div>
+        </div>
       </div>
 
       <div className="bg-blue-700 text-white py-3 shadow-lg">
@@ -177,25 +227,114 @@ const Navbar = () => {
             </div>
           </Link>
 
-          {/* Search Bar - ROUNDED + ENHANCED SHADOW */}
-          <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-xl relative group">
-            <input
-              type="text"
-              placeholder="Tìm kiếm sản phẩm..."
-              className="w-full pl-6 pr-16 py-2.5 text-slate-800 font-bold bg-white border-2 border-transparent focus:border-blue-300 placeholder-slate-400 transition-all focus:outline-none focus:ring-4 focus:ring-blue-500/30 shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_25px_rgba(0,0,0,0.2)] focus:shadow-[0_6px_25px_rgba(59,130,246,0.25)]"
-              style={{ borderRadius: 30 }}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <button type="submit" className="absolute right-1.5 top-1.5 bottom-1.5 px-5 bg-yellow-400 hover:bg-yellow-500 active:bg-yellow-600 text-blue-900 font-bold transition-all flex items-center justify-center shadow-md active:scale-95" style={{ borderRadius: 26 }}>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-            </button>
-          </form>
+          {/* Search Bar - ROUNDED + LIVE SUGGESTIONS */}
+          <div ref={searchRef} className="hidden lg:block flex-1 max-w-xl relative z-[60]">
+            <form onSubmit={handleSearch} className="relative">
+              <input
+                type="text"
+                placeholder="Tìm kiếm sản phẩm..."
+                className="w-full pl-6 pr-16 py-2.5 text-slate-800 font-bold bg-white border-2 border-transparent focus:border-blue-300 placeholder-slate-400 transition-all focus:outline-none focus:ring-4 focus:ring-blue-500/30 shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_25px_rgba(0,0,0,0.2)]"
+                style={{ borderRadius: 30 }}
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+              />
+              <button type="submit" className="absolute right-1.5 top-1.5 bottom-1.5 px-5 bg-yellow-400 hover:bg-yellow-500 active:bg-yellow-600 text-blue-900 font-bold transition-all flex items-center justify-center shadow-md active:scale-95" style={{ borderRadius: 26 }}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </button>
+            </form>
+
+            {/* LIVE SUGGESTIONS DROPDOWN */}
+            {showSuggestions && (searchTerm.trim().length > 1) && (
+              <div className="absolute top-full left-0 right-0 mt-3 bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.2)] border border-slate-100 overflow-hidden animate-fade-in-up">
+                {isSearching ? (
+                  <div className="p-8 text-center bg-white">
+                    <div className="w-6 h-6 border-3 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mx-auto mb-2"></div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Đang tìm...</span>
+                  </div>
+                ) : suggestions.length > 0 ? (
+                  <div className="py-2">
+                    <div className="px-5 py-2 mb-1 border-b border-slate-50 flex items-center justify-between">
+                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sản phẩm gợi ý</span>
+                       <span className="text-[10px] font-bold text-blue-500">{suggestions.length} kết quả</span>
+                    </div>
+                    {suggestions.map((p) => {
+                      const mainImg = p.hinhanh?.find(img => img.is_main) || p.hinhanh?.[0];
+                      const imgSrc = mainImg?.image_url ? `${API_BASE_URL}${mainImg.image_url}` : 'https://via.placeholder.com/150';
+                      return (
+                        <Link
+                          key={p.ma_sanpham}
+                          to={`/products/${p.ma_sanpham}`}
+                          onClick={() => { setShowSuggestions(false); setSearchTerm(''); }}
+                          className="flex items-center gap-4 px-5 py-3 hover:bg-blue-50 transition-colors group"
+                        >
+                          <div className="w-12 h-12 rounded-xl bg-slate-50 overflow-hidden border border-slate-100 flex-shrink-0 group-hover:scale-110 transition-transform">
+                            <img src={imgSrc} alt={p.ten_sanpham} className="w-full h-full object-contain" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-bold text-slate-800 truncate group-hover:text-blue-600 transition-colors">{p.ten_sanpham}</h4>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-black text-blue-600">{p.gia?.toLocaleString('vi-VN')}đ</span>
+                              {p.gia_giam > 0 && <span className="text-[10px] text-slate-400 line-through font-bold">{(p.gia + p.gia_giam).toLocaleString('vi-VN')}đ</span>}
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                    <button 
+                       onClick={handleSearch}
+                       className="w-full py-4 bg-white hover:bg-blue-50 border-t border-slate-50 text-blue-600 text-[11px] font-black uppercase tracking-widest transition-all"
+                    >
+                      Xem tất cả kết quả cho "{searchTerm}" ➔
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-slate-400 bg-white">
+                    <p className="text-sm font-bold italic mb-1">Không tìm thấy sản phẩm phù hợp</p>
+                    <p className="text-[10px] uppercase font-black tracking-widest opacity-50">Hãy thử từ khóa khác nhé!</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Actions: Đăng nhập / Giỏ hàng */}
           <div className="flex items-center gap-6">
 
-            {/* User Info */}
+            {/* Wishlist */}
+            <Link to="/wishlist" className="flex items-center gap-2 text-white hover:text-yellow-400 transition-colors relative group">
+              <div className="w-10 h-10 rounded-full bg-blue-800 flex items-center justify-center border border-blue-600 shadow-md relative icon-btn group-hover:bg-blue-600">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                {wishlistItems.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-black flex items-center justify-center rounded-full shadow-md ring-2 ring-white">
+                    {wishlistItems.length}
+                  </span>
+                )}
+              </div>
+              <div className="hidden sm:block text-sm font-bold">
+                Yêu thích
+              </div>
+            </Link>
+
+            {/* Cart */}
+            <Link to="/cart" className="flex items-center gap-2 text-white hover:text-yellow-400 transition-colors relative group">
+              <div className="w-10 h-10 rounded-full bg-blue-800 flex items-center justify-center border border-blue-600 shadow-md relative icon-btn group-hover:bg-blue-600">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 text-red-600 text-[10px] font-black flex items-center justify-center rounded-full shadow-md ring-2 ring-white">
+                    {cartCount}
+                  </span>
+                )}
+              </div>
+              <div className="hidden sm:block text-sm font-bold">
+                Giỏ hàng
+              </div>
+            </Link>
+
+            {/* User Info - Đưa ra ngoài cùng bên phải */}
             {isLoggedIn ? (
               <div className="relative group z-50">
                 <button className="flex items-center gap-2 text-white hover:text-yellow-400 transition-colors">
@@ -237,36 +376,6 @@ const Navbar = () => {
                 </div>
               </Link>
             )}
-
-            {/* Wishlist */}
-            <Link to="/wishlist" className="flex items-center gap-2 text-white hover:text-yellow-400 transition-colors relative group">
-              <div className="w-10 h-10 rounded-full bg-blue-800 flex items-center justify-center border border-blue-600 shadow-md relative icon-btn group-hover:bg-blue-600">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
-                {wishlistItems.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-black flex items-center justify-center rounded-full shadow-md ring-2 ring-white">
-                    {wishlistItems.length}
-                  </span>
-                )}
-              </div>
-              <div className="hidden sm:block text-sm font-bold">
-                Yêu thích
-              </div>
-            </Link>
-
-            {/* Cart */}
-            <Link to="/cart" className="flex items-center gap-2 text-white hover:text-yellow-400 transition-colors relative group">
-              <div className="w-10 h-10 rounded-full bg-blue-800 flex items-center justify-center border border-blue-600 shadow-md relative icon-btn group-hover:bg-blue-600">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 text-red-600 text-[10px] font-black flex items-center justify-center rounded-full shadow-md ring-2 ring-white">
-                    {cartCount}
-                  </span>
-                )}
-              </div>
-              <div className="hidden sm:block text-sm font-bold">
-                Giỏ hàng
-              </div>
-            </Link>
           </div>
 
           {/* Mobile Hamburger */}
