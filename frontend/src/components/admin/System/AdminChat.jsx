@@ -14,7 +14,7 @@ const AdminChat = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessions, setSessions] = useState([]);
-  const [activeSessionId, setActiveSessionId] = useState(null);
+  const [activeSessionId, setActiveSessionId] = useState(() => localStorage.getItem('admin_chat_session_id'));
   const [showSessions, setShowSessions] = useState(false);
   const [isWide, setIsWide] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
@@ -93,6 +93,7 @@ const AdminChat = () => {
   };
 
   const loadSession = (sessionId) => {
+    isFirstLoad.current = true; // Reset để scroll xuống cuối khi load lịch sử
     setActiveSessionId(sessionId);
     localStorage.setItem('admin_chat_session_id', sessionId);
     fetchHistory(sessionId);
@@ -365,13 +366,7 @@ const AdminChat = () => {
             <div className="absolute inset-0 bg-purple-500 rounded-full animate-ripple [animation-delay:1s]"></div>
           </div>
           <button
-            onClick={() => {
-              const nextState = !isOpen;
-              if (nextState) {
-                handleNewChat(); // Bắt đầu phiên mới mỗi khi mở chatbot admin
-              }
-              setIsOpen(nextState);
-            }}
+            onClick={() => setIsOpen(!isOpen)}
             className="group w-16 h-16 bg-gradient-to-br from-[#4C1D95] via-[#7C3AED] to-[#D946EF] rounded-full shadow-[0_4px_20px_rgba(124,58,237,0.5)] flex items-center justify-center hover:scale-110 transition-all duration-300 cursor-pointer border-[3px] border-[#E9D5FF] overflow-hidden relative z-10"
           >
             <CosmicLogo className="h-9 w-9 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] group-hover:rotate-[20deg] transition-transform duration-500" color="white" />

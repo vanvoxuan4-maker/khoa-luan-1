@@ -16,6 +16,7 @@ from app.models.chatbot import LichSuChat
 from app.schemas.chatbot import ChatRequest, ChatResponse
 from app.models.marketing import Makhuyenmai
 from app.models.order import DonHang, ChiTietDonHang
+from app.models.product import Sanpham, Danhmuc, Thuonghieu
 
 router = APIRouter()
 
@@ -43,9 +44,9 @@ def lay_bao_cao_admin(loai: str, ngay: str = None, so_ngay: int = 7):
             return {"tong_don": sum(stats.values()), "chi_tiet": stats}
             
         elif loai == 'khach_hang':
-            total_users = db.query(User).filter(User.role == 'customer').count()
+            total_users = db.query(User).filter(User.quyen == 'customer').count()
             start_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-            new_this_month = db.query(User).filter(User.role == 'customer', User.ngay_tao >= start_of_month).count()
+            new_this_month = db.query(User).filter(User.quyen == 'customer', User.ngay_lap >= start_of_month).count()
             return {"tong_khach_hang": total_users, "khach_moi_thang_nay": new_this_month}
             
         elif loai == 'xu_huong':
@@ -173,7 +174,89 @@ def quan_ly_voucher(action: str, ma_code: str):
     finally:
         db.close()
 
-my_tools = [lay_bao_cao_admin, tra_cuu_he_thong, quan_ly_kho_va_hang_hoa, quan_ly_voucher]
+
+def quan_ly_tai_khoan_user(hanh_dong: str, tu_khoa: str = "", trang_thai_moi: str = ""):
+    """
+    Quản lý tài khoản người dùng:
+    - 'tim_kiem': tìm user theo tên đăng nhập hoặc họ tên (cần tu_khoa).
+    - 'doi_trang_thai': đổi trạng thái tài khoản (cần tu_khoa là tên đăng nhập, trang_thai_moi là 'active'/'inactive'/'banned').
+    """
+    db = SessionLocal()
+    try:
+        if hanh_dong == 'tim_kiem':
+            if not tu_khoa:
+                return "Vui lòng cung cấp tên đăng nhập hoặc họ tên cần tìm."
+            users = db.query(User).filter(
+                User.quyen == 'customer',
+                (User.ten_user.ilike(f"%{tu_khoa}%") | User.hovaten.ilike(f"%{tu_khoa}%") | User.email.ilike(f"%{tu_khoa}%"))
+            ).limit(10).all()
+            if not users:
+                return f"Không tìm thấy tài khoản nào khớp với '{tu_khoa}'."
+            return [{
+                "ten_user": u.ten_user,
+                "ho_ten": u.hovaten or "(chưa cập nhật)",
+                "email": u.email,
+                "trang_thai": str(u.status.value if hasattr(u.status, 'value') else u.status)
+            } for u in users]
+
+        elif hanh_dong == 'doi_trang_thai':
+            if not tu_khoa or not trang_thai_moi:
+                return "Cần cung cấp tên đăng nhập và trạng thái mới (active/inactive/banned)."
+            trang_thai_moi = trang_thai_moi.lower().strip()
+            if trang_thai_moi not in ['active', 'inactive', 'banned']:
+                return "Trạng thái không hợp lệ. Chỉ chấp nhận: active, inactive, banned."
+
+            # Bước 1: Thử tìm chính xác theo tên đăng nhập (username - duy nhất)
+            user = db.query(User).filter(
+                User.quyen == 'customer',
+                User.ten_user.ilike(tu_khoa.strip())
+            ).first()
+
+            # Bước 2: Nếu không tìm thấy username → tìm theo họ tên
+            if not user:
+                matched = db.query(User).filter(
+                    User.quyen == 'customer',
+                    User.hovaten.ilike(f"%{tu_khoa.strip()}%")
+                ).all()
+
+                if not matched:
+                    return f"Không tìm thấy tài khoản nào khớp với '{tu_khoa}'. Hãy thử dùng tên đăng nhập chính xác."
+
+                if len(matched) > 1:
+                    # Có nhiều user trùng tên → yêu cầu chỉ định username cụ thể
+                    ds = [{"ten_user": u.ten_user, "ho_ten": u.hovaten or "(chưa cập nhật)",
+                            "email": u.email, "trang_thai": str(u.status.value if hasattr(u.status, 'value') else u.status)}
+                          for u in matched]
+                    return {
+                        "canh_bao": f"Tìm thấy {len(matched)} tài khoản có tên tương tự '{tu_khoa}'. "
+                                    "Vui lòng chỉ định chính xác **tên đăng nhập** để tránh nhầm lẫn.",
+                        "danh_sach": ds
+                    }
+
+                user = matched[0]
+
+            if user.quyen == 'admin':
+                return "⚠️ Không thể thay đổi trạng thái tài khoản Admin."
+
+            ten_hien_thi = user.hovaten or user.ten_user
+            trang_thai_cu = str(user.status.value if hasattr(user.status, 'value') else user.status)
+            user.status = trang_thai_moi
+            db.commit()
+            label = {"active": "Hoạt động", "inactive": "Tạm khoá", "banned": "Cấm vĩnh viễn"}
+            return {
+                "tin_nhan": f"Đã cập nhật trạng thái tài khoản '{ten_hien_thi}' (đăng nhập: {user.ten_user}) "
+                            f"từ '{label.get(trang_thai_cu, trang_thai_cu)}' → '{label.get(trang_thai_moi)}'.",
+                "ten_user": user.ten_user,
+                "trang_thai_moi": label.get(trang_thai_moi)
+            }
+        return "Hành động không hợp lệ."
+    except Exception as e:
+        db.rollback()
+        return f"Lỗi: {str(e)}"
+    finally:
+        db.close()
+
+my_tools = [lay_bao_cao_admin, tra_cuu_he_thong, quan_ly_kho_va_hang_hoa, quan_ly_voucher, quan_ly_tai_khoan_user]
 
 sys_instruct = """
 Bạn là AI Assistant Admin của Bike Shop.
@@ -188,15 +271,33 @@ Nhiệm vụ: Hỗ trợ quản trị cửa hàng RÕ RÀNG, DỄ NHÌN.
 4. **BẢNG BIỂU (QUAN TRỌNG)**:
    - Dùng bảng Markdown cho dữ liệu số (doanh thu, tồn kho).
    - ĐẶC BIỆT: Khi liệt kê danh sách Voucher, PHẢI dùng bảng với các cột: | Mã Voucher | Giá trị giảm | Trạng thái |.
+   - ĐẶC BIỆT: Khi hiển thị danh sách tài khoản user (tìm kiếm hoặc trùng tên), PHẢI dùng bảng với các cột: | Họ và tên | Tên đăng nhập | Email | Trạng thái |.
 5. **TRẠNG THÁI VOUCHER**: Hiển thị rõ ràng mã nào đang "Hoạt động" và mã nào "Đã tắt".
 6. **KHÔNG HALLUCINATION**: Tuyệt đối KHÔNG tự nghĩ ra tên mã giảm giá (như BIKE10, FREESHIP, SUMMER20). CHỈ được dùng dữ liệu thật từ Tools trả về. Nếu Tools trả về danh sách trống, hãy báo cáo trung thực là chưa có mã nào.
 7. **XƯNG HÔ CHUYÊN NGHIỆP**: 
    - Tuyệt đối KHÔNG đề cập đến mã ID (như ID=1, Admin ID=1) trong câu trả lời cho người dùng.
-   - Sử dụng xưng hô linh hoạt và lịch sự: "Em" (AI) và "Anh/Chị" hoặc "Bạn" (Admin). 
+   - Sử dụng xưng hô nhất quán: "Em" (AI) và "Anh" (Admin). KHÔNG dùng "Anh/Chị", chỉ dùng "Anh".
    - Luôn giữ thái độ cầu thị, chuyên nghiệp và hỗ trợ tận tâm.
+8. **QUẢN LÝ TÀI KHOẢN USER** (dùng tool `quan_ly_tai_khoan_user`):
+   - Khi Admin muốn tìm user: gọi `hanh_dong='tim_kiem'`, `tu_khoa=<tên/email>`.
+   - Khi Admin muốn đổi sang `active` hoặc `inactive`: gọi tool ngay, không cần hỏi thêm.
+   - KHÔNG được thay đổi tài khoản Admin.
+   - **QUY TRÌNH CẤM TÀI KHOẢN (banned) — BẮT BUỘC 2 BƯỚC**:
+     * Bước 1: Khi Admin yêu cầu cấm/ban tài khoản, PHẢI hỏi xác nhận trước bằng mẫu câu: "Anh chắc chắn muốn cấm vĩnh viễn **[tên đăng nhập]** ([họ tên]) chứ? Một khi thực hiện, tài khoản này sẽ không thể đăng nhập. Gõ 'Xác nhận' để em tiến hành."
+     * Bước 2: CHỈ gọi tool với `trang_thai_moi='banned'` khi Admin đã trả lời xác nhận rõ ràng.
+     * TUYỆT ĐỐI KHÔNG thực hiện banned ngay khi chưa có xác nhận, dù Admin yêu cầu rõ ràng đến đâu.
+   - **HIỂN THỊ KẾT QUẢ BẮT BUỘC THEO BẢNG**:
+     * Kết quả tìm kiếm: dùng bảng | Họ và tên | Tên đăng nhập | Email | Trạng thái |. (Lưu ý: Chỉ in đậm giá trị bên trong bảng nếu cần, không in đậm tiêu đề bảng).
+     * Trùng tên: hiển thị cảnh báo + bảng liệt kê, yêu cầu Admin chỉ định đúng **tên đăng nhập**.
+     * Xác nhận đổi trạng thái thành công: hiển thị theo mẫu sau (mỗi mục trên một dòng riêng):
+       - **Họ và tên**: [tên]
+       - **Tên đăng nhập**: [username]
+       - **Trạng thái cũ**: [trạng thái trước]
+       - **Trạng thái mới**: [trạng thái sau]
+   - Dùng tiếng Việt: "Hoạt động" / "Tạm khoá" / "Cấm vĩnh viễn".
 
 ⚡ VÍ DỤ MẪU:
-Chào Anh/Chị! Rất vui được hỗ trợ Anh/Chị trong ca làm việc hôm nay. ✨
+Chào Anh! Rất vui được hỗ trợ Anh trong ca làm việc hôm nay. ✨
 
 - **Hệ thống**: Hoạt động ổn định.
 """
@@ -317,6 +418,7 @@ ADMIN_TOOL_MAP = {
     "tra_cuu_he_thong": tra_cuu_he_thong,
     "quan_ly_kho_va_hang_hoa": quan_ly_kho_va_hang_hoa,
     "quan_ly_voucher": quan_ly_voucher,
+    "quan_ly_tai_khoan_user": quan_ly_tai_khoan_user,
 }
 
 def run_admin_tool(tool_call) -> str:

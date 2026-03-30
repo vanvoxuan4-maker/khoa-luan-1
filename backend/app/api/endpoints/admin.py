@@ -14,6 +14,9 @@ from app.models.product import Sanpham
 from app.models.order import DonHang, TrangThaiOrder, TrangThaiPayment, ChiTietDonHang
 from app.models.payment import ThanhToan
 from app.models.cart import GioHang
+from app.models.marketing import Danhgia
+from app.models.chatbot import LichSuChat
+from app.models.audit import AuditLog
 from app.api.endpoints.audit import create_audit_log
 from app.schemas.user import UserUpdate, UserResponse
 from app.models.address import Address
@@ -233,7 +236,13 @@ def delete_user(user_id: int, request: Request, db: Session = Depends(get_db), a
         # Lưu thông tin tạm thời để ghi log trước khi commit (vì user object sẽ bị xóa)
         target_info = f"#{user.ma_user} ({user.ten_user} - {user.email})"
 
-        # 4. Xóa User
+        # 4. Xóa Lịch sử Chat
+        db.query(LichSuChat).filter(LichSuChat.user_id == user_id).delete()
+
+        # 5. Xóa Audit Logs của user này
+        db.query(AuditLog).filter(AuditLog.ma_nguoidung == user_id).delete()
+
+        # 6. Xóa User
         db.delete(user)
         db.commit()
 

@@ -146,12 +146,21 @@ const Login = ({ onSwitchToRegister, onSwitchToForgot }) => {
 
             {notification && (
                 <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[120] animate-fade-in-down">
-                    <div className={`flex items-center gap-4 px-8 py-4 rounded-2xl border backdrop-blur-xl shadow-2xl ${notification.type === 'success' ? 'bg-emerald-500 text-white border-none' : 'bg-rose-500 text-white border-none'
-                        }`}>
-                        <span className="text-xl">{notification.type === 'success' ? '✨' : '⚠️'}</span>
+                    <div className={`flex items-center gap-4 px-8 py-4 rounded-2xl border backdrop-blur-xl shadow-2xl transition-all duration-500 ${
+                        notification.type === 'success' 
+                            ? 'bg-emerald-500 text-white border-none' 
+                            : notification.message?.includes('chờ kích hoạt')
+                                ? 'bg-[#FDE68A] text-amber-900 border-amber-300/50 shadow-amber-900/10' 
+                                : 'bg-rose-500 text-white border-none'
+                    }`}>
+                        <span className="text-xl">
+                            {notification.type === 'success' ? '✨' : notification.message?.includes('chờ kích hoạt') ? '⏳' : '⚠️'}
+                        </span>
                         <div className="flex flex-col">
-                            <span className="text-sm font-black uppercase tracking-widest">{notification.title}</span>
-                            <span className="text-xs opacity-90">{notification.message}</span>
+                            <span className={`text-sm font-black uppercase tracking-widest ${notification.message?.includes('chờ kích hoạt') ? 'text-amber-900' : 'text-current'}`}>
+                                {notification.message?.includes('chờ kích hoạt') ? 'Thông báo tài khoản' : notification.title}
+                            </span>
+                            <span className="text-xs font-bold opacity-90">{notification.message}</span>
                         </div>
                     </div>
                 </div>
