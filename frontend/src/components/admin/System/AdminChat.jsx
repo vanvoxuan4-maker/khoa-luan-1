@@ -21,6 +21,7 @@ const AdminChat = () => {
   const scrollRef = useRef(null);
   const messagesEndRef = useRef(null);
   const isFirstLoad = useRef(true);
+  const abortControllerRef = useRef(null);
   const token = localStorage.getItem('admin_access_token');
 
   const scrollToBottom = (behavior = "smooth") => {
@@ -118,9 +119,24 @@ const AdminChat = () => {
     }
   };
 
+  const stopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setMessages(prev => {
+      const updated = [...prev];
+      if (updated[updated.length - 1]?.isStreaming) {
+        updated[updated.length - 1] = { ...updated[updated.length - 1], isStreaming: false };
+      }
+      return updated;
+    });
+    setIsLoading(false);
+  };
+
   const sendMessage = async (overrideMessage = null) => {
     const messageToSend = overrideMessage || input;
-    if (!messageToSend.trim()) return;
+    if (!messageToSend.trim() || isLoading) return; // Chặn gửi kập khi đang chờ AI trả lời
     
     if (!overrideMessage) setInput('');
     const userMsg = { role: 'user', message: messageToSend, thoi_gian: new Date() };
@@ -132,13 +148,15 @@ const AdminChat = () => {
         ? `${API_BASE_URL}/admin/chat/stream?session_id=${activeSessionId}`
         : `${API_BASE_URL}/admin/chat/stream`;
       
+      abortControllerRef.current = new AbortController();
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ message: messageToSend })
+        body: JSON.stringify({ message: messageToSend }),
+        signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) throw new Error('Network response was not ok');
@@ -206,17 +224,20 @@ const AdminChat = () => {
         }
       }
     } catch (err) {
-      console.error("Stream error:", err);
-      setMessages(prev => {
-        const newMsgs = [...prev];
-        const lastIdx = newMsgs.length - 1;
-        if (lastIdx >= 0 && newMsgs[lastIdx].isStreaming) {
+      if (err.name !== 'AbortError') {
+        console.error("Stream error:", err);
+        setMessages(prev => {
+          const newMsgs = [...prev];
+          const lastIdx = newMsgs.length - 1;
+          if (lastIdx >= 0 && newMsgs[lastIdx].isStreaming) {
             newMsgs[lastIdx].message = "Xin lỗi, đã có lỗi xảy ra khi kết nối với AI.";
             newMsgs[lastIdx].isStreaming = false;
-        }
-        return newMsgs;
-      });
+          }
+          return newMsgs;
+        });
+      }
     } finally {
+      abortControllerRef.current = null;
       setIsLoading(false);
     }
   };
@@ -521,17 +542,31 @@ const AdminChat = () => {
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                  onKeyDown={(e) => e.key === 'Enter' && !isLoading && sendMessage()}
                   placeholder="Nhập tin nhắn..."
                   className="flex-1 bg-[#F5F3FF] border border-[#DDD6FE] rounded-lg px-4 py-2 text-[#4C1D95] text-[14px] outline-none focus:border-[#8B5CF6]"
                 />
-                <button
-                  onClick={sendMessage}
-                  disabled={isLoading || !input.trim()}
-                  className="bg-gradient-to-r from-[#6D28D9] to-[#D946EF] text-white w-10 h-10 rounded-lg transition-all shadow-md flex items-center justify-center"
-                >
-                   <PaperAirplaneIcon className="h-5 w-5" />
-                </button>
+                {/* Toggle: nút Gửi / nút Dừng */}
+                {isLoading ? (
+                  <button
+                    type="button"
+                    onClick={stopGeneration}
+                    title="Dừng trả lời"
+                    className="bg-red-100 text-red-500 hover:bg-red-200 border border-red-200 w-10 h-10 rounded-lg transition-all flex items-center justify-center active:scale-95"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="5" y="5" width="14" height="14" rx="2" />
+                    </svg>
+                  </button>
+                ) : (
+                  <button
+                    onClick={sendMessage}
+                    disabled={!input.trim()}
+                    className="bg-gradient-to-r from-[#6D28D9] to-[#D946EF] text-white w-10 h-10 rounded-lg transition-all shadow-md flex items-center justify-center disabled:opacity-50"
+                  >
+                    <PaperAirplaneIcon className="h-5 w-5" />
+                  </button>
+                )}
               </div>
             </>
           ) : (

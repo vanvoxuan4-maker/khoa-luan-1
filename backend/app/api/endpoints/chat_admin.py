@@ -516,31 +516,32 @@ async def stream_chat_with_admin_ai(item: ChatRequest, session_id: Optional[str]
         # ✅ FIX #3: Yield done TRƯỚC khi lưu DB
         yield f"data: {json.dumps({'done': True, 'session_id': s_id})}\n\n"
 
-        # Lưu tin nhắn AI vào DB (sau khi đã báo done cho frontend)
-        if full_reply:
-            save_db = SessionLocal()
-            try:
-                ai_msg = LichSuChat(
-                    user_id=ma_user,
-                    role="assistant",
-                    message=full_reply,
-                    context_type="admin_ai",
-                    session_id=s_id
-                )
-                save_db.add(ai_msg)
-                if is_new_session:
-                    raw_title = message_text.strip()
-                    new_title = raw_title[:80] + "..." if len(raw_title) > 80 else raw_title
-                    save_db.query(LichSuChat).filter(
-                        LichSuChat.session_id == s_id,
-                        LichSuChat.user_id == ma_user
-                    ).update({"title": new_title}, synchronize_session=False)
-                save_db.commit()
-            except Exception as db_err:
-                save_db.rollback()
-                print(f"⚠️ Admin Stream DB save error: {db_err}")
-            finally:
-                save_db.close()
+        # Lưu tin nhắn AI vào DB (kể cả khi bị dừng giữa chừng)
+        save_db = SessionLocal()
+        try:
+            # Nếu bị abort trước khi có phản hồi, lưu placeholder để giữ ngữ cảnh
+            reply_to_save = full_reply if full_reply else "[Đã dừng]"
+            ai_msg = LichSuChat(
+                user_id=ma_user,
+                role="assistant",
+                message=reply_to_save,
+                context_type="admin_ai",
+                session_id=s_id
+            )
+            save_db.add(ai_msg)
+            if is_new_session:
+                raw_title = message_text.strip()
+                new_title = raw_title[:80] + "..." if len(raw_title) > 80 else raw_title
+                save_db.query(LichSuChat).filter(
+                    LichSuChat.session_id == s_id,
+                    LichSuChat.user_id == ma_user
+                ).update({"title": new_title}, synchronize_session=False)
+            save_db.commit()
+        except Exception as db_err:
+            save_db.rollback()
+            print(f"⚠️ Admin Stream DB save error: {db_err}")
+        finally:
+            save_db.close()
 
         # Đã yield done bên trên rồi - không cần yield lại
 

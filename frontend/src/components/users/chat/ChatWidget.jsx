@@ -33,6 +33,7 @@ const ChatWidget = () => {
   const messagesEndRef = useRef(null);
   const scrollRef = useRef(null);
   const isFirstLoad = useRef(true);
+  const abortControllerRef = useRef(null);
   
   const token = getBestToken();
   
@@ -150,6 +151,22 @@ const ChatWidget = () => {
     }
   };
 
+  const stopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    // Đánh dấu tin nhắn cuối đã stream xong
+    setMessages(prev => {
+      const updated = [...prev];
+      if (updated[updated.length - 1]?.isStreaming) {
+        updated[updated.length - 1] = { ...updated[updated.length - 1], isStreaming: false };
+      }
+      return updated;
+    });
+    setIsLoading(false);
+  };
+
   const handleSend = async (e, overrideMessage = null) => {
     if (e) e.preventDefault();
     const messageToSend = overrideMessage || input;
@@ -175,6 +192,7 @@ const ChatWidget = () => {
         ? `${API_BASE_URL}/chat/customer/stream?session_id=${activeSessionId}`
         : `${API_BASE_URL}/chat/customer/stream`;
 
+      abortControllerRef.current = new AbortController();
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -182,6 +200,7 @@ const ChatWidget = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ message: messageToSend }),
+        signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -247,12 +266,15 @@ const ChatWidget = () => {
       }
 
     } catch (error) {
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        message: 'Xin lỗi, hệ thống AI đang bận một chút. Bạn thử lại sau nhé! 😅',
-        thoi_gian: new Date().toISOString()
-      }]);
+      if (error.name !== 'AbortError') {
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          message: 'Xin lỗi, hệ thống AI đang bận một chút. Bạn thử lại sau nhé! 😅',
+          thoi_gian: new Date().toISOString()
+        }]);
+      }
     } finally {
+      abortControllerRef.current = null;
       setIsLoading(false);
     }
   };
@@ -608,13 +630,27 @@ const ChatWidget = () => {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Nhập nội dung cần hỗ trợ..."
-                    className="flex-grow bg-slate-100 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none pr-12"
+                    className="flex-grow bg-slate-100 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none"
                   />
-                  <button type="submit" disabled={!input.trim() || isLoading} className={`absolute right-1 w-10 h-10 flex items-center justify-center rounded-lg transition-all ${
-                      input.trim() && !isLoading ? 'text-blue-600 hover:bg-blue-50' : 'text-slate-300'
-                    }`}>
-                    <PaperAirplaneIcon className="w-6 h-6" />
-                  </button>
+                  {/* Toggle: nút Gửi / nút Dừng */}
+                  {isLoading ? (
+                    <button
+                      type="button"
+                      onClick={stopGeneration}
+                      title="Dừng trả lời"
+                      className="w-10 h-10 flex items-center justify-center rounded-lg bg-red-100 text-red-500 hover:bg-red-200 border border-red-200 transition-all flex-shrink-0 active:scale-95"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="5" y="5" width="14" height="14" rx="2" />
+                      </svg>
+                    </button>
+                  ) : (
+                    <button type="submit" disabled={!input.trim()} className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all flex-shrink-0 ${
+                        input.trim() ? 'text-blue-600 hover:bg-blue-50 bg-blue-50' : 'text-slate-300 bg-slate-100'
+                      }`}>
+                      <PaperAirplaneIcon className="w-5 h-5" />
+                    </button>
+                  )}
                 </div>
               </form>
             </>

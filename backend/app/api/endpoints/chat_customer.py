@@ -53,41 +53,39 @@ def tra_cuu_mua_hang(loai: str, tu_khoa: str = "", ma_khuyen_mai: str = None):
         if loai == 'san_pham':
             query = db.query(Sanpham).filter(Sanpham.is_active == True)
 
-            # Loại stopword phổ biến, giữ từ đặc thù >= 3 ký tự, ưu tiên từ dài nhất
             STOPWORDS = {"xe", "tìm", "cho", "mình", "một", "số", "các", "có", "và", "của",
                          "loại", "muốn", "giúp", "đạp", "gì", "nào"}
             keywords = sorted(
                 [kw.strip() for kw in tu_khoa.split()
                  if len(kw.strip()) >= 3 and kw.strip().lower() not in STOPWORDS],
-                key=len, reverse=True  # từ dài nhất (đặc thù nhất) trước
+                key=len, reverse=True
             )
 
-            # 1. Thử thêm cụm đầy đủ trước
-            cat = db.query(Danhmuc).filter(Danhmuc.ten_danhmuc.ilike(f"%{tu_khoa}%")).first()
+            products = []
+            cat = None
 
-            # 2. Thử từng keyword đặc thù (đã loại stopword, sắp xếp dài → ngắn)
-            if not cat:
+            # === ƯU TIÊN 1: Tìm trực tiếp theo tên sản phẩm (toàn bộ tu_khoa) ===
+            products = query.filter(Sanpham.ten_sanpham.ilike(f"%{tu_khoa}%")).limit(5).all()
+
+            # === ƯU TIÊN 2: Tìm theo từng keyword trong tên sản phẩm ===
+            if not products and keywords:
                 for kw in keywords:
-                    cat = db.query(Danhmuc).filter(
-                        Danhmuc.ten_danhmuc.ilike(f"%{kw}%")
-                    ).first()
-                    if cat:
-                        break
+                    found = query.filter(Sanpham.ten_sanpham.ilike(f"%{kw}%")).limit(5).all()
+                    products.extend(found)
+                seen = set()
+                products = [p for p in products if p.ma_sanpham not in seen and not seen.add(p.ma_sanpham)][:5]
 
-            if cat:
-                # Lấy tối đa 5 sản phẩm thuộc đúng danh mục này
-                products = query.filter(Sanpham.ma_danhmuc == cat.ma_danhmuc).limit(5).all()
-            else:
-                # 2. Fallback: Tìm theo Tên sản phẩm
-                products = query.filter(
-                    Sanpham.ten_sanpham.ilike(f"%{tu_khoa}%")
-                ).limit(5).all()
-                if not products and keywords:
+            # === FALLBACK 3: Tìm theo Danh mục (chỉ khi không tìm thấy sản phẩm nào ở trên) ===
+            if not products:
+                cat = db.query(Danhmuc).filter(Danhmuc.ten_danhmuc.ilike(f"%{tu_khoa}%")).first()
+                if not cat:
                     for kw in keywords:
-                        found = query.filter(Sanpham.ten_sanpham.ilike(f"%{kw}%")).limit(5).all()
-                        products.extend(found)
-                    seen = set()
-                    products = [p for p in products if p.ma_sanpham not in seen and not seen.add(p.ma_sanpham)][:5]
+                        cat = db.query(Danhmuc).filter(Danhmuc.ten_danhmuc.ilike(f"%{kw}%")).first()
+                        if cat:
+                            break
+                if cat:
+                    products = query.filter(Sanpham.ma_danhmuc == cat.ma_danhmuc).limit(5).all()
+
 
             if not products:
                 cats = db.query(Danhmuc).filter(Danhmuc.is_active == True).limit(10).all()
@@ -97,14 +95,33 @@ def tra_cuu_mua_hang(loai: str, tu_khoa: str = "", ma_khuyen_mai: str = None):
             result = []
             for p in products:
                 img = db.query(Hinhanh).filter(Hinhanh.ma_sanpham == p.ma_sanpham, Hinhanh.is_main == True).first()
-                result.append({
+                # Tính giá sau khi giảm
+                gia_goc = p.gia
+                gia_sale = None
+                if p.gia_tri_giam and p.gia_tri_giam > 0:
+                    if p.kieu_giam_gia and p.kieu_giam_gia.value == 'percentage':
+                        gia_sale = gia_goc * (1 - p.gia_tri_giam / 100)
+                    elif p.kieu_giam_gia and p.kieu_giam_gia.value == 'fixed_amount':
+                        gia_sale = gia_goc - p.gia_tri_giam
+                # Chuỗi giảm giá để hiển thị
+                if gia_sale and p.gia_tri_giam and p.gia_tri_giam > 0:
+                    if p.kieu_giam_gia and p.kieu_giam_gia.value == 'percentage':
+                        giam_str = f"-{p.gia_tri_giam:.0f}%"
+                    else:
+                        giam_str = f"-{p.gia_tri_giam:,.0f} VND"
+                else:
+                    giam_str = None
+                item = {
                     "ten": p.ten_sanpham,
-                    "gia": f"{p.gia:,.0f} VND",
+                    "gia_goc": f"{gia_goc:,.0f} VND",
+                    "gia_ban": f"{gia_sale:,.0f} VND" if gia_sale else f"{gia_goc:,.0f} VND",
+                    "giam": giam_str,
+                    "co_sale": gia_sale is not None,
                     "ton": p.ton_kho,
                     "link": f"/products/{p.ma_sanpham}",
                     "hinh_anh": img.image_url if img else None,
-                    "mo_ta_ngan": p.mo_ta[:100] + "..." if p.mo_ta else ""
-                })
+                }
+                result.append(item)
             # Thêm link "Xem thêm toàn bộ danh mục" nếu tìm theo danh mục
             if cat:
                 result.append({
@@ -242,18 +259,26 @@ Bạn là Trợ lý ảo của 'Bike Shop'. Hãy hỗ trợ khách hàng mua s�
 - Ví dụ: Nếu vừa liệt kê "xe địa hình" và khách hỏi "Cái đó giá bao nhiêu?", mình hiểu "cái đó" = các mẫu xe địa hình vừa liệt kê, trả lời ngay mà không cần hỏi lại.
 - Nếu có nhiều sản phẩm trong danh sách, hãy liệt kê giá từng mẫu thay vì hỏi lại.
 
-🛠️ TOOLS: 
+🛠️ TOOLS:
 1. `liet_ke_danh_muc`: Liệt kê tất cả danh mục. Gọi đầu tiên khi khách hỏi về loại xe để lấy tên CHÍNH XÁC.
 2. `tra_cuu_mua_hang(loai='san_pham', tu_khoa=<tên_danh_mục_chính_xác>)`:
-   - LUÔN trả kết quả dưới dạng danh sách bullet, mỗi SP một dòng:
-     `- **[Tên SP](/products/{ma})** – {gia} VND`
+   - LUÔN hiển thị kết quả sản phẩm dưới dạng BẢNG MARKDOWN (KHÔNG dùng danh sách bullet):
+     - Nếu sản phẩm KHÔNG có giảm giá (`co_sale=False`):
+       | Sản phẩm | Giá bán | Tồn kho |
+       |---|---|---|
+       | [Tên SP](/products/{ma}) | {gia_ban} | {ton} chiếc |
+     - Nếu sản phẩm CÓ giảm giá (`co_sale=True`):
+       | Sản phẩm | Giá gốc | Giảm | Giá sau giảm | Tồn kho |
+       |---|---|---|---|---|
+       | [Tên SP](/products/{ma}) | {gia_goc} | {giam} 🏷️ | {gia_ban} | {ton} chiếc |
+   - KHÔNG bọc tên link bằng dấu ** (sẽ gây lỗi render). Chỉ dùng [Tên]({link}) thuần.
    - Nếu kết quả gồm mục `xem_them: True`, BẮT BUỘC thêm dòng cuối:
      `👉 [Xem thêm toàn bộ {ten_danh_muc}]({xem_them_link})`
 3. `quan_ly_don_hang_ca_nhan`: Tra cứu hoặc Hủy đơn (Cần xac_nhan=True).
    - Khi tra cứu danh sách, PHẢI hiển thị dưới dạng bảng Markdown:
      | Mã đơn | Trạng thái | Ngày đặt | Tổng tiền |
      |---|---|---|---|
-   - Mỗi mã đơn PHẢI được gắn link động: **[Đơn hàng #{ma_thực}](/my-orders/{ma_thực})** (thay {ma_thực} bằng giá trị trường `ma` từ tool).
+   - Mỗi mã đơn PHẢI được gắn link động: [Đơn hàng #{ma_thực}](/my-orders/{ma_thực}) (KHÔNG dùng **).
    - KHÔNG được dùng placeholder hay text cố định.
 4. `thong_tin_cua_hang_chinh_sach`: Địa chỉ, Hotline, Quy định bảo hành.
 💡 LƯU Ý: Không tự đoán ID. Chỉ dùng dữ liệu thực từ Tool. Luôn ưu tiên trải nghiệm khách hàng lên hàng đầu.
