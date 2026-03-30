@@ -8,6 +8,10 @@ from app.schemas.user import UserCreate, UserResponse
 from app.schemas.token import Token
 from app.models.address import Address
 from app.api import deps
+from sqlalchemy import or_
+from datetime import timedelta
+from app.api.endpoints.audit import create_audit_log
+from app.models.audit import AuditLog
 
 router = APIRouter()
 
@@ -62,7 +66,6 @@ def logout(
     user_role = getattr(current_user.quyen, "value", str(current_user.quyen)).upper()
     if user_role == "ADMIN":
         try:
-            from app.api.endpoints.audit import create_audit_log
             ip_address = request.client.host if request.client else None
             user_agent = request.headers.get("user-agent")
             
@@ -79,7 +82,6 @@ def logout(
     
     return {"message": "Logged out successfully"}
 
-from sqlalchemy import or_
 
 @router.post("/login")
 def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
@@ -110,7 +112,6 @@ def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db
             detail_msg = "⏳ Tài khoản đang chờ kích hoạt. Vui lòng liên hệ Admin qua Hotline: 0961.178.265 để xác thực."
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail_msg)
     
-    from datetime import timedelta
     
     # Lấy role: nếu quyen là Enum thì lấy value
     user_role = user.quyen
@@ -135,7 +136,6 @@ def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db
     # Log admin login
     if str(user_role).upper() == "ADMIN":
         try:
-            from app.models.audit import AuditLog
             ip_address = request.client.host if request.client else None
             user_agent = request.headers.get("user-agent")
             

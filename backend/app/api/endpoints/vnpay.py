@@ -6,6 +6,7 @@ from app.models.payment import ThanhToan
 from app.utils.vnpay import create_payment_url, verify_payment_response, parse_payment_result
 from pydantic import BaseModel
 from typing import Optional
+from app.models.cart import GioHang, ChiTietGioHang
 
 router = APIRouter()
 
@@ -112,7 +113,6 @@ async def vnpay_payment_return(
             order.trangthai_thanhtoan = "paid" # Cập nhật trạng thái thanh toán
 
             # --- LOGIC XÓA GIỎ HÀNG (Selective) ---
-            from app.models.cart import GioHang, ChiTietGioHang
             user_cart = db.query(GioHang).filter(GioHang.ma_user == order.ma_user).first()
             if user_cart and order.chitiet_donhang:
                 for item in order.chitiet_donhang:
@@ -178,7 +178,6 @@ async def vnpay_ipn(
                     order.trangthai_thanhtoan = "paid"
 
                     # --- LOGIC XÓA GIỎ HÀNG (Selective via IPN) ---
-                    from app.models.cart import GioHang, ChiTietGioHang
                     user_cart = db.query(GioHang).filter(GioHang.ma_user == order.ma_user).first()
                     if user_cart and order.chitiet_donhang:
                         for item in order.chitiet_donhang:

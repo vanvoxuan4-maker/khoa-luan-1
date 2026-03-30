@@ -8,6 +8,7 @@ from sqlalchemy import func, text
 from datetime import datetime
 from typing import List, Optional
 import uuid
+import traceback
 
 from app.db.session import get_db, SessionLocal
 from app.api.deps import get_current_user
@@ -16,7 +17,7 @@ from app.models.chatbot import LichSuChat
 from app.schemas.chatbot import ChatRequest, ChatResponse
 from app.models.order import DonHang, ChiTietDonHang
 from app.models.history import LichSuDonHang
-from app.models.product import Sanpham
+from app.models.product import Sanpham, Danhmuc, Hinhanh
 from app.models.payment import ThanhToan
 from app.models.marketing import Makhuyenmai
 from app.core.config import settings
@@ -28,16 +29,90 @@ genai.configure(api_key=settings.GOOGLE_API_KEY)
 
 # ---------------- CONSOLIDATED TOOLS ----------------
 
+def liet_ke_danh_muc():
+    """
+    Liệt kê tất cả danh mục sản phẩm hiện có trong cửa hàng.
+    Gọi tool này đầu tiên khi khách hỏi về loại xe, để biết đúng tên danh mục cần tra cứu.
+    """
+    db = SessionLocal()
+    try:
+        cats = db.query(Danhmuc).filter(Danhmuc.is_active == True).all()
+        return [{"ma": c.ma_danhmuc, "ten": c.ten_danhmuc} for c in cats]
+    except Exception as e:
+        return f"Lỗi: {str(e)}"
+    finally:
+        db.close()
+
 def tra_cuu_mua_hang(loai: str, tu_khoa: str = "", ma_khuyen_mai: str = None):
     """
-    Tra cứu: 'san_pham' (cần tu_khoa), 'size_xe' (cần tu_khoa là chiều cao), 'khuyen_mai' (tra cứu mã ma_khuyen_mai).
+    Tra cứu: 'san_pham' (cần tu_khoa là tên sản phẩm hoặc tên danh mục chính xác từ tool liệt_kầ_danh_mục),
+    'size_xe' (cần tu_khoa là chiều cao), 'khuyen_mai' (tra cứu mã ma_khuyen_mai).
     """
     db = SessionLocal()
     try:
         if loai == 'san_pham':
-            p = db.query(Sanpham).filter(Sanpham.ten_sanpham.ilike(f"%{tu_khoa}%")).first()
-            if not p: return "Rất tiếc, mình không thấy sản phẩm này."
-            return {"ten": p.ten_sanpham, "gia": f"{p.gia:,} VND", "ton": p.ton_kho, "link": f"/products/{p.ma_sanpham}"}
+            query = db.query(Sanpham).filter(Sanpham.is_active == True)
+
+            # Loại stopword phổ biến, giữ từ đặc thù >= 3 ký tự, ưu tiên từ dài nhất
+            STOPWORDS = {"xe", "tìm", "cho", "mình", "một", "số", "các", "có", "và", "của",
+                         "loại", "muốn", "giúp", "đạp", "gì", "nào"}
+            keywords = sorted(
+                [kw.strip() for kw in tu_khoa.split()
+                 if len(kw.strip()) >= 3 and kw.strip().lower() not in STOPWORDS],
+                key=len, reverse=True  # từ dài nhất (đặc thù nhất) trước
+            )
+
+            # 1. Thử thêm cụm đầy đủ trước
+            cat = db.query(Danhmuc).filter(Danhmuc.ten_danhmuc.ilike(f"%{tu_khoa}%")).first()
+
+            # 2. Thử từng keyword đặc thù (đã loại stopword, sắp xếp dài → ngắn)
+            if not cat:
+                for kw in keywords:
+                    cat = db.query(Danhmuc).filter(
+                        Danhmuc.ten_danhmuc.ilike(f"%{kw}%")
+                    ).first()
+                    if cat:
+                        break
+
+            if cat:
+                # Lấy tối đa 5 sản phẩm thuộc đúng danh mục này
+                products = query.filter(Sanpham.ma_danhmuc == cat.ma_danhmuc).limit(5).all()
+            else:
+                # 2. Fallback: Tìm theo Tên sản phẩm
+                products = query.filter(
+                    Sanpham.ten_sanpham.ilike(f"%{tu_khoa}%")
+                ).limit(5).all()
+                if not products and keywords:
+                    for kw in keywords:
+                        found = query.filter(Sanpham.ten_sanpham.ilike(f"%{kw}%")).limit(5).all()
+                        products.extend(found)
+                    seen = set()
+                    products = [p for p in products if p.ma_sanpham not in seen and not seen.add(p.ma_sanpham)][:5]
+
+            if not products:
+                cats = db.query(Danhmuc).filter(Danhmuc.is_active == True).limit(10).all()
+                cat_names = ", ".join([c.ten_danhmuc for c in cats])
+                return f"Rất tiếc, mình không tìm thấy sản phẩm nào với từ khóa '{tu_khoa}'. Cửa hàng hiện có danh mục: {cat_names}."
+
+            result = []
+            for p in products:
+                img = db.query(Hinhanh).filter(Hinhanh.ma_sanpham == p.ma_sanpham, Hinhanh.is_main == True).first()
+                result.append({
+                    "ten": p.ten_sanpham,
+                    "gia": f"{p.gia:,.0f} VND",
+                    "ton": p.ton_kho,
+                    "link": f"/products/{p.ma_sanpham}",
+                    "hinh_anh": img.image_url if img else None,
+                    "mo_ta_ngan": p.mo_ta[:100] + "..." if p.mo_ta else ""
+                })
+            # Thêm link "Xem thêm toàn bộ danh mục" nếu tìm theo danh mục
+            if cat:
+                result.append({
+                    "xem_them": True,
+                    "ten_danh_muc": cat.ten_danhmuc,
+                    "xem_them_link": f"/products?category_id={cat.ma_danhmuc}"
+                })
+            return result
         elif loai == 'size_xe':
             try: h = float(tu_khoa)
             except: return "Hệ thống: Hãy nhập chiều cao của bạn (ví dụ: 170)."
@@ -64,8 +139,18 @@ def quan_ly_don_hang_ca_nhan(hanh_dong: str, ma_don: str = None, ma_user: int = 
                 o = db.query(DonHang).filter(DonHang.ma_don_hang == ma_don).first()
                 if not o: return "Không tìm thấy đơn hàng này."
                 return {"ma_don": o.ma_don_hang, "trang_thai": str(o.trang_thai), "tong": f"{o.tong_tien:,} VND"}
-            orders = db.query(DonHang).filter(DonHang.ma_user == ma_user).order_by(DonHang.ngay_dat.desc()).limit(3).all()
-            return [{"ma": o.ma_don_hang, "status": o.trang_thai} for o in orders]
+            orders = db.query(DonHang).filter(
+                DonHang.ma_user == ma_user,
+                DonHang.xoa_don == False  # Chỉ lấy đơn đang hiển thị trên trang lịch sử (giống /my-orders)
+            ).order_by(DonHang.ngay_dat.desc()).all()
+            if not orders:
+                return "Không tìm thấy đơn hàng nào trong hệ thống."
+            return [{
+                "ma": o.ma_don_hang,
+                "trang_thai": str(o.trang_thai.value if hasattr(o.trang_thai, 'value') else o.trang_thai),
+                "tong_tien": f"{o.tong_tien:,.0f} VND",
+                "ngay_dat": o.ngay_dat.strftime('%d/%m/%Y') if o.ngay_dat else '---'
+            } for o in orders]
         elif hanh_dong == 'huy_don':
             if not ma_don: return "Cần cung cấp mã đơn hàng để hủy."
             o = db.query(DonHang).filter(DonHang.ma_don_hang == ma_don).first()
@@ -78,9 +163,12 @@ def quan_ly_don_hang_ca_nhan(hanh_dong: str, ma_don: str = None, ma_user: int = 
                     "tin_nhan": f"Bạn có chắc chắn muốn hủy đơn hàng #{ma_don} không? Phản hồi 'Xác nhận' để mình tiến hành nhé."
                 }
             
-            # 2. Kiểm tra trạng thái hợp lệ
-            if str(o.trang_thai).lower() not in ['pending', 'confirmed']: 
-                return "Đơn hàng đang giao hoặc đã hoàn tất, không thể tự hủy. Vui lòng liên hệ Admin."
+            # 2. Kiểm tra trạng thái hợp lệ — CHỈ cho phép hủy khi đang chờ xác nhận (pending)
+            trang_thai_str = str(o.trang_thai.value if hasattr(o.trang_thai, 'value') else o.trang_thai).lower()
+            if trang_thai_str != 'pending':
+                if trang_thai_str == 'confirmed':
+                    return "Đơn hàng này đã được xác nhận và đang được Shop chuẩn bị, không thể tự hủy nữa. Vui lòng liên hệ Admin qua Hotline: 0961.178.265 để được hỗ trợ."
+                return "Đơn hàng đang giao hoặc đã hoàn tất, không thể tự hủy. Vui lòng liên hệ Admin qua Hotline: 0961.178.265."
             
             o.trang_thai = 'cancelled'
             msg = f"Dạ, mình đã hỗ trợ hủy đơn hàng #{ma_don} thành công giúp bạn rồi ạ! ✅"
@@ -100,25 +188,76 @@ def thong_tin_cua_hang_chinh_sach(loai: str):
     Thông tin: 'cua_hang' (địa chỉ, hotline), 'chinh_sach' (bảo hành, đổi trả).
     """
     if loai == 'cua_hang':
-        return {"ten": "BikeStore", "dia_chi": "Đà Nẵng", "hotline": "0961.178.265"}
-    return "Bảo hành 5 năm khung sườn, đổi trả 7 ngày."
+        return {
+            "ten": "Bike Shop",
+            "dia_chi": "Xã Thượng Đức, TP. Đà Nẵng",
+            "hotline": "0961.178.265",
+            "email": "vanvoxuan4@gmail.com",
+            "gio_mo_cua": "Thứ 2 - Thứ 7: 8:00–20:00 | Chủ nhật: 9:00–18:00"
+        }
+    return {
+        "bao_hanh": {
+            "khung_suon": "5 năm",
+            "linh_kien_phu": "1 - 2 năm (phanh, giảm xóc, truyền động)"
+        },
+        "dieu_kien_ap_dung": [
+            "Sản phẩm còn trong thời hạn bảo hành",
+            "Có hóa đơn mua hàng hoặc thông tin đơn hàng trên hệ thống",
+            "Lỗi do nhà sản xuất (không áp dụng nếu do người dùng sử dụng sai cách hoặc tác động ngoại lực)"
+        ],
+        "khong_bao_hanh": [
+            "Hư hỏng do tai nạn, va đập, ngã xe",
+            "Tự ý tháo lắp, sửa chữa ngoài cửa hàng",
+            "Hao mòn tự nhiên (lốp, má phanh, xích...)"
+        ],
+        "doi_tra": "Đổi trả trong 7 ngày nếu sản phẩm lỗi do nhà sản xuất, còn nguyên tem hộp",
+        "ho_tro": "Mang xe trực tiếp đến cửa hàng tại Xã Thượng Đức, TP. Đà Nẵng hoặc gọi Hotline 0961.178.265"
+    }
 
-my_tools = [tra_cuu_mua_hang, quan_ly_don_hang_ca_nhan, thong_tin_cua_hang_chinh_sach]
+my_tools = [liet_ke_danh_muc, tra_cuu_mua_hang, quan_ly_don_hang_ca_nhan, thong_tin_cua_hang_chinh_sach]
 
 # ---------------- SYSTEM INSTRUCTION ----------------
 sys_instruct = """
-Bạn là Trợ lý ảo của 'Bike Shop'. Hãy hỗ trợ khách hàng mua sắm một cách thông minh và tận tâm.
-🌟 PHONG CÁCH: Thân thiện, nhiệt tình, sử dụng emoji (🚲, ✨, ✅).
+Bạn là Trợ lý ảo của 'Bike Shop'. Hãy hỗ trợ khách hàng mua sắm một cách thông minh, tận tâm và chuyên nghiệp.
+
+🌟 PHONG CÁCH GIAO TIẾP:
+1. Thân thiện, ấm áp và con người: Sử dụng emoji phù hợp (🚲, ✨, ✅, 😊). Xưng hô là "Mình" hoặc "Shop" (AI) và gọi khách hàng là "Bạn".
+2. TUYỆT ĐỐI KHÔNG dùng thuật ngữ kỹ thuật hoặc đề cập đến mã ID (như ID=6, User ID: 123) trong câu trả lời. Hãy nói "tài khoản của bạn" hoặc "đơn hàng của bạn".
+3. Trình bày rõ ràng: Sử dụng Markdown (in đậm, danh sách) để thông tin dễ đọc.
+
+🛠️ QUY TRÌNH TƯ VẤN SẢN PHẨM (BẮT BUỘC):
+1. Khi khách hỏi về loại/nhóm xe (ví dụ: "xe địa hình", "xe đạp điện", ...), hãy gọi đầu tiên:
+   - `liet_ke_danh_muc()` → Lấy danh sách danh mục chính xác.
+   - Sau đó gọi `tra_cuu_mua_hang(loai='san_pham', tu_khoa=<ten_danh_muc_chinh_xac>)` với **tên danh mục chính xác từ tool**, không tự đặt từ khóa.
+2. KHAI THÁC TUÀ KHÓA: Nếu khách nói "xe địa hình" thì tu_khoa nên là "ĐỊA HÌNH" (hoặc tên danh mục thực).
+3. CHỈ dùng dữ liệu thực từ tool. KHAI TÁC KHÔNG ĐUỢC tự đơn đặt câu trả lời như "Shop chưa có" nếu chưa gọi tool.
 
 🛠️ QUY TRÌNH HỦY ĐƠN (BẮT BUỘC):
 1. Khi khách muốn hủy, bạn PHẢI hỏi xác nhận: "Bạn có chắc chắn muốn hủy đơn hàng #ID không?".
 2. CHỈ gọi tool `quan_ly_don_hang_ca_nhan` với `xac_nhan=True` khi khách đã đồng ý rõ ràng.
+3. Hệ thống chỉ cho phép hủy đơn có trạng thái **Chờ xác nhận (Pending)**. Các trạng thái khác (Đã xác nhận, Đang giao, Hoàn thành) không thể tự hủy, hãy thông báo rõ và hướng dẫn liên hệ Admin.
+
+🧠 XỬ LÝ NGỮ CẢNH & ĐẠI TỪ THAM CHIẾU:
+- Khi người dùng dùng đại từ "cái đó", "nó", "xe đó", "mẫu đó", "đơn đó"... hãy nhìn lại các tin nhắn trước để xác định sản phẩm/đơn hàng đang được nhắc đến.
+- Ví dụ: Nếu vừa liệt kê "xe địa hình" và khách hỏi "Cái đó giá bao nhiêu?", mình hiểu "cái đó" = các mẫu xe địa hình vừa liệt kê, trả lời ngay mà không cần hỏi lại.
+- Nếu có nhiều sản phẩm trong danh sách, hãy liệt kê giá từng mẫu thay vì hỏi lại.
 
 🛠️ TOOLS: 
-1. `tra_cuu_mua_hang`: Tìm SP, tư vấn size xe, xem khuyến mãi. Link SP: `[Tên SP](/products/ID)`.
-2. `quan_ly_don_hang_ca_nhan`: Tra cứu hoặc Hủy đơn (Cần xac_nhan=True). Link đơn: `[Đơn hàng #ID](/my-orders/ID)`.
-3. `thong_tin_cua_hang_chinh_sach`: Địa chỉ, Hotline, Quy định bảo hành.
-💡 LƯU Ý: Không tự đoán ID. Chỉ dùng ID từ Tool.
+1. `liet_ke_danh_muc`: Liệt kê tất cả danh mục. Gọi đầu tiên khi khách hỏi về loại xe để lấy tên CHÍNH XÁC.
+2. `tra_cuu_mua_hang(loai='san_pham', tu_khoa=<tên_danh_mục_chính_xác>)`:
+   - LUÔN trả kết quả dưới dạng danh sách bullet, mỗi SP một dòng:
+     `- **[Tên SP](/products/{ma})** – {gia} VND`
+   - Nếu kết quả gồm mục `xem_them: True`, BẮT BUỘC thêm dòng cuối:
+     `👉 [Xem thêm toàn bộ {ten_danh_muc}]({xem_them_link})`
+3. `quan_ly_don_hang_ca_nhan`: Tra cứu hoặc Hủy đơn (Cần xac_nhan=True).
+   - Khi tra cứu danh sách, PHẢI hiển thị dưới dạng bảng Markdown:
+     | Mã đơn | Trạng thái | Ngày đặt | Tổng tiền |
+     |---|---|---|---|
+   - Mỗi mã đơn PHẢI được gắn link động: **[Đơn hàng #{ma_thực}](/my-orders/{ma_thực})** (thay {ma_thực} bằng giá trị trường `ma` từ tool).
+   - KHÔNG được dùng placeholder hay text cố định.
+4. `thong_tin_cua_hang_chinh_sach`: Địa chỉ, Hotline, Quy định bảo hành.
+💡 LƯU Ý: Không tự đoán ID. Chỉ dùng dữ liệu thực từ Tool. Luôn ưu tiên trải nghiệm khách hàng lên hàng đầu.
+
 """
 
 try:
@@ -231,7 +370,9 @@ def chat_with_customer_ai(item: ChatRequest, session_id: Optional[str] = None, d
             current_model = genai.GenerativeModel('gemini-3.1-flash-lite-preview', tools=my_tools, system_instruction=dynamic_sys_instruct)
             
             chat = current_model.start_chat(history=gemini_history, enable_automatic_function_calling=True)
-            response = chat.send_message(f"[Hệ thống: Khách hàng ID={current_user.ma_user}] {item.message}")
+            # Truyền thông tin định danh nội bộ (AI không nên lặp lại mã này cho khách)
+            user_info = f"ma_user (nội bộ, KHÔNG đọc nói ra): {current_user.ma_user} | Tên khách: {current_user.hovaten or 'Khách hàng'}"
+            response = chat.send_message(f"[Thông tin nội bộ hệ thống - TUYỆT ĐỐI KHÔNG nhắc lại: {user_info}] {item.message}")
             reply = response.text
 
             # 4.5. Tự động tạo tiêu đề nếu là tin nhắn đầu tiên của session
@@ -252,7 +393,6 @@ def chat_with_customer_ai(item: ChatRequest, session_id: Optional[str] = None, d
             reply = customer_fallback(item.message, current_user.ma_user)
             
     except Exception as e:
-        import traceback
         print(f"❌ Customer AI Error: {e}")
         traceback.print_exc()
         reply = customer_fallback(item.message, current_user.ma_user)
@@ -344,8 +484,9 @@ async def stream_chat_with_customer_ai(item: ChatRequest, session_id: Optional[s
             current_date_str = datetime.now().strftime('%d/%m/%Y')
             
             chat = model.start_chat(history=gemini_history)
-            # Inject ngày vào tin nhắn đầu tiên
-            prompt = f"[Hệ thống: Khách hàng ID={ma_user}, Ngày: {current_date_str}] {message_text}"
+            # Inject ngày và thông tin khách hàng vào ngữ cảnh (tránh dùng mã ID thô)
+            user_info = f"ma_user (nội bộ, KHÔNG đọc nói ra): {current_user.ma_user} | Tên khách: {current_user.hovaten or 'Khách hàng'}"
+            prompt = f"[Hệ thống nội bộ - Ngày: {current_date_str}, {user_info}] {message_text}"
 
             # ✅ FIX #2: Tách pha Tool-call (không stream) và pha Text (stream thực sự)
             MAX_TOOL_ROUNDS = 5
@@ -390,7 +531,6 @@ async def stream_chat_with_customer_ai(item: ChatRequest, session_id: Optional[s
                     await asyncio.sleep(0.04) # Tạo hiệu ứng gõ mượt mà
 
         except Exception as e:
-            import traceback
             err_msg = traceback.format_exc()
             print(f"❌ Customer AI Stream Error: {e}")
             with open("ai_runtime_error.log", "a", encoding="utf-8") as f:

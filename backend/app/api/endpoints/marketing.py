@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
 from app.utils.text_utils import normalize_str
+from app.api.endpoints.audit import create_audit_log
 import traceback
 from pydantic import BaseModel
 
@@ -218,7 +219,6 @@ def create_voucher(voucher: VoucherCreate, db: Session = Depends(get_db), admin:
     
     # Audit log
     try:
-        from app.api.endpoints.audit import create_audit_log
         create_audit_log(
             db=db,
             user_id=admin.ma_user,
@@ -285,7 +285,6 @@ def update_voucher(id: int, data: VoucherUpdate, db: Session = Depends(get_db), 
     
     # Audit log
     try:
-        from app.api.endpoints.audit import create_audit_log
         create_audit_log(
             db=db,
             user_id=admin.ma_user,

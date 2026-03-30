@@ -11,12 +11,16 @@ from app.api.deps import check_admin_role
 from app.models.user import User
 from app.models.product import Sanpham
 # 👇 QUAN TRỌNG: Import thêm TrangThaiPayment
-from app.models.order import DonHang, TrangThaiOrder, TrangThaiPayment
-from app.schemas.user import UserUpdate 
+from app.models.order import DonHang, TrangThaiOrder, TrangThaiPayment, ChiTietDonHang
+from app.models.payment import ThanhToan
+from app.models.cart import GioHang
+from app.api.endpoints.audit import create_audit_log
+from app.schemas.user import UserUpdate, UserResponse
 from app.models.address import Address
 from app.schemas.address import AddressCreate, AddressUpdate, AddressResponse
 from app.utils.text_utils import normalize_str
 from pydantic import BaseModel
+from typing import List, Optional
 
 router = APIRouter()
 
@@ -69,7 +73,6 @@ def get_all_users(
 
 @router.get("/users/{user_id}", response_model=UserResponse)
 def get_user_detail(user_id: int, db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
-    from sqlalchemy.orm import joinedload
     user = db.query(User).options(joinedload(User.addresses)).filter(User.ma_user == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
@@ -78,8 +81,7 @@ def get_user_detail(user_id: int, db: Session = Depends(get_db), admin: User = D
     order_count = db.query(DonHang).filter(DonHang.ma_user == user_id).count()
     user.total_orders = order_count
     
-    # Tính tổng chi tiêu (Các đơn hàng đã giao thành công hoặc đã thanh toán)
-    from sqlalchemy import func
+    # Tính tổng chi tiêu
     total = db.query(func.sum(DonHang.tong_tien)).filter(
         DonHang.ma_user == user_id,
         DonHang.trang_thai != "cancelled",
@@ -108,7 +110,6 @@ def toggle_user_status(user_id: int, request: Request, db: Session = Depends(get
     
     # Ghi nhật ký hoạt động
     try:
-        from app.api.endpoints.audit import create_audit_log
         ip_address = request.client.host if request.client else None
         user_agent = request.headers.get("user-agent")
         create_audit_log(
@@ -140,7 +141,6 @@ def update_user_status(user_id: int, status: str, request: Request, db: Session 
 
     # Ghi nhật ký hoạt động
     try:
-        from app.api.endpoints.audit import create_audit_log
         ip_address = request.client.host if request.client else None
         user_agent = request.headers.get("user-agent")
         create_audit_log(
@@ -184,7 +184,6 @@ def update_user_info(user_id: int, user_in: UserUpdateAdmin, request: Request, d
 
     # Ghi nhật ký hoạt động
     try:
-        from app.api.endpoints.audit import create_audit_log
         ip_address = request.client.host if request.client else None
         user_agent = request.headers.get("user-agent")
         create_audit_log(
@@ -212,11 +211,6 @@ def delete_user(user_id: int, request: Request, db: Session = Depends(get_db), a
         raise HTTPException(status_code=400, detail="Bạn không thể xóa chính tài khoản Admin đang đăng nhập!")
 
     try:
-        # Import models locally to avoid circular imports if any
-        from app.models.cart import GioHang
-        from app.models.payment import ThanhToan
-        from app.models.order import ChiTietDonHang
-
         # 1. Xóa các Đánh giá
         db.query(Danhgia).filter(Danhgia.ma_user == user_id).delete()
         
@@ -245,7 +239,6 @@ def delete_user(user_id: int, request: Request, db: Session = Depends(get_db), a
 
         # Ghi nhật ký hoạt động
         try:
-            from app.api.endpoints.audit import create_audit_log
             ip_address = request.client.host if request.client else None
             user_agent = request.headers.get("user-agent")
             create_audit_log(

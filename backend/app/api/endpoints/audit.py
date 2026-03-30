@@ -2,7 +2,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 from datetime import datetime
 
 from app.db.session import get_db
@@ -177,8 +177,7 @@ def get_audit_stats(
     db: Session = Depends(get_db),
     current_user: User = Depends(check_admin_role)
 ):
-    """Get audit log statistics"""
-    from sqlalchemy import func
+    """Get audit log statistics segment"""
     
     total_logs = db.query(func.count(AuditLog.ma_log)).scalar()
     

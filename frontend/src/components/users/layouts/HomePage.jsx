@@ -54,18 +54,27 @@ const HomePage = () => {
     }, [loading, allProducts, categories]);
 
     const fetchData = async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 giây timeout
+
         try {
             setLoading(true);
             setError(null);
             const [productRes, catRes] = await Promise.all([
-                axios.get(`${API_BASE_URL}/sanpham?limit=100`),
-                axios.get(`${API_BASE_URL}/danhmuc`)
+                axios.get(`${API_BASE_URL}/sanpham?limit=100`, { signal: controller.signal }),
+                axios.get(`${API_BASE_URL}/danhmuc`, { signal: controller.signal })
             ]);
+            clearTimeout(timeoutId);
             setAllProducts(productRes.data);
             setCategories(catRes.data);
         } catch (err) {
-            console.error("Lỗi tải dữ liệu:", err);
-            setError(err.response?.data?.detail || err.message || 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng!');
+            clearTimeout(timeoutId);
+            if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
+                setError('Server đang khởi động, vui lòng thử lại sau vài giây!');
+            } else {
+                console.error("Lỗi tải dữ liệu:", err);
+                setError(err.response?.data?.detail || err.message || 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng!');
+            }
         } finally {
             setLoading(false);
         }

@@ -1,7 +1,9 @@
 import os
+import io
 import uuid
 import unicodedata
 from typing import List, Optional
+from PIL import Image
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case, or_
@@ -25,6 +27,7 @@ from app.schemas.product import (
 )
 from app.utils.product_utils import generate_random_product_code
 from app.utils.text_utils import normalize_str
+from app.api.endpoints.audit import create_audit_log
 
 router = APIRouter()
 
@@ -42,7 +45,6 @@ def create_danhmuc(item: DanhmucCreate, db: Session = Depends(get_db)):
 
     # Audit log
     try:
-        from app.api.endpoints.audit import create_audit_log
         create_audit_log(
             db=db,
             user_id=1, # Default admin or system if no current_user in this legacy endpoint
@@ -90,7 +92,6 @@ def create_thuonghieu(item: ThuonghieuCreate, db: Session = Depends(get_db)):
 
     # Audit log
     try:
-        from app.api.endpoints.audit import create_audit_log
         create_audit_log(
             db=db,
             user_id=1, # Default admin
@@ -475,9 +476,6 @@ def get_generated_code(prefix: str = "SP", db: Session = Depends(get_db)):
 
 @router.post("/upload-anh/{ma_sanpham}")
 async def upload_image(ma_sanpham: int, is_main: bool = False, mau: Optional[str] = None, file: UploadFile = File(...), db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
-    from PIL import Image
-    import io
-
     product = db.query(Sanpham).filter(Sanpham.ma_sanpham == ma_sanpham).first()
     if not product:
         raise HTTPException(status_code=404, detail="Sản phẩm không tồn tại")
@@ -615,7 +613,6 @@ def create_category_admin(cat: DanhmucCreate, db: Session = Depends(get_db), adm
 
     # Audit log
     try:
-        from app.api.endpoints.audit import create_audit_log
         create_audit_log(
             db=db,
             user_id=admin.ma_user,
@@ -687,7 +684,6 @@ def create_brand_admin(brand: ThuonghieuCreate, db: Session = Depends(get_db), a
 
     # Audit log
     try:
-        from app.api.endpoints.audit import create_audit_log
         create_audit_log(
             db=db,
             user_id=admin.ma_user,

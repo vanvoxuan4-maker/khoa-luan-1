@@ -231,62 +231,8 @@ const AdminChat = () => {
     return finalUrl.startsWith('/') ? finalUrl : `/${finalUrl}`;
   };
 
-  const renderMessage = (text, role) => {
-    if (!text) return null;
-    if (text.includes('|') && text.includes('---')) {
-      const lines = text.split('\n');
-      const tableIndices = [];
-      let inTable = false;
-      lines.forEach((line, i) => {
-        if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
-          if (!inTable) { tableIndices.push({ start: i, end: i }); inTable = true; }
-          else { tableIndices[tableIndices.length - 1].end = i; }
-        } else { inTable = false; }
-      });
-      if (tableIndices.length > 0) {
-        const result = [];
-        let lastIdx = 0;
-        tableIndices.forEach((range, tIdx) => {
-          if (range.start > lastIdx) {
-            result.push(<div key={`text-pre-${tIdx}`}>{renderTextContent(lines.slice(lastIdx, range.start).join('\n'), role)}</div>);
-          }
-          const tableLines = lines.slice(range.start, range.end + 1);
-          const headers = tableLines[0].split('|').filter(c => c.trim()).map(c => c.trim());
-          const rows = tableLines.slice(2).filter(l => l.includes('|')).map(l => l.split('|').filter(c => c.trim()).map(c => c.trim()));
-          result.push(
-            <div key={`table-${tIdx}`} className="my-3 overflow-x-auto border border-purple-100 rounded-lg bg-white shadow-inner">
-              <table className="min-w-full text-[12px] border-collapse">
-                <thead>
-                  <tr className="bg-purple-50 border-b border-purple-100">
-                    {headers.map((h, i) => (
-                      <th key={i} className="px-3 py-2 text-left font-black text-purple-700 border-r border-purple-100 last:border-0">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row, i) => (
-                    <tr key={i} className="border-b border-purple-50 last:border-0 hover:bg-purple-50/50 transition-colors">
-                      {row.map((cell, j) => (
-                        <td key={j} className="px-3 py-2 text-slate-600 border-r border-purple-50 last:border-0">{renderTextContent(cell, role)}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          );
-          lastIdx = range.end + 1;
-        });
-        if (lastIdx < lines.length) {
-          result.push(<div key="text-post">{renderTextContent(lines.slice(lastIdx).join('\n'), role)}</div>);
-        }
-        return result;
-      }
-    }
-    return renderTextContent(text, role);
-  };
-
-  const renderTextContent = (text, role) => {
+  // Hàm render inline (bold, link) - dùng bởi renderMessage
+  const renderInline = (text, role) => {
     if (!text) return null;
     const linkRegex = /(\[.*?\]\((?:https?:\/\/[^\s)]+|(?:\/admin|\/products|\/my-orders)[^\s)]+)\)|https?:\/\/[^\s]+|(?:\/admin|\/products|\/my-orders)[^\s]+)/g;
     const parts = text.split(linkRegex);
@@ -298,36 +244,20 @@ const AdminChat = () => {
         const display = mdLinkMatch[1];
         const isInternal = !url.startsWith('http');
         return isInternal ? (
-          <span 
-            key={index} 
-            onClick={() => {
-              setIsOpen(false);
-              navigate(url);
-            }}
+          <span key={index} onClick={() => { setIsOpen(false); navigate(url); }}
             className="text-purple-600 hover:text-purple-800 underline font-bold cursor-pointer transition-all active:scale-95"
-          >
-            {display}
-          </span>
+          >{display}</span>
         ) : (
           <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:text-purple-800 underline font-bold">{display}</a>
         );
       }
       const lowerPart = part.toLowerCase();
-      if (lowerPart.startsWith('/admin/') || lowerPart.startsWith('admin/') || 
-          lowerPart.startsWith('/products/') || lowerPart.startsWith('products/') ||
-          lowerPart.startsWith('/my-orders/') || lowerPart.startsWith('my-orders/')) {
+      if (lowerPart.startsWith('/admin/') || lowerPart.startsWith('/products/') || lowerPart.startsWith('/my-orders/')) {
         const targetUrl = part.startsWith('/') ? part : `/${part}`;
         return (
-          <span 
-            key={index} 
-            onClick={() => {
-              setIsOpen(false);
-              navigate(targetUrl);
-            }}
+          <span key={index} onClick={() => { setIsOpen(false); navigate(targetUrl); }}
             className="text-purple-600 hover:text-purple-800 underline font-extrabold cursor-pointer transition-all active:scale-95"
-          >
-            {part}
-          </span>
+          >{part}</span>
         );
       }
       if (part.match(/^https?:\/\//)) {
@@ -345,7 +275,84 @@ const AdminChat = () => {
     });
   };
 
+  const renderMessage = (text, role) => {
+    if (!text) return null;
 
+    // Chia nội dung thành các đoạn (table vs text)
+    const blocks = [];
+    const lines = text.split('\n');
+    let tableBuffer = [];
+    let nonTableBuffer = [];
+
+    const flushNonTable = () => {
+      if (nonTableBuffer.length > 0) {
+        blocks.push({ type: 'text', content: nonTableBuffer.join('\n') });
+        nonTableBuffer = [];
+      }
+    };
+
+    lines.forEach((line) => {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+        if (nonTableBuffer.length > 0) flushNonTable();
+        tableBuffer.push(line);
+      } else {
+        if (tableBuffer.length > 0) {
+          blocks.push({ type: 'table', content: tableBuffer.join('\n') });
+          tableBuffer = [];
+        }
+        nonTableBuffer.push(line);
+      }
+    });
+    if (tableBuffer.length > 0) blocks.push({ type: 'table', content: tableBuffer.join('\n') });
+    if (nonTableBuffer.length > 0) blocks.push({ type: 'text', content: nonTableBuffer.join('\n') });
+
+    return blocks.map((block, bIdx) => {
+      if (block.type === 'table' && block.content.includes('---')) {
+        const tableLines = block.content.split('\n').filter(l => l.trim());
+        const headers = tableLines[0].split('|').filter(c => c.trim()).map(c => c.trim());
+        const rows = tableLines.slice(2).filter(l => l.includes('|')).map(l => l.split('|').filter(c => c.trim()).map(c => c.trim()));
+        return (
+          <div key={bIdx} className="my-3 overflow-x-auto border border-purple-100 rounded-lg bg-white shadow-inner">
+            <table className="min-w-full text-[12px] border-collapse">
+              <thead>
+                <tr className="bg-purple-50 border-b border-purple-100">
+                  {headers.map((h, i) => <th key={i} className="px-3 py-2 text-left font-black text-purple-700 border-r border-purple-100 last:border-0">{h}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, i) => (
+                  <tr key={i} className="border-b border-purple-50 last:border-0 hover:bg-purple-50/50 transition-colors">
+                    {row.map((cell, j) => <td key={j} className="px-3 py-2 text-slate-600 border-r border-purple-50 last:border-0">{renderInline(cell, role)}</td>)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      }
+
+      // Render từng dòng text (xuống dòng đúng chuẩn)
+      const textLines = block.content.split('\n');
+      return (
+        <div key={bIdx}>
+          {textLines.map((line, lIdx) => {
+            if (line.trim() === '') return <br key={lIdx} />;
+            const isBullet = line.trim().startsWith('- ') || line.trim().startsWith('* ');
+            const content = isBullet ? line.trim().slice(2) : line;
+            return (
+              <div key={lIdx} className={isBullet ? 'flex items-start gap-1.5 my-0.5' : 'my-0'}>
+                {isBullet && <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0" />}
+                <span>{renderInline(content, role)}</span>
+              </div>
+            );
+          })}
+        </div>
+      );
+    });
+  };
+
+  
   return (
     <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end font-sans antialiased">
 
@@ -394,7 +401,7 @@ const AdminChat = () => {
                     </div>
                     <div>
                       <h3 className="font-bold text-white text-[14px] truncate max-w-[150px]">
-                        {activeSessionId ? (sessions.find(s => s.session_id === activeSessionId)?.title || "Đang chat...") : "AI Galaxy Admin"}
+                        {activeSessionId ? (sessions.find(s => s.session_id === activeSessionId)?.title || "Đang chat...") : "Admin AI Assistant"}
                       </h3>
                       <div className="flex items-center gap-1">
                         <span className="w-1.5 h-1.5 bg-[#4ade80] rounded-full animate-pulse"></span>
@@ -434,10 +441,11 @@ const AdminChat = () => {
                       <button onClick={() => setShowSessions(true)} className="mt-2 text-xs text-purple-600 hover:underline">Xem lịch sử chat cũ</button>
                     </div>
                     <div className="grid grid-cols-2 gap-3 w-full px-4 mb-6">
-                      <button onClick={() => sendMessage("Thống kê doanh thu hôm nay")} className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">📊 Doanh thu hôm nay</button>
-                      <button onClick={() => sendMessage("Sản phẩm nào sắp hết hàng?")} className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">📦 Kiểm tra tồn kho</button>
-                      <button onClick={() => sendMessage("Cập nhật giá sản phẩm ID 1 sang 15.000.000 VNĐ")} className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">💰 Cập nhật giá bán</button>
-                      <button onClick={() => sendMessage("Vô hiệu hóa mã giảm giá KM2025")} className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">🎟️ Quản lý voucher</button>
+                      <button onClick={() => sendMessage("Báo cáo doanh thu và đơn hàng hôm nay")} className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">📊 Doanh thu hôm nay</button>
+                      <button onClick={() => sendMessage("Danh sách sản phẩm sắp hết hàng")} className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">📦 Kiểm tra tồn kho</button>
+                      <button onClick={() => sendMessage("Liệt kê 5 đơn hàng mới nhất")} className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">🛒 Đơn hàng gần đây</button>
+                     <button onClick={() => sendMessage("Danh sách Voucher trên hệ thống")}
+ className="px-3 py-3 bg-white rounded-xl text-[11px] font-bold text-[#6D28D9] shadow-sm border border-[#DDD6FE] hover:bg-[#F3E8FF] hover:border-purple-300 active:scale-95 transition-all text-center leading-tight">🎟️ Voucher</button>
                     </div>
                   </div>
                 )}
@@ -493,7 +501,7 @@ const AdminChat = () => {
                         <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce [animation-duration:0.8s]"></span>
                         <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.2s]"></span>
                         <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.4s]"></span>
-                        <span className="ml-1 text-[10px] font-bold text-purple-400 tracking-tighter uppercase">AI Galaxy</span>
+                        <span className="ml-1 text-[10px] font-bold text-purple-400 tracking-tighter uppercase"></span>
                       </div>
                     </div>
                   )}

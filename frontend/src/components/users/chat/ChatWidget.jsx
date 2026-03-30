@@ -338,17 +338,19 @@ const ChatWidget = () => {
   // Hàm helper render nội dung text (Link + Bold) - Tách ra từ renderMessage gốc
   const renderTextContent = (text, role) => {
     if (!text) return null;
-    const linkRegex = /(\[.*?\]\((?:https?:\/\/[^\s]+?|\/(?:products|my-orders)\/\d+)\)|https?:\/\/[^\s]+?|\/(?:products|my-orders)\/\d+)/g;
+    // Regex mở rộng: hỗ trợ cả /products?category_id=2 và /products/62 và /my-orders/5
+    const linkRegex = /(\[.*?\]\((?:https?:\/\/[^\s)]+|\/[^\s)]+)\)|https?:\/\/[^\s]+|\/(?:products|my-orders)[^\s]*)/g;
     const parts = text.split(linkRegex);
 
     return parts.map((part, index) => {
       if (!part) return null;
       
-      const mdLinkMatch = part.match(/^\[(.*?)\]\((https?:\/\/[^\s]+?|\/(?:products|my-orders)\/\d+)\)$/);
+      // Markdown link: [text](url)
+      const mdLinkMatch = part.match(/^\[(.*?)\]\((https?:\/\/[^\s)]+|\/[^\s)]+)\)$/);
       if (mdLinkMatch) {
         const url = fixUrl(mdLinkMatch[2]);
         const display = mdLinkMatch[1];
-        const isInternal = !url.startsWith('http');
+        const isInternal = url.startsWith('/');
         
         return isInternal ? (
           <Link key={index} to={url} className="text-blue-500 hover:text-blue-700 underline font-bold transition-colors">
@@ -361,7 +363,8 @@ const ChatWidget = () => {
         );
       }
       
-      if (part.startsWith('/products/')) {
+      // Bare internal path: /products/... hoặc /my-orders/...
+      if (part.startsWith('/products') || part.startsWith('/my-orders')) {
         return (
           <Link key={index} to={part} className="text-blue-500 hover:text-blue-700 underline font-bold transition-colors">
             {part}

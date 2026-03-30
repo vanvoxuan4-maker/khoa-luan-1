@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 # 👇 Import deps chuẩn từ package cha
 from app.api import deps
 from app.utils.text_utils import normalize_str
+from app.api.endpoints.audit import create_audit_log
 
 router = APIRouter()
 
@@ -414,7 +415,6 @@ def update_order_status(
         
         # Audit log
         try:
-            from app.api.endpoints.audit import create_audit_log
             create_audit_log(
                 db=db,
                 user_id=current_user.ma_user,
@@ -527,7 +527,6 @@ def update_payment_status(
     
     # Audit log
     try:
-        from app.api.endpoints.audit import create_audit_log
         action_descriptions = {
             "paid": f"Xác nhận đã thu tiền đơn #{ma_don_hang}",
             "refunded": f"Hoàn tiền đơn #{ma_don_hang}",

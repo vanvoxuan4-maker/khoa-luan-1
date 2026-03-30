@@ -28,7 +28,7 @@ const VoucherManager = () => {
   const fetchVouchers = async (search = debouncedSearch) => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE_URL}/admin/vouchers`, { 
+      const res = await axios.get(`${API_BASE_URL}/admin/vouchers`, {
         headers: { Authorization: `Bearer ${token}` },
         params: { search: search || undefined }
       });
@@ -42,9 +42,9 @@ const VoucherManager = () => {
   const handleCreate = async () => {
     if (!formData.ma_giamgia || !formData.giatrigiam) return alert("Vui lòng nhập đủ Mã Code và Giá Trị Giảm!");
     const payload = {
-      ...formData, 
-      giatrigiam: Number(formData.giatrigiam), 
-      don_toithieu: Number(formData.don_toithieu), 
+      ...formData,
+      giatrigiam: Number(formData.giatrigiam),
+      don_toithieu: Number(formData.don_toithieu),
       giam_toida: formData.giam_toida ? Number(formData.giam_toida) : null,
       solandung: Number(formData.solandung),
       ngay_ketthuc: formData.ngay_ketthuc ? formData.ngay_ketthuc : null
@@ -79,8 +79,8 @@ const VoucherManager = () => {
 
   const handleToggleActive = async (id, currentStatus) => {
     try {
-      await axios.put(`${API_BASE_URL}/admin/vouchers/${id}`, 
-        { is_active: !currentStatus }, 
+      await axios.put(`${API_BASE_URL}/admin/vouchers/${id}`,
+        { is_active: !currentStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       fetchVouchers();
@@ -267,206 +267,214 @@ const VoucherManager = () => {
         <div className="relative min-h-[400px] mb-20">
           {loading && (
             <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center gap-3 rounded-[2.5rem]">
-               <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-               <span className="text-indigo-600 font-black text-[11px] uppercase tracking-[0.2em] animate-pulse">Đang truy vấn kho voucher...</span>
+              <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-indigo-600 font-black text-[11px] uppercase tracking-[0.2em] animate-pulse">Đang truy vấn kho voucher...</span>
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
             {vouchers.length > 0 ? (
               vouchers.map(v => {
-              const expiryDate = v.ngay_ketthuc ? new Date(v.ngay_ketthuc) : null;
-              if (expiryDate) expiryDate.setHours(23, 59, 59, 999);
-              const isExpired = expiryDate && expiryDate.getTime() < Date.now();
-              const isUsageFull = v.solan_hientai >= v.solandung;
-              const isClosed = isExpired || isUsageFull || !v.is_active;
-              const isEditing = editingVoucher === v.ma_khuyenmai;
+                const expiryDate = v.ngay_ketthuc ? new Date(v.ngay_ketthuc) : null;
+                if (expiryDate) expiryDate.setHours(23, 59, 59, 999);
+                const isExpired = expiryDate && expiryDate.getTime() < Date.now();
+                const isUsageFull = v.solan_hientai >= v.solandung;
+                const isClosed = isExpired || isUsageFull || !v.is_active;
+                const isEditing = editingVoucher === v.ma_khuyenmai;
 
-              return (
-                <div key={v.ma_khuyenmai} className={`relative group transition-all duration-300 hover:-translate-y-2 ${isClosed && !isEditing ? 'grayscale opacity-70' : ''}`}>
-                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-[2rem] opacity-0 group-hover:opacity-20 blur transition duration-500"></div>
+                return (
+                  <div key={v.ma_khuyenmai} className="relative group transition-all duration-300 hover:-translate-y-2">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-[2rem] opacity-0 group-hover:opacity-20 blur transition duration-500"></div>
 
-                  <div className="relative bg-white/80 backdrop-blur-xl rounded-[2rem] overflow-hidden border border-white shadow-xl hover:shadow-2xl transition-all flex flex-col">
-                    <div className={`p-6 relative text-white overflow-hidden ${isClosed ? 'bg-slate-600' : 'bg-gradient-to-br from-indigo-600 via-blue-600 to-indigo-700'}`}>
-                      <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/20 rounded-full blur-3xl"></div>
-                      <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-indigo-900/40 rounded-full blur-3xl"></div>
+                    <div className="relative bg-white/80 backdrop-blur-xl rounded-[2rem] overflow-hidden border border-white shadow-xl hover:shadow-2xl transition-all flex flex-col">
+                      <div className={`p-6 relative text-white overflow-hidden ${isClosed ? 'bg-slate-600 grayscale opacity-80' : 'bg-gradient-to-br from-indigo-600 via-blue-600 to-indigo-700'}`}>
+                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/20 rounded-full blur-3xl"></div>
+                        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-indigo-900/40 rounded-full blur-3xl"></div>
 
-                      <div className="flex justify-between items-start relative z-10">
-                        <div>
-                          <h4 className="text-2xl font-black tracking-[0.1em] drop-shadow-xl uppercase">{v.ma_giamgia}</h4>
-                          <div className="mt-2 flex items-center gap-2">
-                            <label className="relative inline-flex items-center cursor-pointer group">
-                              <input 
-                                type="checkbox" 
-                                className="sr-only peer" 
-                                checked={v.is_active}
-                                onChange={() => handleToggleActive(v.ma_khuyenmai, v.is_active)}
-                              />
-                              <div className="w-9 h-5 bg-slate-400/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500 shadow-inner"></div>
-                              <span className={`ml-2 text-[8px] font-black uppercase tracking-widest ${v.is_active ? 'text-green-300' : 'text-slate-300'}`}>
-                                {v.is_active ? 'Hoạt động' : 'Tạm dừng'}
-                              </span>
-                            </label>
+                        <div className="flex justify-between items-start relative z-10">
+                          <div>
+                            <h4 className="text-2xl font-black tracking-[0.1em] drop-shadow-xl uppercase">{v.ma_giamgia}</h4>
+                            <div className="mt-2 flex items-center gap-2">
+                              <label className={`relative inline-flex items-center group ${isExpired || isUsageFull ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
+                                <input
+                                  type="checkbox"
+                                  className="sr-only peer"
+                                  checked={v.is_active && !isExpired && !isUsageFull}
+                                  onChange={() => handleToggleActive(v.ma_khuyenmai, v.is_active)}
+                                  disabled={isExpired || isUsageFull}
+                                />
+                                <div className="w-9 h-5 bg-slate-400/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500 shadow-inner transition-colors"></div>
+                                <span className={`ml-2 text-[8px] font-black uppercase tracking-widest ${!v.is_active ? 'text-slate-300' :
+                                    isExpired ? 'text-white drop-shadow-sm' :
+                                      isUsageFull ? 'text-white drop-shadow-sm' :
+                                        'text-green-300'
+                                  }`}>
+                                  {!v.is_active ? 'Tạm dừng' : isExpired ? 'Hết hạn' : isUsageFull ? 'Hết lượt' : 'Hoạt động'}
+                                </span>
+                              </label>
+                            </div>
                           </div>
-                        </div>
-                        <div className="bg-white/95 text-indigo-700 px-3 py-2 rounded-xl shadow-2xl font-black text-xl border-b-4 border-indigo-100 flex flex-col items-center">
-                          <span>{v.kieu_giamgia === 'percentage' ? `${v.giatrigiam}%` : `${(v.giatrigiam / 1000)}k`}</span>
-                          <span className="text-[7px] -mt-1 opacity-60 uppercase tracking-widest">Disc.</span>
+                          <div className="bg-white/95 text-indigo-700 px-3 py-2 rounded-xl shadow-2xl font-black text-xl border-b-4 border-indigo-100 flex flex-col items-center">
+                            <span>{v.kieu_giamgia === 'percentage' ? `${v.giatrigiam}%` : `${(v.giatrigiam / 1000)}k`}</span>
+                            <span className="text-[7px] -mt-1 opacity-60 uppercase tracking-widest">Disc.</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="p-6 space-y-4 flex-grow">
-                      {isEditing ? (
-                        <div className="animate-fade-in space-y-4 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/50">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-[8px] font-black text-indigo-400 uppercase mb-1.5 ml-1 tracking-widest">Giá trị giảm mới</label>
-                              <div className="relative">
+                      <div className={`p-6 space-y-4 flex-grow ${isClosed && !isEditing ? 'grayscale opacity-80' : ''}`}>
+                        {isEditing ? (
+                          <div className="animate-fade-in space-y-4 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/50">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[8px] font-black text-indigo-400 uppercase mb-1.5 ml-1 tracking-widest">Giá trị giảm mới</label>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    className="w-full bg-white border border-indigo-200 rounded-xl pl-3 pr-8 h-10 text-xs font-black outline-none"
+                                    value={renewalData.giatrigiam}
+                                    onChange={e => setRenewalData({ ...renewalData, giatrigiam: e.target.value })}
+                                  />
+                                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 pointer-events-none">
+                                    {v.kieu_giamgia === 'percentage' ? '%' : 'đ'}
+                                  </span>
+                                </div>
+                              </div>
+                              <div>
+                                <label className="block text-[8px] font-black text-indigo-400 uppercase mb-1.5 ml-1 tracking-widest">Gia hạn đến ngày</label>
                                 <input
-                                  type="number"
-                                  className="w-full bg-white border border-indigo-200 rounded-xl pl-3 pr-8 h-10 text-xs font-black outline-none"
-                                  value={renewalData.giatrigiam}
-                                  onChange={e => setRenewalData({ ...renewalData, giatrigiam: e.target.value })}
+                                  type="date"
+                                  className="w-full bg-white border border-indigo-200 rounded-xl px-3 h-10 text-xs font-black outline-none [color-scheme:light]"
+                                  value={renewalData.ngay_ketthuc}
+                                  onChange={e => setRenewalData({ ...renewalData, ngay_ketthuc: e.target.value })}
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 pointer-events-none">
-                                  {v.kieu_giamgia === 'percentage' ? '%' : 'đ'}
-                                </span>
                               </div>
                             </div>
                             <div>
-                              <label className="block text-[8px] font-black text-indigo-400 uppercase mb-1.5 ml-1 tracking-widest">Gia hạn đến ngày</label>
+                              <label className="block text-[8px] font-black text-indigo-400 uppercase mb-1.5 ml-1 tracking-widest">Tổng giới hạn mới ({v.solan_hientai})</label>
                               <input
-                                type="date"
-                                className="w-full bg-white border border-indigo-200 rounded-xl px-3 h-10 text-xs font-black outline-none [color-scheme:light]"
-                                value={renewalData.ngay_ketthuc}
-                                onChange={e => setRenewalData({ ...renewalData, ngay_ketthuc: e.target.value })}
+                                type="number"
+                                className="w-full bg-white border border-indigo-200 rounded-xl px-3 h-10 text-xs font-black outline-none"
+                                value={renewalData.solandung}
+                                onChange={e => setRenewalData({ ...renewalData, solandung: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[8px] font-black text-indigo-400 uppercase mb-1.5 ml-1 tracking-widest">Giảm tối đa mới (VND)</label>
+                              <input
+                                type="number"
+                                className={`w-full bg-white border border-indigo-200 rounded-xl px-3 h-10 text-xs font-black outline-none ${v.kieu_giamgia !== 'percentage' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                value={renewalData.giam_toida}
+                                onChange={e => setRenewalData({ ...renewalData, giam_toida: e.target.value })}
+                                disabled={v.kieu_giamgia !== 'percentage'}
+                                placeholder="Không giới hạn"
                               />
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-[8px] font-black text-indigo-400 uppercase mb-1.5 ml-1 tracking-widest">Tổng giới hạn mới ({v.solan_hientai})</label>
-                            <input
-                              type="number"
-                              className="w-full bg-white border border-indigo-200 rounded-xl px-3 h-10 text-xs font-black outline-none"
-                              value={renewalData.solandung}
-                              onChange={e => setRenewalData({ ...renewalData, solandung: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[8px] font-black text-indigo-400 uppercase mb-1.5 ml-1 tracking-widest">Giảm tối đa mới (VND)</label>
-                            <input
-                              type="number"
-                              className={`w-full bg-white border border-indigo-200 rounded-xl px-3 h-10 text-xs font-black outline-none ${v.kieu_giamgia !== 'percentage' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                              value={renewalData.giam_toida}
-                              onChange={e => setRenewalData({ ...renewalData, giam_toida: e.target.value })}
-                              disabled={v.kieu_giamgia !== 'percentage'}
-                              placeholder="Không giới hạn"
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="bg-white/60 p-3 rounded-2xl border border-indigo-50 flex items-center gap-3">
-                            <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600 text-base shadow-sm">🎫</div>
-                            <div>
-                              <p className="text-[8px] text-indigo-400 font-black uppercase tracking-widest mb-0.5">Yêu cầu tối thiểu</p>
-                              <p className="text-xs font-black text-slate-700">
-                              {v.don_toithieu > 0 ? `Đơn từ ${parseFloat(v.don_toithieu).toLocaleString()} VND` : "Mọi loại đơn hàng"}
-                              {v.giam_toida > 0 && (
-                                <span className="block text-[9px] text-amber-500 font-bold mt-1">
-                                  Giảm tối đa {parseFloat(v.giam_toida).toLocaleString()} VND
-                                </span>
-                              )}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="px-1 pt-1">
-                            <div className="flex justify-between text-[10px] font-black text-slate-500 mb-2 uppercase tracking-tight">
-                              <span>Lượt đã sử dụng</span>
-                              <div className="flex items-baseline gap-1">
-                                <span className="text-indigo-600 font-black">{v.solan_hientai}</span>
-                                <span className="text-slate-300">/</span>
-                                <span className="text-slate-400">{v.solandung}</span>
+                        ) : (
+                          <>
+                            <div className="bg-white/60 p-3 rounded-2xl border border-indigo-50 flex items-center gap-3">
+                              <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600 text-base shadow-sm">🎫</div>
+                              <div>
+                                <p className="text-[8px] text-indigo-400 font-black uppercase tracking-widest mb-0.5">Yêu cầu tối thiểu</p>
+                                <p className="text-xs font-black text-slate-700">
+                                  {v.don_toithieu > 0 ? `Đơn từ ${parseFloat(v.don_toithieu).toLocaleString()} VND` : "Mọi loại đơn hàng"}
+                                  {v.giam_toida > 0 && (
+                                    <span className="block text-[9px] text-amber-500 font-bold mt-1">
+                                      Giảm tối đa {parseFloat(v.giam_toida).toLocaleString()} VND
+                                    </span>
+                                  )}
+                                </p>
                               </div>
                             </div>
-                            <div className="w-full bg-slate-100 rounded-full h-2 padding-[2px]">
-                              <div
-                                className={`h-full rounded-full transition-all duration-1000 ${isClosed ? 'bg-slate-400' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500'}`}
-                                style={{ width: `${Math.min((v.solan_hientai / v.solandung) * 100, 100)}%` }}
-                              ></div>
+
+                            <div className="px-1 pt-1">
+                              <div className="flex justify-between text-[10px] font-black text-slate-500 mb-2 uppercase tracking-tight">
+                                <span>Lượt đã sử dụng</span>
+                                <div className="flex items-baseline gap-1">
+                                  <span className="text-indigo-600 font-black">{v.solan_hientai}</span>
+                                  <span className="text-slate-300">/</span>
+                                  <span className="text-slate-400">{v.solandung}</span>
+                                </div>
+                              </div>
+                              <div className="w-full bg-slate-100 rounded-full h-2 padding-[2px]">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-1000 ${isClosed ? 'bg-slate-400' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500'}`}
+                                  style={{ width: `${Math.min((v.solan_hientai / v.solandung) * 100, 100)}%` }}
+                                ></div>
+                              </div>
                             </div>
+                          </>
+                        )}
+                      </div>
+
+                      <div className="p-6 pt-0 border-t border-slate-100/50 mt-auto bg-slate-50/50 text-[10px] font-bold">
+                        <div className="flex flex-col gap-4 py-5">
+                          <div className="flex items-center justify-between text-slate-500">
+                            <span className="uppercase tracking-widest flex items-center gap-1.5">
+                              <span className="text-sm">🕒</span> Hạn sử dụng
+                            </span>
+                            <span className={`${isExpired ? 'text-red-500 font-black' : 'text-slate-700'} uppercase tracking-tight bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-sm`}>
+                              {v.ngay_ketthuc ? new Date(v.ngay_ketthuc).toLocaleDateString('vi-VN') : 'Vĩnh viễn'}
+                            </span>
                           </div>
-                        </>
-                      )}
-                    </div>
 
-                    <div className="p-6 pt-0 border-t border-slate-100/50 mt-auto bg-slate-50/50 text-[10px] font-bold">
-                      <div className="flex flex-col gap-4 py-5">
-                        <div className="flex items-center justify-between text-slate-500">
-                          <span className="uppercase tracking-widest flex items-center gap-1.5">
-                            <span className="text-sm">🕒</span> Hạn sử dụng
-                          </span>
-                          <span className={`${isExpired ? 'text-red-500 font-black' : 'text-slate-700'} uppercase tracking-tight bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-sm`}>
-                            {v.ngay_ketthuc ? new Date(v.ngay_ketthuc).toLocaleDateString('vi-VN') : 'Vĩnh viễn'}
-                          </span>
-                        </div>
-
-                        <div className="flex gap-2 w-full pt-1">
-                          {isEditing ? (
-                            <>
-                              <button
-                                onClick={() => handleUpdate(v.ma_khuyenmai)}
-                                className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black uppercase tracking-[0.1em] hover:bg-slate-900 transition-all shadow-xl shadow-indigo-500/10 flex items-center justify-center gap-2"
-                              >
-                                <span>💾</span> Lưu lại
-                              </button>
-                              <button
-                                onClick={() => setEditingVoucher(null)}
-                                className="flex-1 bg-white text-slate-500 border border-slate-200 py-3 rounded-xl font-black uppercase tracking-[0.1em] hover:bg-red-50 hover:text-red-500 hover:border-red-500 transition-all flex items-center justify-center gap-2"
-                              >
-                                <span>✕</span> Hủy
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => {
-                                  setEditingVoucher(v.ma_khuyenmai);
-                                  setRenewalData({
-                                    ngay_ketthuc: v.ngay_ketthuc ? v.ngay_ketthuc.split('T')[0] : '',
-                                    solandung: v.solandung,
-                                    giam_toida: v.giam_toida || '',
-                                    giatrigiam: v.giatrigiam
-                                  });
-                                }}
-                                className="flex-1 bg-white text-indigo-600 border border-indigo-100 py-3 rounded-xl font-black uppercase tracking-[0.1em] hover:bg-indigo-600 hover:text-white transition-all shadow-xl shadow-indigo-500/5 flex items-center justify-center gap-2"
-                              >
-                                <span>📝</span> Sửa
-                              </button>
-                              <button
-                                onClick={() => handleDelete(v.ma_khuyenmai)}
-                                className="flex-1 bg-white text-red-500 border border-red-100 py-3 rounded-xl font-black uppercase tracking-[0.1em] hover:bg-red-500 hover:text-white transition-all shadow-xl shadow-red-500/5 flex items-center justify-center gap-2"
-                              >
-                                <span>🗑️</span> Xóa
-                              </button>
-                            </>
-                          )}
+                          <div className="flex gap-2 w-full pt-1">
+                            {isEditing ? (
+                              <>
+                                <button
+                                  onClick={() => handleUpdate(v.ma_khuyenmai)}
+                                  className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black uppercase tracking-[0.1em] hover:bg-slate-900 transition-all shadow-xl shadow-indigo-500/10 flex items-center justify-center gap-2"
+                                >
+                                  <span>💾</span> Lưu lại
+                                </button>
+                                <button
+                                  onClick={() => setEditingVoucher(null)}
+                                  className="flex-1 bg-white text-slate-500 border border-slate-200 py-3 rounded-xl font-black uppercase tracking-[0.1em] hover:bg-red-50 hover:text-red-500 hover:border-red-500 transition-all flex items-center justify-center gap-2"
+                                >
+                                  <span>✕</span> Hủy
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setEditingVoucher(v.ma_khuyenmai);
+                                    setRenewalData({
+                                      ngay_ketthuc: v.ngay_ketthuc ? v.ngay_ketthuc.split('T')[0] : '',
+                                      solandung: v.solandung,
+                                      giam_toida: v.giam_toida || '',
+                                      giatrigiam: v.giatrigiam
+                                    });
+                                  }}
+                                  className={`flex-1 py-3 rounded-xl font-black uppercase tracking-[0.1em] transition-all flex items-center justify-center gap-2 shadow-xl ${(isExpired || isUsageFull)
+                                      ? 'bg-indigo-600 text-white shadow-indigo-500/30 ring-2 ring-white/50'
+                                      : 'bg-white text-indigo-600 border border-indigo-100 hover:bg-indigo-600 hover:text-white shadow-indigo-500/10'
+                                    }`}
+                                >
+                                  <span>📝</span> Sửa
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(v.ma_khuyenmai)}
+                                  className="flex-1 bg-white text-red-500 border-2 border-red-100 py-3 rounded-xl font-black uppercase tracking-[0.1em] hover:bg-red-500 hover:text-white transition-all shadow-xl shadow-red-500/5 flex items-center justify-center gap-2"
+                                >
+                                  <span>🗑️</span> Xóa
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="col-span-full py-20 text-center bg-white/40 backdrop-blur-md rounded-[3rem] border-2 border-dashed border-slate-300">
-              <span className="text-4xl mb-4 block">🔎</span>
-              <p className="text-slate-400 font-black uppercase tracking-widest text-xs italic">
-                Không tìm thấy Voucher nào khớp với từ khóa của bạn
-              </p>
-            </div>
-          )}
+                );
+              })
+            ) : (
+              <div className="col-span-full py-20 text-center bg-white/40 backdrop-blur-md rounded-[3rem] border-2 border-dashed border-slate-300">
+                <span className="text-4xl mb-4 block">🔎</span>
+                <p className="text-slate-400 font-black uppercase tracking-widest text-xs italic">
+                  Không tìm thấy Voucher nào khớp với từ khóa của bạn
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
