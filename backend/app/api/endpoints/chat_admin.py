@@ -1,14 +1,17 @@
 import google.generativeai as genai
 import json
 import asyncio
+import traceback
+import uuid
+from datetime import date, datetime, timedelta
+from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
-from datetime import date, datetime, timedelta
-from typing import List, Optional
-import uuid
 
+from app.core.config import settings
 from app.db.session import get_db, SessionLocal
 from app.api.deps import check_admin_role
 from app.models.user import User
@@ -19,8 +22,6 @@ from app.models.order import DonHang, ChiTietDonHang
 from app.models.product import Sanpham, Danhmuc, Thuonghieu
 
 router = APIRouter()
-
-from app.core.config import settings
 
 # ---------------- CONFIG AI ----------------
 genai.configure(api_key=settings.GOOGLE_API_KEY)
@@ -175,15 +176,33 @@ def quan_ly_voucher(action: str, ma_code: str):
         db.close()
 
 
-def quan_ly_tai_khoan_user(hanh_dong: str, tu_khoa: str = "", trang_thai_moi: str = ""):
+def quan_ly_tai_khoan_user(hanh_dong: str, tu_khoa: str = "", trang_thai_moi: str = "", so_luong: int = 20):
     """
     Quản lý tài khoản người dùng:
+    - 'danh_sach': lấy danh sách khách hàng (có thể chỉ định so_luong, mặc định 20).
     - 'tim_kiem': tìm user theo tên đăng nhập hoặc họ tên (cần tu_khoa).
     - 'doi_trang_thai': đổi trạng thái tài khoản (cần tu_khoa là tên đăng nhập, trang_thai_moi là 'active'/'inactive'/'banned').
     """
     db = SessionLocal()
     try:
-        if hanh_dong == 'tim_kiem':
+        if hanh_dong == 'danh_sach':
+            users = db.query(User).filter(User.quyen == 'customer') \
+                .order_by(User.ngay_lap.desc()).limit(min(so_luong, 50)).all()
+            if not users:
+                return "Chưa có khách hàng nào đăng ký."
+            return [
+                {
+                    "stt": i + 1,
+                    "ho_ten": u.hovaten or "(chưa cập nhật)",
+                    "ten_user": u.ten_user,
+                    "email": u.email or "---",
+                    "trang_thai": str(u.status.value if hasattr(u.status, 'value') else u.status),
+                    "ngay_dang_ky": u.ngay_lap.strftime("%d/%m/%Y") if u.ngay_lap else "---"
+                }
+                for i, u in enumerate(users)
+            ]
+
+        elif hanh_dong == 'tim_kiem':
             if not tu_khoa:
                 return "Vui lòng cung cấp tên đăng nhập hoặc họ tên cần tìm."
             users = db.query(User).filter(
@@ -271,7 +290,8 @@ Nhiệm vụ: Hỗ trợ quản trị cửa hàng RÕ RÀNG, DỄ NHÌN.
 4. **BẢNG BIỂU (QUAN TRỌNG)**:
    - Dùng bảng Markdown cho dữ liệu số (doanh thu, tồn kho).
    - ĐẶC BIỆT: Khi liệt kê danh sách Voucher, PHẢI dùng bảng với các cột: | Mã Voucher | Giá trị giảm | Trạng thái |.
-   - ĐẶC BIỆT: Khi hiển thị danh sách tài khoản user (tìm kiếm hoặc trùng tên), PHẢI dùng bảng với các cột: | Họ và tên | Tên đăng nhập | Email | Trạng thái |.
+   - ĐẶC BIỆT: Khi hiển thị **danh sách toàn bộ khách hàng** (`hanh_dong='danh_sach'`), PHẢI dùng bảng: | STT | Họ và tên | Tên đăng nhập | Email | Trạng thái | Ngày đăng ký |. Ghi rõ tổng số ở đầu.
+   - ĐẶC BIỆT: Khi hiển thị kết quả tìm kiếm user hoặc danh sách trùng tên, PHẢI dùng bảng: | Họ và tên | Tên đăng nhập | Email | Trạng thái |.
 5. **TRẠNG THÁI VOUCHER**: Hiển thị rõ ràng mã nào đang "Hoạt động" và mã nào "Đã tắt".
 6. **KHÔNG HALLUCINATION**: Tuyệt đối KHÔNG tự nghĩ ra tên mã giảm giá (như BIKE10, FREESHIP, SUMMER20). CHỈ được dùng dữ liệu thật từ Tools trả về. Nếu Tools trả về danh sách trống, hãy báo cáo trung thực là chưa có mã nào.
 7. **XƯNG HÔ CHUYÊN NGHIỆP**: 
@@ -279,6 +299,7 @@ Nhiệm vụ: Hỗ trợ quản trị cửa hàng RÕ RÀNG, DỄ NHÌN.
    - Sử dụng xưng hô nhất quán: "Em" (AI) và "Anh" (Admin). KHÔNG dùng "Anh/Chị", chỉ dùng "Anh".
    - Luôn giữ thái độ cầu thị, chuyên nghiệp và hỗ trợ tận tâm.
 8. **QUẢN LÝ TÀI KHOẢN USER** (dùng tool `quan_ly_tai_khoan_user`):
+   - **Khi Admin muốn xem danh sách khách hàng**: gọi `hanh_dong='danh_sach'`, có thể chỉ định `so_luong` (mặc định 20, tối đa 50). Hiển thị dạng bảng Markdown đầy đủ.
    - Khi Admin muốn tìm user: gọi `hanh_dong='tim_kiem'`, `tu_khoa=<tên/email>`.
    - Khi Admin muốn đổi sang `active` hoặc `inactive`: gọi tool ngay, không cần hỏi thêm.
    - KHÔNG được thay đổi tài khoản Admin.
@@ -303,10 +324,8 @@ Chào Anh! Rất vui được hỗ trợ Anh trong ca làm việc hôm nay. ✨
 """
 
 try:
-    # Sử dụng Gemini 3.1 Flash Lite Preview theo yêu cầu mới nhất
     model = genai.GenerativeModel('gemini-3.1-flash-lite-preview', tools=my_tools, system_instruction=sys_instruct)
 except Exception as e:
-    from datetime import datetime
     with open("ai_admin_init_error.log", "a", encoding="utf-8") as f:
         f.write(f"[{datetime.now()}] Admin AI Init Error: {e}\n")
     model = None
@@ -397,7 +416,6 @@ def chat_with_admin_ai(item: ChatRequest, session_id: Optional[str] = None, db: 
         else:
             reply = "AI Offline."
     except Exception as e:
-        import traceback
         print(f"❌ Admin AI Error: {e}")
         traceback.print_exc()
         reply = intelligent_fallback(item.message)
@@ -469,81 +487,89 @@ async def stream_chat_with_admin_ai(item: ChatRequest, session_id: Optional[str]
 
     ma_user = admin.ma_user
     message_text = item.message
+    hovaten = admin.hovaten or admin.ten_user
 
     async def generate():
         full_reply = ""
+        db_saved = False  # Cờ đảm bảo DB chỉ lưu 1 lần
+
+        # ✅ Gửi session_id NGAY LẬP TỨC trước khi gọi AI
+        # AdminChat.jsx đã xử lý event này đúng cách (cập nhật state ngay trong vòng lặp SSE)
+        yield f"data: {json.dumps({'session_id': s_id})}\n\n"
+
         try:
             if not model:
-                yield f"data: {json.dumps({'chunk': 'AI Offline.', 'session_id': s_id})}\n\n"
-                await asyncio.sleep(0.04)
                 full_reply = "AI Offline."
-            if not model:
-                # ... already handled in previous yield ...
-                pass
+                yield f"data: {json.dumps({'chunk': full_reply, 'session_id': s_id})}\n\n"
+                await asyncio.sleep(0.01)
             else:
                 current_date_str = datetime.now().strftime('%d/%m/%Y')
-                # ✅ RE-INITIALIZE MODEL LOCALLY to force the new sys_instruct
                 dynamic_sys_instruct = f"{sys_instruct}\nHôm nay là: {current_date_str}"
-                current_model = genai.GenerativeModel('gemini-3.1-flash-lite-preview', tools=my_tools, system_instruction=dynamic_sys_instruct)
-                
-                chat = current_model.start_chat(history=gemini_history, enable_automatic_function_calling=True)
-                prompt = f"[Hệ thống: Quản trị viên: {admin.hovaten or admin.ten_user}] {message_text}"
+                current_model = genai.GenerativeModel(
+                    'gemini-3.1-flash-lite-preview',
+                    tools=my_tools,
+                    system_instruction=dynamic_sys_instruct
+                )
 
-                # Gọi AI và để nó tự động xử lý tool call (đã bật enable_automatic_function_calling)
+                chat = current_model.start_chat(
+                    history=gemini_history,
+                    enable_automatic_function_calling=True
+                )
+                prompt = f"[Hệ thống: Quản trị viên: {hovaten}] {message_text}"
+
+                # Gọi AI (enable_automatic_function_calling xử lý tool tự động)
                 response = chat.send_message(prompt)
                 full_reply = response.text or "Xin lỗi, mình không thể xử lý yêu cầu này lúc này."
 
-                # Bước 2: Stream kết quả từng từ ra frontend
-                if full_reply:
-                    words = full_reply.split(" ")
-                    for i, word in enumerate(words):
-                        chunk = word if i == 0 else " " + word
-                        yield f"data: {json.dumps({'chunk': chunk, 'session_id': s_id})}\n\n"
-                        await asyncio.sleep(0.04) # Tạo hiệu ứng gõ mượt mà
+                # Stream từng từ ra frontend
+                words = full_reply.split(" ")
+                for i, word in enumerate(words):
+                    chunk = word if i == 0 else " " + word
+                    yield f"data: {json.dumps({'chunk': chunk, 'session_id': s_id})}\n\n"
+                    await asyncio.sleep(0.04)
 
+        except asyncio.CancelledError:
+            pass
         except Exception as e:
-            import traceback
-            from datetime import datetime as dt
             err_msg = traceback.format_exc()
             print(f"❌ Admin AI Error: {e}")
             with open("ai_admin_runtime_error.log", "a", encoding="utf-8") as f:
-                f.write(f"[{dt.now()}] Admin AI Error: {e}\n{err_msg}\n")
-            full_reply = intelligent_fallback(message_text)
+                f.write(f"[{datetime.now()}] Admin AI Error: {e}\n{err_msg}\n")
+            full_reply = full_reply or intelligent_fallback(message_text)
             yield f"data: {json.dumps({'chunk': full_reply, 'session_id': s_id})}\n\n"
-            await asyncio.sleep(0.04)
-
-
-        # ✅ FIX #3: Yield done TRƯỚC khi lưu DB
-        yield f"data: {json.dumps({'done': True, 'session_id': s_id})}\n\n"
-
-        # Lưu tin nhắn AI vào DB (kể cả khi bị dừng giữa chừng)
-        save_db = SessionLocal()
-        try:
-            # Nếu bị abort trước khi có phản hồi, lưu placeholder để giữ ngữ cảnh
-            reply_to_save = full_reply if full_reply else "[Đã dừng]"
-            ai_msg = LichSuChat(
-                user_id=ma_user,
-                role="assistant",
-                message=reply_to_save,
-                context_type="admin_ai",
-                session_id=s_id
-            )
-            save_db.add(ai_msg)
-            if is_new_session:
-                raw_title = message_text.strip()
-                new_title = raw_title[:80] + "..." if len(raw_title) > 80 else raw_title
-                save_db.query(LichSuChat).filter(
-                    LichSuChat.session_id == s_id,
-                    LichSuChat.user_id == ma_user
-                ).update({"title": new_title}, synchronize_session=False)
-            save_db.commit()
-        except Exception as db_err:
-            save_db.rollback()
-            print(f"⚠️ Admin Stream DB save error: {db_err}")
+            await asyncio.sleep(0.01)
         finally:
-            save_db.close()
+            # ✅ LUÔN lưu DB dù stream kết thúc bình thường hay bị abort
+            if not db_saved:
+                db_saved = True
+                save_db = SessionLocal()
+                try:
+                    # Lưu partial text nếu có, không thì lưu placeholder giữ ngữ cảnh
+                    reply_to_save = full_reply.strip() if full_reply.strip() else "[Phản hồi bị gián đoạn]"
+                    ai_msg = LichSuChat(
+                        user_id=ma_user,
+                        role="assistant",
+                        message=reply_to_save,
+                        context_type="admin_ai",
+                        session_id=s_id
+                    )
+                    save_db.add(ai_msg)
+                    if is_new_session:
+                        raw_title = message_text.strip()
+                        new_title = raw_title[:80] + "..." if len(raw_title) > 80 else raw_title
+                        save_db.query(LichSuChat).filter(
+                            LichSuChat.session_id == s_id,
+                            LichSuChat.user_id == ma_user
+                        ).update({"title": new_title}, synchronize_session=False)
+                    save_db.commit()
+                except Exception as db_err:
+                    save_db.rollback()
+                    print(f"⚠️ Admin Stream DB save error: {db_err}")
+                finally:
+                    save_db.close()
 
-        # Đã yield done bên trên rồi - không cần yield lại
+        # Báo hiệu frontend đã xong
+        yield f"data: {json.dumps({'done': True, 'session_id': s_id})}\n\n"
 
     return StreamingResponse(
         generate(),

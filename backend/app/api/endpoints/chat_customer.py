@@ -1,26 +1,27 @@
 import google.generativeai as genai
 import json
 import asyncio
+import traceback
+import uuid
+from datetime import datetime
+from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
-from datetime import datetime
-from typing import List, Optional
-import uuid
-import traceback
 
+from app.core.config import settings
 from app.db.session import get_db, SessionLocal
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.chatbot import LichSuChat
 from app.schemas.chatbot import ChatRequest, ChatResponse
-from app.models.order import DonHang, ChiTietDonHang
-from app.models.history import LichSuDonHang
+from app.models.order import DonHang
 from app.models.product import Sanpham, Danhmuc, Hinhanh
 from app.models.payment import ThanhToan
+from app.models.history import LichSuDonHang
 from app.models.marketing import Makhuyenmai
-from app.core.config import settings
 
 router = APIRouter()
 
@@ -172,28 +173,56 @@ def quan_ly_don_hang_ca_nhan(hanh_dong: str, ma_don: str = None, ma_user: int = 
             if not ma_don: return "Cần cung cấp mã đơn hàng để hủy."
             o = db.query(DonHang).filter(DonHang.ma_don_hang == ma_don).first()
             if not o: return f"Không tìm thấy đơn hàng #{ma_don}."
-            
+
             # 1. PHẢI hỏi xác nhận trước
             if not xac_nhan:
                 return {
-                    "can_xac_nhan": True, 
+                    "can_xac_nhan": True,
                     "tin_nhan": f"Bạn có chắc chắn muốn hủy đơn hàng #{ma_don} không? Phản hồi 'Xác nhận' để mình tiến hành nhé."
                 }
-            
-            # 2. Kiểm tra trạng thái hợp lệ — CHỈ cho phép hủy khi đang chờ xác nhận (pending)
+
+            # 2. Kiểm tra trạng thái hợp lệ — CHỈ cho phép hủy khi đang chờ (pending)
             trang_thai_str = str(o.trang_thai.value if hasattr(o.trang_thai, 'value') else o.trang_thai).lower()
             if trang_thai_str != 'pending':
                 if trang_thai_str == 'confirmed':
                     return "Đơn hàng này đã được xác nhận và đang được Shop chuẩn bị, không thể tự hủy nữa. Vui lòng liên hệ Admin qua Hotline: 0961.178.265 để được hỗ trợ."
                 return "Đơn hàng đang giao hoặc đã hoàn tất, không thể tự hủy. Vui lòng liên hệ Admin qua Hotline: 0961.178.265."
-            
+
+            # 3. Đặt trạng thái đơn = cancelled
             o.trang_thai = 'cancelled'
+
+            # 4. Hoàn kho (giống admin endpoint — pending đã trừ kho lúc checkout)
+            for item in o.chitiet_donhang:
+                product = db.query(Sanpham).filter(Sanpham.ma_sanpham == item.ma_sanpham).first()
+                if product:
+                    product.ton_kho += item.so_luong
+
+            # 5. Cập nhật trạng thái thanh toán
+            current_payment = str(
+                o.trangthai_thanhtoan.value if hasattr(o.trangthai_thanhtoan, 'value')
+                else o.trangthai_thanhtoan
+            ).lower()
+
             msg = f"Dạ, mình đã hỗ trợ hủy đơn hàng #{ma_don} thành công giúp bạn rồi ạ! ✅"
-            
-            # 3. Thông báo VNPAY nếu cần
-            if o.phuong_thuc == 'vnpay' and o.trangthai_thanhtoan == 'paid':
+
+            if current_payment != 'paid':
+                # COD (hoặc VNPAY chưa thanh toán): set failed
+                o.trangthai_thanhtoan = 'failed'
+                db.query(ThanhToan).filter(
+                    ThanhToan.ma_don_hang == ma_don,
+                    ThanhToan.trang_thai == 'pending'
+                ).update({'trang_thai': 'failed'})
+            else:
+                # VNPAY đã thanh toán: giữ nguyên, thông báo hoàn tiền
                 msg += "\n\n⚠️ **Lưu ý**: Vì đơn này đã thanh toán qua VNPAY, bạn vui lòng liên hệ Admin (Hotline: 0961.178.265) để được hỗ trợ thủ tục hoàn tiền nhé."
-                
+
+            # 6. Ghi lịch sử hủy
+            db.add(LichSuDonHang(
+                ma_don_hang=ma_don,
+                trang_thai='cancelled',
+                mo_ta='Đơn hàng đã được khách hàng hủy qua chatbot.'
+            ))
+
             db.commit()
             return msg
         return "Xử lý thất bại."
@@ -317,15 +346,11 @@ def get_customer_chat_sessions(db: Session = Depends(get_db), current_user: User
 @router.get("/chat/customer/history", response_model=List[ChatResponse])
 def get_customer_chat_history(session_id: Optional[str] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     query = db.query(LichSuChat).filter(
-        LichSuChat.user_id == current_user.ma_user, 
+        LichSuChat.user_id == current_user.ma_user,
         LichSuChat.context_type == "customer_ai"
     )
     if session_id:
         query = query.filter(LichSuChat.session_id == session_id)
-    else:
-        # Nếu không có session_id, lấy những tin nhắn không có session (legacy) hoặc session gần nhất
-        pass
-
     messages = query.order_by(LichSuChat.thoi_gian.desc()).limit(50).all()
     messages.reverse()
     return messages
@@ -441,6 +466,7 @@ def chat_with_customer_ai(item: ChatRequest, session_id: Optional[str] = None, d
 
 # Map tên function → callable để gọi thủ công khi AI yêu cầu
 CUSTOMER_TOOL_MAP = {
+    "liet_ke_danh_muc": liet_ke_danh_muc,
     "tra_cuu_mua_hang": tra_cuu_mua_hang,
     "quan_ly_don_hang_ca_nhan": quan_ly_don_hang_ca_nhan,
     "thong_tin_cua_hang_chinh_sach": thong_tin_cua_hang_chinh_sach,
@@ -494,107 +520,110 @@ async def stream_chat_with_customer_ai(item: ChatRequest, session_id: Optional[s
 
     ma_user = current_user.ma_user
     message_text = item.message
+    hovaten = current_user.hovaten or 'Khách hàng'
 
     async def generate():
         full_reply = ""
+        db_saved = False  # Cờ đảm bảo DB chỉ lưu 1 lần
+
+        # ✅ Gửi session_id NGAY LẬP TỨC trước khi gọi AI
+        # Được frontend nưu vào state/localStorage — đảm bảo nếu user Stop
+        # trong khi AI đang tính toán, session vẫn còn được giữ
+        yield f"data: {json.dumps({'session_id': s_id})}\n\n"
+
         try:
             if not model:
-                reply = customer_fallback(message_text, ma_user)
-                full_reply_ref = [reply]
-                yield f"data: {json.dumps({'chunk': reply, 'session_id': s_id})}\n\n"
-                await asyncio.sleep(0.04)
-                return
+                full_reply = customer_fallback(message_text, ma_user)
+                yield f"data: {json.dumps({'chunk': full_reply, 'session_id': s_id})}\n\n"
+                await asyncio.sleep(0.01)
+            else:
+                current_date_str = datetime.now().strftime('%d/%m/%Y')
 
-            # ✅ FIX #1: Dùng model cố định, truyền ngày qua prompt (không tạo model mới mỗi request)
-            current_date_str = datetime.now().strftime('%d/%m/%Y')
-            
-            chat = model.start_chat(history=gemini_history)
-            # Inject ngày và thông tin khách hàng vào ngữ cảnh (tránh dùng mã ID thô)
-            user_info = f"ma_user (nội bộ, KHÔNG đọc nói ra): {current_user.ma_user} | Tên khách: {current_user.hovaten or 'Khách hàng'}"
-            prompt = f"[Hệ thống nội bộ - Ngày: {current_date_str}, {user_info}] {message_text}"
+                chat = model.start_chat(history=gemini_history)
+                user_info = f"ma_user (nội bộ, KHÔNG đọc nói ra): {ma_user} | Tên khách: {hovaten}"
+                prompt = f"[Hệ thống nội bộ - Ngày: {current_date_str}, {user_info}] {message_text}"
 
-            # ✅ FIX #2: Tách pha Tool-call (không stream) và pha Text (stream thực sự)
-            MAX_TOOL_ROUNDS = 5
-            for _ in range(MAX_TOOL_ROUNDS):
-                # Bước 1: Gọi không stream để phát hiện tool call nhanh
-                probe_response = chat.send_message(prompt)
-                candidate = probe_response.candidates[0]
+                # ✅ Tách pha Tool-call (không stream) và pha Text (stream thực sự)
+                MAX_TOOL_ROUNDS = 5
+                for _ in range(MAX_TOOL_ROUNDS):
+                    probe_response = chat.send_message(prompt)
+                    candidate = probe_response.candidates[0]
 
-                round_tool_calls = [
-                    part.function_call
-                    for part in candidate.content.parts
-                    if hasattr(part, "function_call") and getattr(part.function_call, "name", None)
-                ]
+                    round_tool_calls = [
+                        part.function_call
+                        for part in candidate.content.parts
+                        if hasattr(part, "function_call") and getattr(part.function_call, "name", None)
+                    ]
 
-                if not round_tool_calls:
-                    # Không có tool call -> AI đã trả lời văn bản
-                    full_reply = probe_response.text or ""
-                    break
+                    if not round_tool_calls:
+                        full_reply = probe_response.text or ""
+                        break
 
-                # Có tool call -> Thực thi và tiếp tục
-                all_tool_results = []
-                for tc in round_tool_calls:
-                    result_str = run_customer_tool(tc)
-                    all_tool_results.append(
-                        genai.protos.Part(
-                            function_response=genai.protos.FunctionResponse(
-                                name=tc.name,
-                                response={"result": result_str}
+                    all_tool_results = []
+                    for tc in round_tool_calls:
+                        result_str = run_customer_tool(tc)
+                        all_tool_results.append(
+                            genai.protos.Part(
+                                function_response=genai.protos.FunctionResponse(
+                                    name=tc.name,
+                                    response={"result": result_str}
+                                )
                             )
                         )
-                    )
-                prompt = all_tool_results
-            else:
-                full_reply = "Xin lỗi, mình không thể tổng hợp thông tin lúc này."
+                    prompt = all_tool_results
+                else:
+                    full_reply = "Xin lỗi, mình không thể tổng hợp thông tin lúc này."
 
-            # Bước 2: Stream kết quả từng từ ra frontend
-            if full_reply:
-                words = full_reply.split(" ")
-                for i, word in enumerate(words):
-                    chunk = word if i == 0 else " " + word
-                    yield f"data: {json.dumps({'chunk': chunk, 'session_id': s_id})}\n\n"
-                    await asyncio.sleep(0.04) # Tạo hiệu ứng gõ mượt mà
+                # Stream từng từ ra frontend
+                if full_reply:
+                    words = full_reply.split(" ")
+                    for i, word in enumerate(words):
+                        chunk = word if i == 0 else " " + word
+                        yield f"data: {json.dumps({'chunk': chunk, 'session_id': s_id})}\n\n"
+                        await asyncio.sleep(0.04)
 
+        except asyncio.CancelledError:
+            # Client disconnect - không re-raise, để finally chạy lưu DB
+            pass
         except Exception as e:
             err_msg = traceback.format_exc()
             print(f"❌ Customer AI Stream Error: {e}")
             with open("ai_runtime_error.log", "a", encoding="utf-8") as f:
                 f.write(f"[{datetime.now()}] Customer AI Error: {e}\n{err_msg}\n")
-            full_reply = customer_fallback(message_text, ma_user)
+            full_reply = full_reply or customer_fallback(message_text, ma_user)
             yield f"data: {json.dumps({'chunk': full_reply, 'session_id': s_id})}\n\n"
-            await asyncio.sleep(0.04)
+            await asyncio.sleep(0.01)
+        finally:
+            # ✅ LUÔN lưu DB dù stream kết thúc bình thường hay bị abort
+            if not db_saved:
+                db_saved = True
+                save_db = SessionLocal()
+                try:
+                    reply_to_save = full_reply.strip() if full_reply.strip() else "[Phản hồi bị gián đoạn]"
+                    ai_msg = LichSuChat(
+                        user_id=ma_user,
+                        role="assistant",
+                        message=reply_to_save,
+                        context_type="customer_ai",
+                        session_id=s_id
+                    )
+                    save_db.add(ai_msg)
+                    if is_new_session:
+                        raw_title = message_text.strip()
+                        new_title = raw_title[:60] + "..." if len(raw_title) > 60 else raw_title
+                        save_db.query(LichSuChat).filter(
+                            LichSuChat.session_id == s_id,
+                            LichSuChat.user_id == ma_user
+                        ).update({"title": new_title}, synchronize_session=False)
+                    save_db.commit()
+                except Exception as db_err:
+                    save_db.rollback()
+                    print(f"⚠️ Stream DB save error: {db_err}")
+                finally:
+                    save_db.close()
 
-
-        # ✅ FIX #3: Yield done TRƯỚC khi lưu DB
+        # Báo hiệu frontend đã xong
         yield f"data: {json.dumps({'done': True, 'session_id': s_id})}\n\n"
-
-        # Lưu tin nhắn AI vào DB (sau khi đã báo done cho frontend)
-        if full_reply:
-            save_db = SessionLocal()
-            try:
-                ai_msg = LichSuChat(
-                    user_id=ma_user,
-                    role="assistant",
-                    message=full_reply,
-                    context_type="customer_ai",
-                    session_id=s_id
-                )
-                save_db.add(ai_msg)
-                if is_new_session:
-                    raw_title = message_text.strip()
-                    new_title = raw_title[:60] + "..." if len(raw_title) > 60 else raw_title
-                    save_db.query(LichSuChat).filter(
-                        LichSuChat.session_id == s_id,
-                        LichSuChat.user_id == ma_user
-                    ).update({"title": new_title}, synchronize_session=False)
-                save_db.commit()
-            except Exception as db_err:
-                save_db.rollback()
-                print(f"⚠️ Stream DB save error: {db_err}")
-            finally:
-                save_db.close()
-
-        # Đã yield done bên trên rồi - không cần yield lại
 
     return StreamingResponse(
         generate(),

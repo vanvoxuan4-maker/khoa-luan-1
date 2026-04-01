@@ -57,17 +57,27 @@ const AdminLayout = ({ children }) => {
   // 👇 CẬP NHẬT 2: Cập nhật tiêu đề
   const getCurrentTitle = () => {
     const currentPath = location.pathname;
+
+    // Khớp chính xác với menu chính
     const item = menuItems.find(i => i.path === currentPath);
     if (item) {
       switch (item.id) {
-        case 'dashboard': return 'Báo Cáo Thống Kê';
+        case 'dashboard':  return 'Báo Cáo Thống Kê';
         case 'config-hub': return 'Cấu Hình Sản Phẩm';
-        case 'order-hub': return 'Quản Lý Đơn Hàng';
-        case 'users': return 'Quản Lý Khách Hàng';
-        default: return item.label;
+        case 'order-hub':  return 'Quản Lý Đơn Hàng';
+        case 'users':      return 'Quản Lý Khách Hàng';
+        default:           return item.label;
       }
     }
-    return 'Hồ Sơ Khách Hàng';
+
+    // Đường dẫn động (không có trong menu chính)
+    if (currentPath === '/admin/profile')                   return 'Hồ Sơ Quản Trị Viên';
+    if (currentPath === '/admin/audit')                     return 'Lịch Hoạt Động';
+    if (currentPath.startsWith('/admin/users/'))            return 'Hồ Sơ Khách Hàng';
+    if (currentPath.startsWith('/admin/order-hub/'))        return 'Chi Tiết Đơn Hàng';
+    if (currentPath.startsWith('/admin/config-hub/'))       return 'Chi Tiết Sản Phẩm';
+
+    return 'Trang Quản Trị';
   };
 
   const MenuItem = ({ item }) => {
@@ -231,7 +241,7 @@ const AdminLayout = ({ children }) => {
               </nav>
 
               <h2 className="text-4xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-                {breadcrumbSuffix ? "Chi Tiết Khách Hàng" : getCurrentTitle()}
+                {getCurrentTitle()}
                 <div className="h-2 w-2 rounded-full bg-blue-600 animate-pulse"></div>
               </h2>
             </div>

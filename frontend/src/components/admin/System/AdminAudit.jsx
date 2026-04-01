@@ -138,6 +138,18 @@ const AdminAudit = () => {
         setShowDetailModal(true);
     };
 
+    // ✅ Safe timestamp parser: xử lý cả "2026-04-01T10:00:00" lẫn "2026-04-01T10:00:00+07:00"
+    const parseTimestamp = (ts) => {
+        if (!ts) return new Date(NaN);
+        // Chuẩn hóa: thay space bằng T (format SQL)
+        const normalized = String(ts).replace(' ', 'T');
+        // Chỉ thêm Z nếu chưa có timezone info
+        if (normalized.includes('+') || normalized.endsWith('Z')) {
+            return new Date(normalized);
+        }
+        return new Date(normalized + 'Z');
+    };
+
     // Use isInitialLoading for full-page spinner to avoid unmounting filters while typing
     if (isInitialLoading) {
         return (
@@ -274,18 +286,17 @@ const AdminAudit = () => {
                                     </td>
                                 </tr>
                             ) : (
-                                auditLogs.map((log, idx) => (
-                                    <tr 
-                                        key={idx} 
-                                        className="border-b border-slate-100 hover:bg-slate-50 transition-colors group cursor-pointer"
-                                        onClick={() => openDetailModal(log)}
+                                auditLogs.map((log) => (
+                                    <tr
+                                        key={log.ma_log}
+                                        className="border-b border-slate-100 hover:bg-slate-50 transition-colors group"
                                     >
                                         <td className="py-4 px-4 text-center align-middle whitespace-nowrap">
                                             <div className="text-[13px] font-bold text-slate-600">
-                                                {new Date(log.timestamp).toLocaleDateString('vi-VN')}
+                                                {parseTimestamp(log.timestamp).toLocaleDateString('vi-VN')}
                                             </div>
                                             <div className="text-[11px] font-medium text-slate-400">
-                                                {new Date(log.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                                {parseTimestamp(log.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                                             </div>
                                         </td>
                                         <td className="py-4 px-4 text-center align-middle">
@@ -315,7 +326,8 @@ const AdminAudit = () => {
                                         </td>
                                         <td className="py-4 px-4 text-center align-middle">
                                             <div className="flex justify-center items-center gap-2">
-                                                <button 
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); openDetailModal(log); }}
                                                     className="w-8 h-8 rounded-lg bg-white border border-slate-100 text-blue-600 hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center font-bold text-sm"
                                                     title="Chi tiết"
                                                 >
@@ -353,7 +365,10 @@ const AdminAudit = () => {
                     <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
                         <span className="text-slate-500 font-bold text-xs uppercase tracking-widest">
-                            {pagination.skip + 1} - {pagination.skip + auditLogs.length}
+                            {auditLogs.length === 0
+                                ? 'Không có kết quả'
+                                : `${pagination.skip + 1} - ${pagination.skip + auditLogs.length}`
+                            }
                         </span>
                     </div>
 
@@ -416,7 +431,7 @@ const AdminAudit = () => {
                             <div>
                                 <label className="text-sm font-bold text-gray-500 uppercase">Thời gian</label>
                                 <p className="mt-1 text-base text-gray-800">
-                                    {new Date(selectedLog.timestamp).toLocaleString('vi-VN', {
+                                    {parseTimestamp(selectedLog.timestamp).toLocaleString('vi-VN', {
                                         year: 'numeric',
                                         month: 'long',
                                         day: 'numeric',

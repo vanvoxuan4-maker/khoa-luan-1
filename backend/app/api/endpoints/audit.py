@@ -56,40 +56,34 @@ def get_my_audit_logs(
 ):
     """Get audit logs for the current admin user"""
     query = db.query(AuditLog).filter(AuditLog.ma_nguoidung == current_user.ma_user)
-    
-    # Apply filters
+
     if action_filter:
         query = query.filter(AuditLog.action == action_filter)
-    
+
     if resource_filter:
         query = query.filter(AuditLog.resource_type == resource_filter)
-    
+
     if date_from:
         try:
             date_from_dt = datetime.fromisoformat(date_from)
             query = query.filter(AuditLog.timestamp >= date_from_dt)
         except ValueError:
             pass
-    
+
     if date_to:
         try:
-            # Set to end of day to be inclusive
             date_to_dt = datetime.fromisoformat(date_to).replace(hour=23, minute=59, second=59, microsecond=999999)
             query = query.filter(AuditLog.timestamp <= date_to_dt)
         except ValueError:
             pass
-    
-    # Order by timestamp descending (newest first)
-    query = query.order_by(AuditLog.timestamp.desc())
-    
-    logs = query.all()
 
+    # ✅ Search filter at DB level (so pagination is correct)
     if search:
-        norm_search = normalize_str(search)
-        logs = [log for log in logs if norm_search in normalize_str(log.description or "")]
+        norm = f"%{search.strip()}%"
+        query = query.filter(AuditLog.description.ilike(norm))
 
-    # Pagination
-    return logs[skip : skip + limit]
+    query = query.order_by(AuditLog.timestamp.desc())
+    return query.offset(skip).limit(limit).all()
 
 @router.get("/all-logs", response_model=List[AuditLogResponse])
 def get_all_audit_logs(
@@ -106,43 +100,37 @@ def get_all_audit_logs(
 ):
     """Get all audit logs (admin only)"""
     query = db.query(AuditLog)
-    
-    # Apply filters
+
     if user_id:
         query = query.filter(AuditLog.ma_nguoidung == user_id)
-    
+
     if action_filter:
         query = query.filter(AuditLog.action == action_filter)
-    
+
     if resource_filter:
         query = query.filter(AuditLog.resource_type == resource_filter)
-    
+
     if date_from:
         try:
             date_from_dt = datetime.fromisoformat(date_from)
             query = query.filter(AuditLog.timestamp >= date_from_dt)
         except ValueError:
             pass
-    
+
     if date_to:
         try:
-            # Set to end of day to be inclusive
             date_to_dt = datetime.fromisoformat(date_to).replace(hour=23, minute=59, second=59, microsecond=999999)
             query = query.filter(AuditLog.timestamp <= date_to_dt)
         except ValueError:
             pass
-    
-    # Order by timestamp descending
-    query = query.order_by(AuditLog.timestamp.desc())
-    
-    logs = query.all()
 
+    # ✅ Search filter at DB level
     if search:
-        norm_search = normalize_str(search)
-        logs = [log for log in logs if norm_search in normalize_str(log.description or "")]
+        norm = f"%{search.strip()}%"
+        query = query.filter(AuditLog.description.ilike(norm))
 
-    # Pagination
-    return logs[skip : skip + limit]
+    query = query.order_by(AuditLog.timestamp.desc())
+    return query.offset(skip).limit(limit).all()
 
 @router.post("/log", response_model=AuditLogResponse)
 def create_log(

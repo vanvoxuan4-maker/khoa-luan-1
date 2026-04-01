@@ -126,8 +126,19 @@ const AdminChat = () => {
     }
     setMessages(prev => {
       const updated = [...prev];
-      if (updated[updated.length - 1]?.isStreaming) {
-        updated[updated.length - 1] = { ...updated[updated.length - 1], isStreaming: false };
+      const last = updated[updated.length - 1];
+      if (last?.isStreaming) {
+        // Đang stream giữa chừng → đánh dấu stopped
+        updated[updated.length - 1] = { ...last, isStreaming: false, isStopped: true };
+      } else if (last?.role === 'user') {
+        // Chưa có phản hồi nào → thêm placeholder
+        updated.push({
+          role: 'assistant',
+          message: '',
+          isStreaming: false,
+          isStopped: true,
+          thoi_gian: new Date()
+        });
       }
       return updated;
     });
@@ -224,14 +235,15 @@ const AdminChat = () => {
         }
       }
     } catch (err) {
-      if (err.name !== 'AbortError') {
+      if (err.name === 'AbortError') {
+        // Đã xử lý trong stopGeneration — không làm gì thêm
+      } else {
         console.error("Stream error:", err);
         setMessages(prev => {
           const newMsgs = [...prev];
           const lastIdx = newMsgs.length - 1;
           if (lastIdx >= 0 && newMsgs[lastIdx].isStreaming) {
-            newMsgs[lastIdx].message = "Xin lỗi, đã có lỗi xảy ra khi kết nối với AI.";
-            newMsgs[lastIdx].isStreaming = false;
+            newMsgs[lastIdx] = { ...newMsgs[lastIdx], message: "Xin lỗi, đã có lỗi xảy ra khi kết nối với AI.", isStreaming: false };
           }
           return newMsgs;
         });
@@ -480,10 +492,18 @@ const AdminChat = () => {
                         ? 'bg-gradient-to-r from-[#6D28D9] to-[#9333EA] text-white rounded-br-none'
                         : 'bg-white text-slate-700 border border-[#DDD6FE] rounded-bl-none'
                         }`}>
-                        {msg.role === 'assistant' && msg.isStreaming ? (
+                      {msg.role === 'assistant' && msg.isStreaming ? (
                           <div className="relative">
                             {renderMessage(msg.message, msg.role)}
                             <span className="inline-block w-1.5 h-4 bg-purple-500 ml-1 animate-blink align-middle"></span>
+                          </div>
+                        ) : msg.role === 'assistant' && msg.isStopped ? (
+                          <div>
+                            {msg.message ? renderMessage(msg.message, msg.role) : null}
+                            <span className="inline-flex items-center gap-1 mt-1.5 text-[10px] text-slate-400 font-medium border border-slate-200 rounded-full px-2 py-0.5">
+                              <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2" /></svg>
+                              Đã dừng
+                            </span>
                           </div>
                         ) : msg.role === 'assistant' && msg.isNew ? (
                           <TypewriterText 

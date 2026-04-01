@@ -156,11 +156,22 @@ const ChatWidget = () => {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
-    // Đánh dấu tin nhắn cuối đã stream xong
+    // Đánh dấu tin nhắn cuối
     setMessages(prev => {
       const updated = [...prev];
-      if (updated[updated.length - 1]?.isStreaming) {
-        updated[updated.length - 1] = { ...updated[updated.length - 1], isStreaming: false };
+      const last = updated[updated.length - 1];
+      if (last?.isStreaming) {
+        // Đang stream giữa chừng → đánh dấu stopped
+        updated[updated.length - 1] = { ...last, isStreaming: false, isStopped: true };
+      } else if (last?.role === 'user') {
+        // Chưa có phản hồi → thêm placeholder
+        updated.push({
+          role: 'assistant',
+          message: '',
+          isStreaming: false,
+          isStopped: true,
+          thoi_gian: new Date().toISOString()
+        });
       }
       return updated;
     });
@@ -210,6 +221,7 @@ const ChatWidget = () => {
       let fullText = '';
       let streamStarted = false;
       let newSessionId = activeSessionId;
+      let sessionSynced = false; // cờ để tránh gọi setActiveSessionId nhiều lần
 
       while (true) {
         const { done, value } = await reader.read();
@@ -222,7 +234,19 @@ const ChatWidget = () => {
           if (!line.startsWith('data: ')) continue;
           try {
             const data = JSON.parse(line.slice(6));
-            if (data.session_id) newSessionId = data.session_id;
+
+            // ✅ Cập nhật session_id NGAY TRONG VÒNG LẶP — giống AdminChat.jsx
+            // Đây là fix chính: nếu user nhấn Stop, localStorage vẫn đã được lưu
+            if (data.session_id && !sessionSynced) {
+              sessionSynced = true;
+              newSessionId = data.session_id;
+              if (!activeSessionId || activeSessionId !== data.session_id) {
+                setActiveSessionId(data.session_id);
+                localStorage.setItem('chat_session_id', data.session_id);
+                fetchSessions();
+              }
+            }
+
             if (data.done) break;
             if (data.chunk) {
               fullText += data.chunk;
@@ -257,16 +281,12 @@ const ChatWidget = () => {
         }
         return updated;
       });
-
-      // Cập nhật session mới
-      if (!activeSessionId && newSessionId) {
-        setActiveSessionId(newSessionId);
-        localStorage.setItem('chat_session_id', newSessionId);
-        fetchSessions();
-      }
+      // (session_id đã được cập nhật ngay trong vòng lặp bên trên rồi)
 
     } catch (error) {
-      if (error.name !== 'AbortError') {
+      if (error.name === 'AbortError') {
+        // Đã xử lý trong stopGeneration — không làm gì thêm
+      } else {
         setMessages(prev => [...prev, { 
           role: 'assistant', 
           message: 'Xin lỗi, hệ thống AI đang bận một chút. Bạn thử lại sau nhé! 😅',
@@ -571,6 +591,14 @@ const ChatWidget = () => {
                               {renderMessage(msg.message, msg.role)}
                               <span className="inline-block w-0.5 h-4 bg-blue-500 ml-0.5 animate-blink align-middle" />
                             </>
+                          ) : msg.role === 'assistant' && msg.isStopped ? (
+                            <div>
+                              {msg.message ? renderMessage(msg.message, msg.role) : null}
+                              <span className="inline-flex items-center gap-1 mt-1.5 text-[10px] text-slate-400 font-medium border border-slate-200 rounded-full px-2 py-0.5">
+                                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2" /></svg>
+                                Đã dừng
+                              </span>
+                            </div>
                           ) : msg.role === 'assistant' && msg.isNew ? (
                             <TypewriterText 
                               text={msg.message} 

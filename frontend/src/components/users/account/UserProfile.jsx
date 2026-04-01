@@ -71,7 +71,7 @@ const UserProfile = () => {
     });
 
     // Form data states
-    const [profileData, setProfileData] = useState({ hovaten: '', sdt: '' });
+    const [profileData, setProfileData] = useState({ hovaten: '', sdt: '', email: '' });
     const [showPasswordForm, setShowPasswordForm] = useState(false);
     const [passData, setPassData] = useState({ old_password: '', new_password: '', confirm_password: '' });
 
@@ -86,7 +86,8 @@ const UserProfile = () => {
                 setUser(res.data);
                 setProfileData({
                     hovaten: res.data.hovaten || '',
-                    sdt: res.data.sdt || ''
+                    sdt: res.data.sdt || '',
+                    email: res.data.email || ''
                 });
                 localStorage.setItem('user_info', JSON.stringify(res.data));
             } catch (err) {
@@ -104,7 +105,11 @@ const UserProfile = () => {
         setUpdating(true);
         try {
             const token = localStorage.getItem('user_access_token');
-            const res = await axios.put(`${API_BASE_URL}/users/me`, profileData, {
+            const res = await axios.put(`${API_BASE_URL}/users/me`, {
+                hovaten: profileData.hovaten,
+                sdt: profileData.sdt,
+                email: profileData.email
+            }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setUser(res.data);
@@ -260,12 +265,19 @@ const UserProfile = () => {
                                     value={profileData.hovaten}
                                     onChange={e => setProfileData({ ...profileData, hovaten: e.target.value })}
                                 />
-                                <FormInput
-                                    label="Email (Không thể đổi)"
-                                    icon="🌐"
-                                    value={user.email}
-                                    disabled
-                                />
+                                <div className="space-y-1">
+                                    <FormInput
+                                        label="Email liên hệ"
+                                        icon="🌐"
+                                        type="email"
+                                        placeholder="Nhập email mới..."
+                                        value={profileData.email}
+                                        onChange={e => setProfileData({ ...profileData, email: e.target.value })}
+                                    />
+                                    <p className="text-[10px] text-slate-400 pl-2 font-semibold">
+                                        🔒 Email phải là duy nhất — không thể dùng email đã đăng ký bởi tài khoản khác.
+                                    </p>
+                                </div>
                                 <FormInput
                                     label="Số điện thoại"
                                     icon="📞"
@@ -276,12 +288,17 @@ const UserProfile = () => {
                                         setProfileData({ ...profileData, sdt: val });
                                     }}
                                 />
-                                <FormInput
-                                    label="Tên đăng nhập (Không thể đổi)"
-                                    icon="✨"
-                                    value={user.ten_user}
-                                    disabled
-                                />
+                                <div className="space-y-1">
+                                    <FormInput
+                                        label="Tên đăng nhập"
+                                        icon="✨"
+                                        value={user.ten_user}
+                                        disabled
+                                    />
+                                    <p className="text-[10px] text-slate-400 pl-2 font-semibold">
+                                        🔑 Tên đăng nhập là định danh cố định của tài khoản, không thể thay đổi để đảm bảo tính toàn vẹn hệ thống.
+                                    </p>
+                                </div>
                             </div>
 
 
