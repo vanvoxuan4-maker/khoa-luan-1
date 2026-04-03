@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../../../utils/apiConfig';
 import { useNotification } from '../../../context/NotificationContext';
+import { useIsInactive } from '../../../utils/auth';
 
 /* ─── Data ─── */
 const VIETNAM_PROVINCES = [
@@ -63,7 +64,7 @@ const CSS = `
 `;
 
 /* ─── AddressCard ─── */
-const AddressCard = ({ addr, index, onEdit, onDelete, onSetDefault }) => {
+const AddressCard = ({ addr, index, onEdit, onDelete, onSetDefault, readOnly }) => {
     const [hovered, setHovered] = useState(false);
     const isDefault = addr.is_mac_dinh;
 
@@ -158,7 +159,8 @@ const AddressCard = ({ addr, index, onEdit, onDelete, onSetDefault }) => {
                 )}
             </div>
 
-            {/* Thanh thao tác */}
+            {/* Thanh thác tác */}
+            {!readOnly && (
             <div style={{
                 display: 'flex', alignItems: 'center', gap: '4px',
                 marginTop: '16px', paddingTop: '12px',
@@ -189,6 +191,7 @@ const AddressCard = ({ addr, index, onEdit, onDelete, onSetDefault }) => {
                     )}
                 </div>
             </div>
+            )}
         </div>
     );
 };
@@ -243,6 +246,7 @@ const AddressManager = () => {
     const [form, setForm] = useState({
         ten_nguoi_nhan: '', sdt_nguoi_nhan: '', dia_chi: '', tinh_thanh: '', is_mac_dinh: false,
     });
+    const isInactive = useIsInactive();
 
     const token = localStorage.getItem('user_access_token');
     const hdr = { Authorization: `Bearer ${token}` };
@@ -341,9 +345,11 @@ const AddressManager = () => {
                         {addresses.length}
                     </span>
                 </div>
-                <GradientBtn className="addr-add-btn" onClick={() => openModal()}>
-                    <IcPlus /> Thêm địa chỉ mới
-                </GradientBtn>
+                {!isInactive && (
+                    <GradientBtn className="addr-add-btn" onClick={() => openModal()}>
+                        <IcPlus /> Thêm địa chỉ mới
+                    </GradientBtn>
+                )}
             </div>
 
             {/* ══ Danh sách ══ */}
@@ -353,7 +359,9 @@ const AddressManager = () => {
                     <p style={{ fontSize: '14px', margin: 0 }}>Đang tải danh sách địa chỉ...</p>
                 </div>
             ) : addresses.length === 0 ? (
-                <EmptyState onAdd={() => openModal()} />
+                isInactive
+                    ? <div style={{ textAlign: 'center', padding: '64px 24px', color: '#9ca3af', fontSize: '14px' }}>Chưa có địa chỉ nào.</div>
+                    : <EmptyState onAdd={() => openModal()} />
             ) : (
                 <div className="addr-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '22px' }}>
                     {addresses.map((addr, i) => (
@@ -364,6 +372,7 @@ const AddressManager = () => {
                             onEdit={openModal}
                             onDelete={handleDelete}
                             onSetDefault={handleSetDefault}
+                            readOnly={isInactive}
                         />
                     ))}
                 </div>

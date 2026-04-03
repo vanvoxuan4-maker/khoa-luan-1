@@ -4,6 +4,7 @@ import API_BASE_URL from '../../../utils/apiConfig';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useNotification } from '../../../context/NotificationContext';
 import AddressManager from '../profile/AddressManager';
+import { isInactiveUser, useIsInactive } from '../../../utils/auth';
 
 // --- Styled Input Component for Reusability ---
 const FormInput = ({ label, icon, type = "text", value, onChange, placeholder, disabled, showPasswordToggle, onToggle, autoComplete }) => (
@@ -64,6 +65,7 @@ const UserProfile = () => {
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
     const [changingPass, setChangingPass] = useState(false);
+    const isInactive = useIsInactive();
     const [showPasswords, setShowPasswords] = useState({
         old: false,
         new: false,
@@ -211,9 +213,19 @@ const UserProfile = () => {
                                 </div>
                                 <div className="flex items-center justify-between px-2">
                                     <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</span>
-                                    <span className={`px-3 py-1 text-[10px] font-black uppercase rounded-lg border flex items-center gap-1.5 ${user.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
-                                        <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span>
-                                        {user.status === 'active' ? 'Đang hoạt động' : 'Bị khóa'}
+                                    <span className={`px-3 py-1 text-[10px] font-black uppercase rounded-lg border flex items-center gap-1.5 ${
+                                        user.status === 'active'
+                                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                            : user.status === 'inactive'
+                                            ? 'bg-amber-50 text-amber-600 border-amber-100'
+                                            : 'bg-red-50 text-red-600 border-red-100'
+                                    }`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${
+                                            user.status === 'active' ? 'bg-emerald-500 animate-pulse'
+                                            : user.status === 'inactive' ? 'bg-amber-500'
+                                            : 'bg-red-500'
+                                        }`}></span>
+                                        {user.status === 'active' ? 'Đang hoạt động' : user.status === 'inactive' ? 'Chờ kích hoạt' : 'Bị khóa'}
                                     </span>
                                 </div>
                             </div>
@@ -305,21 +317,24 @@ const UserProfile = () => {
                             <div className="flex flex-wrap gap-4">
                                 <button
                                     type="submit"
-                                    disabled={updating}
-                                    className="px-10 py-4 bg-blue-600 text-white font-black rounded-2xl shadow-lg shadow-blue-200 hover:bg-blue-700 hover:-translate-y-1 active:scale-95 transition-all flex items-center gap-3 disabled:opacity-50 disabled:translate-y-0 text-sm uppercase"
+                                    disabled={updating || isInactive}
+                                    title={isInactive ? 'Tài khoản chưa được kích hoạt' : ''}
+                                    className="px-10 py-4 bg-blue-600 text-white font-black rounded-2xl shadow-lg shadow-blue-200 hover:bg-blue-700 hover:-translate-y-1 active:scale-95 transition-all flex items-center gap-3 disabled:opacity-50 disabled:translate-y-0 disabled:cursor-not-allowed text-sm uppercase"
                                 >
                                     {updating ? 'Đang xử lý...' : '💾 Lưu thay đổi'}
                                 </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPasswordForm(!showPasswordForm)}
-                                    className={`px-10 py-4 font-black rounded-2xl shadow-lg transition-all flex items-center gap-3 text-sm uppercase border-2 ${showPasswordForm
-                                        ? 'bg-amber-50 text-amber-600 border-amber-200 shadow-amber-100'
-                                        : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-50'
-                                        }`}
-                                >
-                                    {showPasswordForm ? '❌ Hủy đổi mật khẩu' : '🔐 Đổi mật khẩu'}
-                                </button>
+                                {!isInactive && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPasswordForm(!showPasswordForm)}
+                                        className={`px-10 py-4 font-black rounded-2xl shadow-lg transition-all flex items-center gap-3 text-sm uppercase border-2 ${showPasswordForm
+                                            ? 'bg-amber-50 text-amber-600 border-amber-200 shadow-amber-100'
+                                            : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-50'
+                                            }`}
+                                    >
+                                        {showPasswordForm ? '❌ Hủy đổi mật khẩu' : '🔐 Đổi mật khẩu'}
+                                    </button>
+                                )}
                             </div>
                         </form>
 

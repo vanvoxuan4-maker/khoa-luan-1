@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../utils/apiConfig';
-import { getBestToken } from '../utils/auth';
+import { getBestToken, isInactiveUser } from '../utils/auth';
 import { useNotification } from './NotificationContext';
 
 const CartContext = createContext();
@@ -34,6 +34,10 @@ export const CartProvider = ({ children }) => {
     };
 
     const addToCart = async (productId, quantity, color = '') => {
+        if (isInactiveUser()) {
+            addToast('Tài khoản chưa được kích hoạt. Liên hệ Hotline 0961.178.265 để được hỗ trợ.', 'warning');
+            return false;
+        }
         const token = getBestToken();
         if (!token) return false;
 

@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_active_user
 from app.models.user import User
 from app.models.product import Sanpham, Hinhanh
 from app.models.cart import GioHang, ChiTietGioHang
@@ -11,7 +11,7 @@ from app.schemas.cart import CartItemCreate, CartResponse
 router = APIRouter()
 
 @router.post("/add")
-def add_to_cart(item: CartItemCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def add_to_cart(item: CartItemCreate, db: Session = Depends(get_db), current_user: User = Depends(get_active_user)):
     product = db.query(Sanpham).filter(Sanpham.ma_sanpham == item.ma_sanpham).first()
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sản phẩm không tồn tại")
@@ -112,7 +112,7 @@ def view_cart(db: Session = Depends(get_db), current_user: User = Depends(get_cu
     return {"ma_gio": user_cart.ma_gio, "tong_tien": tong_tien_gio, "items": final_items}
 
 @router.put("/{ma_sanpham}")
-def update_cart_quantity(ma_sanpham: int, so_luong_moi: int, mau_sac: str = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def update_cart_quantity(ma_sanpham: int, so_luong_moi: int, mau_sac: str = None, db: Session = Depends(get_db), current_user: User = Depends(get_active_user)):
     if so_luong_moi <= 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Số lượng phải > 0")
     
@@ -140,9 +140,9 @@ def update_cart_quantity(ma_sanpham: int, so_luong_moi: int, mau_sac: str = None
 @router.delete("/{ma_sanpham}")
 def remove_from_cart(
     ma_sanpham: int, 
-    mau_sac: str = None, # Thêm tham số mau_sac (optional)
+    mau_sac: str = None,
     db: Session = Depends(get_db), 
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_active_user)
 ):
     user_cart = db.query(GioHang).filter(GioHang.ma_user == current_user.ma_user).first()
     if user_cart:
@@ -162,7 +162,7 @@ def remove_from_cart(
     return {"message": "Đã xóa khỏi giỏ hàng"}
 
 @router.delete("/")
-def clear_cart(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def clear_cart(db: Session = Depends(get_db), current_user: User = Depends(get_active_user)):
     user_cart = db.query(GioHang).filter(GioHang.ma_user == current_user.ma_user).first()
     if user_cart:
         db.query(ChiTietGioHang).filter(ChiTietGioHang.ma_gio == user_cart.ma_gio).delete()

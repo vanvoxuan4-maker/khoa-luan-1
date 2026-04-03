@@ -45,17 +45,37 @@ async def get_current_user(
     if user is None:
         raise credentials_exception
         
-    # 👇 KIỂM TRA TRẠNG THÁI: Nếu bị khóa khi đang có session -> Chặn ngay
+    # Chỉ chặn nếu tài khoản bị cấm vĩnh viễn (banned)
+    # inactive vẫn vào được, nhưng sẽ bị chặn ở get_active_user nếu gọi API ghi
     status_val = getattr(user.status, "value", user.status)
     user_status = str(status_val).lower() if status_val else "active"
 
-    if user_status in ["banned", "inactive"]:
+    if user_status == "banned":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Tài khoản của bạn đã bị khóa hoặc không còn hiệu lực."
+            detail="Tài khoản của bạn đã bị khóa vĩnh viễn."
         )
 
     return user
+
+
+async def get_active_user(
+    current_user: User = Depends(get_current_user)
+) -> User:
+    """
+    Dependency dành riêng cho các API GHI (thêm, sửa, xóa).
+    Tài khoản phải ở trạng thái 'active' mới được thực hiện.
+    Tài khoản 'inactive' chỉ đọc (read-only): không thêm giỏ hàng, không đặt đơn.
+    """
+    status_val = getattr(current_user.status, "value", current_user.status)
+    user_status = str(status_val).lower() if status_val else "active"
+
+    if user_status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản của bạn chưa được kích hoạt. Vui lòng liên hệ Admin qua Hotline: 0961.178.265."
+        )
+    return current_user
 
 def check_admin_role(current_user: User = Depends(get_current_user)):
     role = current_user.quyen

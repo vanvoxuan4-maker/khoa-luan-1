@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.api import deps
+from app.api.deps import get_current_user, get_active_user
 from app.models.user import User
 from app.schemas.user import UserResponse, UserProfileUpdate, ChangePassword
 from app.core.security import verify_password, get_password_hash
@@ -19,7 +20,7 @@ def read_user_me(current_user: User = Depends(deps.get_current_user)):
 def update_user_me(
     item: UserProfileUpdate, 
     db: Session = Depends(get_db), 
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(get_active_user)
 ):
     """
     Cập nhật thông tin cá nhân (Họ tên, Email, SĐT, Địa chỉ).
@@ -45,7 +46,7 @@ def update_user_me(
 def change_password(
     item: ChangePassword,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(get_active_user)
 ):
     """
     Đổi mật khẩu (Yêu cầu nhập mật khẩu cũ).

@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useNotification } from '../../../context/NotificationContext';
 import { useCart } from '../../../context/CartContext';
 import Breadcrumb from '../layouts/Breadcrumb';
+import { useIsInactive } from '../../../utils/auth';
 
 const Cart = () => {
     const navigate = useNavigate();
@@ -17,8 +18,9 @@ const Cart = () => {
         removeFromCart,
         clearCart: clearUserCart
     } = useCart();
-    const [selectedIds, setSelectedIds] = useState(new Set()); // ma_ctgh của items được chọn
+    const [selectedIds, setSelectedIds] = useState(new Set());
     const isInitialized = useRef(false);
+    const isInactive = useIsInactive();
 
     useEffect(() => {
         if (cart?.items && !isInitialized.current) {
@@ -301,8 +303,9 @@ const Cart = () => {
                                 <div className="space-y-4">
                                     <button
                                         onClick={handleCheckout}
-                                        disabled={selectedIds.size === 0}
-                                        className={`w-full py-5 rounded-[2rem] font-black text-base transition-all shadow-2xl flex items-center justify-center gap-3 active:scale-95 ${selectedIds.size > 0
+                                        disabled={selectedIds.size === 0 || isInactive}
+                                        title={isInactive ? 'Tài khoản chưa được kích hoạt' : ''}
+                                        className={`w-full py-5 rounded-[2rem] font-black text-base transition-all shadow-2xl flex items-center justify-center gap-3 active:scale-95 ${(selectedIds.size > 0 && !isInactive)
                                             ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200 transform hover:scale-[1.02]'
                                             : 'bg-slate-100 text-slate-300 cursor-not-allowed border border-slate-200 shadow-none'
                                             }`}>
@@ -311,10 +314,14 @@ const Cart = () => {
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                                             </svg>
                                         </div>
-                                        {selectedIds.size === 0 ? 'CHƯA CHỌN SẢN PHẨM' : `THANH TOÁN NGAY`}
+                                        {isInactive ? 'TÀI KHOẢN CHƯА KÍCH HOẠT' : selectedIds.size === 0 ? 'CHƯA CHỌ N SẢN PHẨM' : 'THANH TOÁN NGAY'}
                                     </button>
 
-                                    {selectedIds.size > 0 ? (
+                                    {isInactive ? (
+                                        <p className="text-center text-[10px] font-black text-amber-500 uppercase tracking-[0.15em]">
+                                            Liên hệ Hotline 0961.178.265 để kích hoạt tài khoản
+                                        </p>
+                                    ) : selectedIds.size > 0 ? (
                                         <p className="text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] animate-pulse">
                                             Nhấn để tiếp tục bước thanh toán
                                         </p>

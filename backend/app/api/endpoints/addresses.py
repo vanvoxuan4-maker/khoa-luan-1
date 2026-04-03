@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.db.session import get_db
 from app.api import deps
+from app.api.deps import get_current_user, get_active_user
 from app.models.address import Address
 from app.models.user import User
 from app.schemas.address import AddressCreate, AddressUpdate, AddressResponse
@@ -12,7 +13,7 @@ router = APIRouter()
 @router.get("/", response_model=List[AddressResponse])
 def get_addresses(
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách địa chỉ của người dùng hiện tại (mặc định lên đầu).
@@ -23,7 +24,7 @@ def get_addresses(
 def create_address(
     address_in: AddressCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(get_active_user)
 ):
     """
     Thêm địa chỉ giao hàng mới.
@@ -53,7 +54,7 @@ def update_address(
     ma_dia_chi: int,
     address_in: AddressUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(get_active_user)
 ):
     """
     Cập nhật thông tin địa chỉ.
@@ -78,7 +79,7 @@ def update_address(
 def delete_address(
     ma_dia_chi: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(get_active_user)
 ):
     """
     Xóa địa chỉ.
@@ -105,7 +106,7 @@ def delete_address(
 def set_default_address(
     ma_dia_chi: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(get_active_user)
 ):
     """
     Đặt một địa chỉ làm mặc định.

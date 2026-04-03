@@ -13,8 +13,9 @@ from app.schemas.order import OrderCreate, OrderResponse
 from typing import List, Optional
 from datetime import datetime, timedelta
 
-# 👇 Import deps chuẩn từ package cha
+# Import deps chuẩn từ package cha
 from app.api import deps
+from app.api.deps import get_active_user
 from app.utils.text_utils import normalize_str
 from app.api.endpoints.audit import create_audit_log
 
@@ -53,7 +54,7 @@ def get_pending_order(
 def checkout(
     order_in: OrderCreate, 
     db: Session = Depends(get_db), 
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(get_active_user)
 ):
     # 1. Lấy giỏ hàng
     user_cart = db.query(GioHang).filter(GioHang.ma_user == current_user.ma_user).first()
@@ -629,7 +630,7 @@ def get_my_order_detail(
     return order
 
 @router.delete("/my-orders/clean")
-def clean_my_orders(db: Session = Depends(get_db), current_user: User = Depends(deps.get_current_user)):
+def clean_my_orders(db: Session = Depends(get_db), current_user: User = Depends(get_active_user)):
     """Dọn dẹp lịch sử đơn hàng của user"""
     # 1. Tìm các đơn hàng PENDING để chuyển sang CANCELLED (Hoàn kho)
     pending_orders = db.query(DonHang).filter(
@@ -665,7 +666,7 @@ def clean_my_orders(db: Session = Depends(get_db), current_user: User = Depends(
     return {"message": f"Đã ẩn {hidden_count} đơn hàng khỏi lịch sử của bạn."}
 
 @router.delete("/my-orders/{ma_don_hang}")
-def delete_my_order(ma_don_hang: int, db: Session = Depends(get_db), current_user: User = Depends(deps.get_current_user)):
+def delete_my_order(ma_don_hang: int, db: Session = Depends(get_db), current_user: User = Depends(get_active_user)):
     """Hủy đơn hàng (nếu Pending) hoặc Xóa lịch sử (nếu Cancelled/Failed)"""
     order = db.query(DonHang).filter(
         DonHang.ma_don_hang == ma_don_hang,

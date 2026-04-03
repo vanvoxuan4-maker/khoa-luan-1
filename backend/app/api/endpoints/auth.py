@@ -100,17 +100,17 @@ def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Kiểm tra trạng thái tài khoản (Chỉ chặn nếu là banned hoặc inactive)
-    # Lấy giá trị chuỗi từ Enum hoặc DB, mặc định 'active' nếu NULL
+    # Kiểm tra trạng thái tài khoản
+    # - banned: chặn hoàn toàn
+    # - inactive: cho đăng nhập nhưng hạn chế hành động ghi (xử lý ở deps.get_active_user)
     status_val = getattr(user.status, "value", user.status)
     user_status = str(status_val).lower() if status_val else "active"
     
-    if user_status in ["banned", "inactive"]:
-        if user_status == "banned":
-            detail_msg = "⛔ Tài khoản đã bị KHÓA do vi phạm chính sách. Vui lòng liên hệ Hotline: 0961.178.265 để được hỗ trợ."
-        else:
-            detail_msg = "⏳ Tài khoản đang chờ kích hoạt. Vui lòng liên hệ Admin qua Hotline: 0961.178.265 để xác thực."
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail_msg)
+    if user_status == "banned":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="⛔ Tài khoản đã bị KHÓA do vi phạm chính sách. Vui lòng liên hệ Hotline: 0961.178.265 để được hỗ trợ."
+        )
     
     
     # Lấy role: nếu quyen là Enum thì lấy value
@@ -161,7 +161,8 @@ def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db
             "ten_user": user.ten_user,
             "hovaten": user.hovaten,
             "quyen": str(user_role).upper(),  # ADMIN hoặc CUSTOMER
-            "is_superuser": str(user_role).upper() == "ADMIN"
+            "is_superuser": str(user_role).upper() == "ADMIN",
+            "status": user_status  # Frontend dùng để hiển thị trạng thái tài khoản
         }
     }
 

@@ -7,6 +7,7 @@ import { useNotification } from '../../../context/NotificationContext';
 import { useWishlist } from '../../../context/WishlistContext';
 import { useCart } from '../../../context/CartContext';
 import Breadcrumb from '../layouts/Breadcrumb';
+import { useIsInactive } from '../../../utils/auth';
 
 const ProductDetail = () => {
     const { id } = useParams();
@@ -15,6 +16,7 @@ const ProductDetail = () => {
     const { addToast, showConfirm } = useNotification();
     const { toggleWishlist, isFavorite } = useWishlist();
     const { addToCart } = useCart();
+    const isInactive = useIsInactive();
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [quantity, setQuantity] = useState(1);
@@ -469,8 +471,9 @@ const ProductDetail = () => {
                             <div className="space-y-3">
                                 <button
                                     onClick={handleAddToCart}
-                                    disabled={!product.is_active}
-                                    className={`w-full py-4 rounded-2xl font-black text-base transition-all flex items-center justify-center gap-3 ${product.is_active
+                                    disabled={!product.is_active || isInactive}
+                                    title={isInactive ? 'Tài khoản chưa được kích hoạt' : ''}
+                                    className={`w-full py-4 rounded-2xl font-black text-base transition-all flex items-center justify-center gap-3 ${(product.is_active && !isInactive)
                                         ? 'bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white shadow-sm hover:shadow-lg hover:shadow-blue-200 transform hover:scale-[1.02]'
                                         : 'bg-gray-100 text-gray-300 cursor-not-allowed border-2 border-gray-200'}`}
                                 >
@@ -482,8 +485,9 @@ const ProductDetail = () => {
 
                                 <button
                                     onClick={handleBuyNow}
-                                    disabled={!product.is_active}
-                                    className={`w-full py-4 rounded-2xl font-black text-base transition-all flex items-center justify-center gap-3 ${product.is_active
+                                    disabled={!product.is_active || isInactive}
+                                    title={isInactive ? 'Tài khoản chưa được kích hoạt' : ''}
+                                    className={`w-full py-4 rounded-2xl font-black text-base transition-all flex items-center justify-center gap-3 ${(product.is_active && !isInactive)
                                         ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-200 transform hover:scale-[1.02]'
                                         : 'bg-gray-300 text-gray-400 cursor-not-allowed'}`}
                                 >

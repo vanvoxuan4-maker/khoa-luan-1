@@ -26,9 +26,9 @@ Trợ lý ảo thông minh tích hợp trực tiếp vào hệ thống quản tr
 
 ### 3. Quản Trị Hệ Thống (Admin Dashboard)
 - **Quản lý toàn diện:** Sản phẩm, Đơn hàng, Danh mục, Thương hiệu, Ưu đãi.
-- **Quản lý người dùng:** Banned/Unbanned, theo dõi lịch sử mua hàng.
+- **Quản lý người dùng đa trạng thái:** Hỗ trợ 3 trạng thái: `Active` (Toàn quyền), `Inactive` (Read-only - chỉ xem, không được thanh toán/giỏ hàng), `Banned` (Khóa hoàn toàn).
 - **Thống kê chuyên sâu:** Top 10 sản phẩm bán chạy, tỷ lệ hủy đơn, biểu đồ doanh thu.
-- **Bảo mật:** Phân quyền chặt chẽ thông qua JWT (JSON Web Token).
+- **Bảo mật:** Phân quyền chặt chẽ thông qua JWT (JSON Web Token) và Custom FastAPI Dependencies.
 
 ---
 
@@ -63,9 +63,39 @@ Dự án không chỉ dừng lại ở các tính năng cơ bản mà còn đư�
 - **Intelligent API Design:** Tích hợp **Pydantic Model Validation** chặt chẽ, đảm bảo dữ liệu đầu vào luôn sạch và đúng định dạng trước khi xử lý.
 
 ### 3. Developer & User Experience (DX/UX)
-- **Global Error Interceptor:** Hệ thống xử lý lỗi tập trung thông qua **Axios Interceptor**, tự động nhận diện và thông báo lỗi 401, 403, 500 và lỗi kết nối mạng (Network Error) một cách chuyên nghiệp.
+- **Global Error Interceptor:** Hệ thống xử lý lỗi tập trung thông qua **Axios Interceptor**, tự động nhận diện và xử lý linh hoạt (Inactive: Toast cảnh báo nhẹ; Banned/Expired: Logout & Redirect).
+- **Reactive User Status Sync:** Cơ chế đồng bộ trạng thái tài khoản thời gian thực. Sử dụng `window.focus` listener và `CustomEvent` để tự động cập nhật UI (Banner/Buttons) ngay lập tức khi Admin thay đổi trạng thái người dùng trong trang quản trị, mang lại trải nghiệm không gián đoạn.
 - **URL-based Filter Persistence:** Đồng bộ hóa bộ lọc sản phẩm trực tiếp với URL Search Params, cho phép người dùng chia sẻ kết quả tìm kiếm dễ dàng và giữ trạng thái lọc ngay cả khi tải lại trang.
 - **Smart Scroll Logic**: Cơ chế cuộn trang thông minh, chỉ tự động kéo lên đầu khi chuyển trang (pagination) và giữ nguyên vị trí khi thực hiện lọc/sắp xếp, tạo cảm giác tự nhiên nhất.
+- **Optimized JWT Handling**: Xử lý token tập trung, hỗ trợ fallback giữa các context (User/Admin) giúp duy trì phiên làm việc mượt mà ngay cả khi chuyển đổi vai trò.
+
+---
+
+## 🧠 Thuật Toán & Cơ Chế Đặc Sắc
+
+Hệ thống tích hợp những giải pháp xử lý dữ liệu phức tạp để đảm bảo tính chính xác và hiệu năng:
+
+### 1. AI Function Calling & Intent Routing
+- **Cơ chế:** AI không chỉ trả lời văn bản mà còn được cấp quyền truy cập các bộ "Tool" (hàm backend). Khi nhận câu hỏi như "Doanh thu tháng này thế nào?", hệ thống sẽ tự động routing đến tool `get_revenue_report`.
+- **Lợi ích:** Đảm bảo AI luôn nói đúng dữ liệu thực tế trong DB, loại bỏ hoàn toàn hiện tượng "ảo tưởng" (hallucination).
+
+### 2. Concurrency & Inventory Lock (Pessimistic Locking)
+- **Thuật toán:** Sử dụng `SELECT ... FOR UPDATE` trong SQLAlchemy để khóa dòng sản phẩm ngay khi user bấm thanh toán.
+- **Giải quyết:** Triệt tiêu hoàn toàn lỗi **Race Condition** khi nhiều người cùng đặt món hàng cuối cùng, đảm bảo số tồn kho không bao giờ bị âm.
+
+### 3. Reactive UI Synchronization (Event-Driven Sync)
+- **Cơ chế:** Kết hợp `window.focus` event và `CustomEvent` bus trong React. 
+- **Ứng dụng:** Trạng thái tài khoản (Active/Inactive) được đồng bộ ngay lập tức mà không cần F5 khi user quay lại tab sau khi Admin đã thay đổi quyền truy cập trong trang quản lý.
+
+---
+
+## 🔄 Lịch Sử Cải Tiến Gần Đây
+
+Dự án liên tục được tối ưu hóa dựa trên phản hồi thực tế:
+
+- **Chuyển đổi Chính sách Truy cập:** Nâng cấp từ "Hard-block" (khóa cứng) sang "Read-only access" cho tài khoản Inactive. Cho phép user xem sản phẩm/lịch sử nhưng chặn mọi hành động "Write" (thêm giỏ, thanh toán) giúp tăng tỷ lệ chuyển đổi từ khách tiềm năng.
+- **Tối ưu hóa Tìm kiếm AI:** Tích hợp bộ lọc danh mục trực tiếp vào prompt AI, giúp trợ lý hiểu sâu hơn về cấu trúc sản phẩm và đưa ra gợi ý chính xác theo nhóm hàng (xe địa hình, xe đua, phụ kiện).
+- **Refactoring Interceptor:** Chuẩn hóa luồng bắt lỗi 403, phân tách rõ ràng giữa "Khóa tạm thời" (inactive) và "Cấm truy cập" (banned) để hiển thị thông báo toast phù hợp mà không gây gián đoạn phiên làm việc.
 
 ---
 
