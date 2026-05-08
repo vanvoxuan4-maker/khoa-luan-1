@@ -44,14 +44,17 @@ const ProductCard = ({
                 addToast("Vui lòng đăng nhập để thêm vào giỏ hàng!", "warning", "Yêu cầu đăng nhập");
             }
         } catch (err) {
-            addToast("Không thể thêm vào giỏ hàng. Thử lại sau!", "error", "Lỗi");
+            const errorMsg = err.response?.data?.detail || "Không thể thêm vào giỏ hàng. Thử lại sau!";
+            addToast(errorMsg, "error", "Lỗi");
         }
     };
+
+    const isOutOfStock = product.ton_kho <= 0;
 
     return (
         <Link to={`/products/${product.ma_sanpham}`} className={`group block h-full ${className}`}>
             <div className={`relative bg-white rounded-[2.5rem] overflow-hidden border border-slate-100 group-hover:border-blue-500/50 shadow-[0_10px_30px_rgba(0,0,0,0.03)] group-hover:shadow-[0_30px_60px_rgba(59,130,246,0.15)] group-hover:-translate-y-4 transition-all duration-500 flex flex-col h-full ${cardClassName}`}>
-
+                
                 {/* Favorite Toggle Button */}
                 <button
                     onClick={handleFavoriteClick}

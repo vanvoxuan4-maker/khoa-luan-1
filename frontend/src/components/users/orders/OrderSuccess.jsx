@@ -25,7 +25,7 @@ const OrderSuccess = () => {
                 <Link to="/products" className="px-6 py-3 bg-gray-200 text-gray-800 rounded-full font-bold hover:bg-gray-300 transition">
                     Tiếp tục mua sắm
                 </Link>
-                <Link to="/my-orders" className="px-6 py-3 bg-blue-600 text-white rounded-full font-bold hover:bg-blue-700 transition">
+                <Link to="/profile?tab=orders" className="px-6 py-3 bg-blue-600 text-white rounded-full font-bold hover:bg-blue-700 transition">
                     Xem lịch sử đơn hàng
                 </Link>
             </div>

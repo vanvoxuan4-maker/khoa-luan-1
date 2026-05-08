@@ -10,7 +10,7 @@ const ReviewList = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const token = localStorage.getItem('admin_access_token');
+  const token = sessionStorage.getItem('admin_access_token');
 
   // ─── DEBOUNCE SEARCH TERM (500ms) ───────────────────
   useEffect(() => {

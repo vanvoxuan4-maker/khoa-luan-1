@@ -33,7 +33,7 @@ const VNPayPayment = () => {
             setPaymentResult(response.data);
 
             setLoading(false);
-            setTimeout(() => navigate('/my-orders'), 5000);
+            setTimeout(() => navigate('/profile?tab=orders'), 5000);
         } catch (error) {
             console.error('Lỗi xử lý kết quả thanh toán:', error);
             setPaymentResult({
@@ -124,7 +124,7 @@ const VNPayPayment = () => {
                     )}
 
                     <button
-                        onClick={() => navigate('/my-orders')}
+                        onClick={() => navigate('/profile?tab=orders')}
                         className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors"
                     >
                         Xem đơn hàng

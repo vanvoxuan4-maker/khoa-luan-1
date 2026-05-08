@@ -19,8 +19,8 @@ const UserList = () => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const token = localStorage.getItem('admin_access_token');
-  const currentAdmin = JSON.parse(localStorage.getItem('admin_info') || '{}');
+  const token = sessionStorage.getItem('admin_access_token');
+  const currentAdmin = JSON.parse(sessionStorage.getItem('admin_info') || '{}');
   const currentAdminId = currentAdmin.ma_user || currentAdmin.id;
 
   // ─── DEBOUNCE SEARCH TERM (500ms) ──────────────────────────────────────────

@@ -240,7 +240,7 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
     // Nếu là ảnh đã tồn tại trên server, gọi API đổi ngay
     if (selectedImage.isExisting && selectedImage.id) {
       try {
-        const token = localStorage.getItem('admin_access_token');
+        const token = sessionStorage.getItem('admin_access_token');
         await axios.put(`${API_BASE}/set-anh-chinh/${selectedImage.id}`, {}, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -261,7 +261,7 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
   const handleRemoveImage = useCallback(async (index) => {
     const imageToRemove = imagePreviews[index];
     if (imageToRemove.isExisting && imageToRemove.id) {
-      const token = localStorage.getItem('admin_access_token');
+      const token = sessionStorage.getItem('admin_access_token');
       try {
         await axios.delete(`${API_BASE}/xoa-anh/${imageToRemove.id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -298,7 +298,7 @@ const AddProduct = ({ onProductAdded, editProduct, onCancel, brands: propBrands 
     }
     setFormErrors({});
 
-    const token = localStorage.getItem('admin_access_token');
+    const token = sessionStorage.getItem('admin_access_token');
     const config = { headers: { 'Authorization': `Bearer ${token}` } };
 
     try {

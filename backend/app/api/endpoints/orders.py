@@ -123,6 +123,8 @@ def checkout(
     # 2.5. Xử lý Voucher (nếu có)
     voucher_id = None
     giam_gia = 0
+    voucher = None  # Giữ tham chiếu để dùng ở bước 6
+    old_voucher_id = None  # Voucher cũ của pending order (nếu có)
     
     if order_in.ma_giamgia:
         clean_code = order_in.ma_giamgia.strip().upper()
@@ -136,13 +138,27 @@ def checkout(
             if voucher.ngay_ketthuc and voucher.ngay_ketthuc.date() < datetime.now().date():
                 raise HTTPException(status_code=400, detail="Mã giảm giá đã hết hạn!")
             
-            if voucher.solan_hientai >= voucher.solandung:
+            if voucher.solandung and voucher.solan_hientai >= voucher.solandung:
                 raise HTTPException(status_code=400, detail="Mã giảm giá đã hết lượt sử dụng!")
             
             if tong_tien_don < voucher.don_toithieu:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST, 
                     detail=f"Đơn hàng tối thiểu {voucher.don_toithieu:,.0f} VND để áp dụng mã này!"
+                )
+            
+            # ✅ FIX: Kiểm tra user đã dùng voucher này chưa (trong đơn hàng không bị hủy)
+            # Loại trừ các đơn cancelled/returned (đơn thất bại không tính)
+            INVALID_STATES = ["cancelled", "returned", "failed"]
+            existing_usage = db.query(DonHang).filter(
+                DonHang.ma_user == current_user.ma_user,
+                DonHang.ma_khuyenmai == voucher.ma_khuyenmai,
+                ~DonHang.trang_thai.in_(INVALID_STATES)
+            ).first()
+            if existing_usage:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Bạn đã sử dụng mã giảm giá này rồi! Mỗi tài khoản chỉ được dùng 1 lần."
                 )
             
             # Calculate discount
@@ -194,6 +210,10 @@ def checkout(
         DonHang.trang_thai == TrangThaiOrder.PENDING,
         DonHang.phuong_thuc == PhuongThucPayment.VNPAY  # Chỉ ghi đè nếu là đơn VNPay chưa thanh toán
     ).order_by(DonHang.ngay_dat.desc()).first()
+    
+    # ✅ FIX: Ghi nhớ voucher cũ của pending order (để tránh double-increment)
+    if pending_order:
+        old_voucher_id = pending_order.ma_khuyenmai
     
     if pending_order:
         # ===== CẬP NHẬT ĐƠN CŨ =====
@@ -293,8 +313,30 @@ def checkout(
         db.add(db_detail)
     
     # 6. Increment voucher usage if applied
-    if voucher_id:
-        voucher.solan_hientai += 1
+    # ✅ FIX: Chỉ tăng counter khi voucher THỰC SỰ mới được áp dụng:
+    # - Nếu là đơn mới → tăng bình thường
+    # - Nếu là cập nhật pending order với CÙNG voucher cũ → KHÔNG tăng (tránh double-count)
+    # - Nếu là cập nhật pending order với voucher MỚI → tăng voucher mới, hoàn lại voucher cũ
+    if voucher_id and voucher:
+        if old_voucher_id is None:
+            # Đơn hoàn toàn mới → tăng bình thường
+            voucher.solan_hientai += 1
+        elif old_voucher_id != voucher_id:
+            # Đổi sang voucher mới → tăng voucher mới, hoàn lại 1 lượt cho voucher cũ
+            voucher.solan_hientai += 1
+            old_voucher = db.query(Makhuyenmai).filter(
+                Makhuyenmai.ma_khuyenmai == old_voucher_id
+            ).first()
+            if old_voucher and old_voucher.solan_hientai > 0:
+                old_voucher.solan_hientai -= 1
+        # else: old_voucher_id == voucher_id → cùng voucher, KHÔNG tăng
+    elif not voucher_id and old_voucher_id:
+        # User bỏ voucher khi update pending order → hoàn lại 1 lượt
+        old_voucher = db.query(Makhuyenmai).filter(
+            Makhuyenmai.ma_khuyenmai == old_voucher_id
+        ).first()
+        if old_voucher and old_voucher.solan_hientai > 0:
+            old_voucher.solan_hientai -= 1
     
     # 7. XỬ LÝ KHẤU TRỪ GIỎ HÀNG (Selective Cart Clearance)
     if phuong_thuc_enum == PhuongThucPayment.COD:

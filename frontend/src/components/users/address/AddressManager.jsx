@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import axios from 'axios';
 import API_BASE_URL from '../../../utils/apiConfig';
 import { useNotification } from '../../../context/NotificationContext';
@@ -397,8 +398,8 @@ const AddressManager = () => {
                 </div>
             )}
 
-            {/* ══ Modal ══ */}
-            {showModal && (
+            {/* ══ Modal (rendered via Portal to bypass parent overflow) ══ */}
+            {showModal && ReactDOM.createPortal(
                 <div style={{
                     position: 'fixed', inset: 0, zIndex: 1000,
                     background: 'rgba(15,23,42,.55)',
@@ -474,7 +475,6 @@ const AddressManager = () => {
                                     placeholder="Số nhà, tên đường, phường/xã..." />
                             </Field>
 
-                            {/* Checkbox với phản hồi trực quan */}
                             <label style={{
                                 display: 'flex', alignItems: 'center', gap: '10px',
                                 cursor: 'pointer', padding: '12px 14px', borderRadius: '9px',
@@ -496,7 +496,8 @@ const AddressManager = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

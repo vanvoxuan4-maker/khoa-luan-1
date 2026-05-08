@@ -1,11 +1,11 @@
 # Bike Shop - Hệ Thống Quản Lý & Bán Xe Đạp Tích Hợp AI
 
 ![Project Banner](https://img.shields.io/badge/Project-Bike%20Shop-blue?style=for-the-badge)
-![AI Powered](https://img.shields.io/badge/AI-Gemini%202.0%20Flash-orange?style=for-the-badge)
+![AI Powered](https://img.shields.io/badge/AI-Gemini%203.1%20Flash%20Lite%20Review-orange?style=for-the-badge)
 ![Framework](https://img.shields.io/badge/FastAPI-React-green?style=for-the-badge)
 
 ## 📌 Giới Thiệu
-Dự án **Bike Shop** là một hệ thống thương mại điện tử chuyên nghiệp dành cho việc kinh doanh xe đạp, được xây dựng với kiến trúc hiện đại (FastAPI + React). Điểm đặc biệt của hệ thống là việc tích hợp **AI Trợ Lý Admin (Gemini 2.0 Flash)** giúp phân tích dữ liệu kinh doanh, báo cáo doanh thu và hỗ trợ marketing định hướng dữ liệu.
+Dự án **Bike Shop** là một hệ thống thương mại điện tử chuyên nghiệp dành cho việc kinh doanh xe đạp, được xây dựng với kiến trúc hiện đại (FastAPI + React). Điểm đặc biệt của hệ thống là việc tích hợp **AI Trợ Lý Admin (Gemini 3.1 Flash Lite Review)** giúp phân tích dữ liệu kinh doanh, báo cáo doanh thu và hỗ trợ marketing định hướng dữ liệu.
 
 ---
 
@@ -13,16 +13,16 @@ Dự án **Bike Shop** là một hệ thống thương mại điện tử chuyê
 
 ### 1. AI Assistant (Dành cho Admin)
 Trợ lý ảo thông minh tích hợp trực tiếp vào hệ thống quản trị:
-- **Phân tích doanh thu:** Báo cáo doanh thu theo ngày/tháng bằng ngôn ngữ tự nhiên.
-- **Quản trị tồn kho:** Cảnh báo sản phẩm sắp hết hàng dựa trên ngưỡng thiết lập.
+- **Báo cáo doanh thu 3 tầng:** Tự động tổng hợp dữ liệu (Hôm nay, Tháng này, Tổng tích lũy) kèm phân tích sản phẩm bán chạy nhất chỉ với một câu lệnh.
+- **Quản trị thông minh:** Phân biệt rõ ràng các hành động quản lý tài khoản (Vô hiệu hóa vs Cấm vĩnh viễn), đảm bảo an toàn dữ liệu với bước xác nhận 2 lớp.
+- **Quản trị tồn kho:** Cảnh báo sản phẩm sắp hết hàng và hỗ trợ điều chỉnh tồn kho trực tiếp qua chat.
 - **Xử lý content:** Tự động soạn thảo mô tả sản phẩm và nội dung Marketing chuyên nghiệp.
-- **Thông minh & Linh hoạt:** Cơ chế **Intelligent Fallback** hoạt động ngay cả khi vượt quá hạn ngạch API.
 
 ### 2. Trải Nghiệm Khách Hàng (Customer)
-- **Mua sắm thông minh:** Tìm kiếm, lọc sản phẩm theo nhu cầu (giá, thương hiệu, danh mục).
-- **Giỏ hàng & Yêu thích:** Quản lý danh sách mua sắm tiện lợi.
-- **Thanh toán đa dạng:** Hỗ trợ COD, Chuyển khoản ngân hàng, Thẻ tín dụng.
-- **Đánh giá & Phản hồi:** Hệ thống đánh giá sao và bình luận sau khi mua hàng.
+- **Giao diện Profile Premium:** Trang cá nhân được thiết kế lại theo phong cách hiện đại, tối giản các trường thông tin dư thừa và tối ưu hóa quản lý đơn hàng.
+- **Hệ thống Voucher & Khuyến mãi:** Trang khuyến mãi với hiệu ứng Toast thông báo lưu mã thành công, thiết kế dạng Ticket trực quan và đếm ngược Flash Sale thời gian thực.
+- **Quản lý đơn hàng tối ưu:** Bổ sung bộ lọc "Trả hàng", nút Refresh dữ liệu nhanh và cơ chế xóa mềm (Soft-delete) giúp dọn dẹp lịch sử mua hàng.
+- **Thanh toán đa dạng:** Hỗ trợ COD, Chuyển khoản ngân hàng (VNPAY Sandbox).
 
 ### 3. Quản Trị Hệ Thống (Admin Dashboard)
 - **Quản lý toàn diện:** Sản phẩm, Đơn hàng, Danh mục, Thương hiệu, Ưu đãi.
@@ -37,7 +37,7 @@ Trợ lý ảo thông minh tích hợp trực tiếp vào hệ thống quản tr
 ### Backend
 - **Framework:** FastAPI (Python)
 - **Database:** PostgreSQL/MySQL (SQLAlchemy ORM)
-- **AI:** Google Generative AI (Gemini 2.0 Flash)
+- **AI:** Google Generative AI (Gemini 3.1 Flash Lite Review)
 - **Auth:** JWT Authentication, Bcrypt Password Hashing
 
 ### Frontend
@@ -93,9 +93,10 @@ Hệ thống tích hợp những giải pháp xử lý dữ liệu phức tạp 
 
 Dự án liên tục được tối ưu hóa dựa trên phản hồi thực tế:
 
-- **Chuyển đổi Chính sách Truy cập:** Nâng cấp từ "Hard-block" (khóa cứng) sang "Read-only access" cho tài khoản Inactive. Cho phép user xem sản phẩm/lịch sử nhưng chặn mọi hành động "Write" (thêm giỏ, thanh toán) giúp tăng tỷ lệ chuyển đổi từ khách tiềm năng.
-- **Tối ưu hóa Tìm kiếm AI:** Tích hợp bộ lọc danh mục trực tiếp vào prompt AI, giúp trợ lý hiểu sâu hơn về cấu trúc sản phẩm và đưa ra gợi ý chính xác theo nhóm hàng (xe địa hình, xe đua, phụ kiện).
-- **Refactoring Interceptor:** Chuẩn hóa luồng bắt lỗi 403, phân tách rõ ràng giữa "Khóa tạm thời" (inactive) và "Cấm truy cập" (banned) để hiển thị thông báo toast phù hợp mà không gây gián đoạn phiên làm việc.
+- **Nâng cấp AI Analytics:** Triển khai logic báo cáo doanh thu đa tầng giúp Admin có cái nhìn từ chi tiết (hôm nay) đến tổng thể (tổng doanh thu) mà không bị mâu thuẫn số liệu.
+- **Modernizing UI/UX:** Tái cấu trúc trang Profile và Promotions theo tiêu chuẩn thiết kế hiện đại, sử dụng Glassmorphism và các micro-animations để tăng tính tương tác.
+- **Fix lỗi Checkout:** Loại bỏ các Trigger dư thừa ở cấp Database để giải quyết triệt để lỗi "Network Error" khi thanh toán, chuyển toàn bộ logic xử lý tồn kho về cấp Application (Python).
+- **Phân tách trạng thái tài khoản:** Chuẩn hóa thuật ngữ AI (Active/Inactive/Banned) để tránh việc AI nhầm lẫn giữa việc "Tạm khóa" và "Cấm vĩnh viễn".
 
 ---
 

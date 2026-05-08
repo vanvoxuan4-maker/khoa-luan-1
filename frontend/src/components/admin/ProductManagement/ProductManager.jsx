@@ -38,8 +38,8 @@ const ProductManager = ({ initialSearch = '' }) => {
   const [tempStockValue, setTempStockValue] = useState('');
   const [isUpdatingStock, setIsUpdatingStock] = useState(false);
 
-  const token = localStorage.getItem('admin_access_token');
-  const user = JSON.parse(localStorage.getItem('admin_info')) || {};
+  const token = sessionStorage.getItem('admin_access_token');
+  const user = JSON.parse(sessionStorage.getItem('admin_info')) || {};
   const isAdmin = user.quyen?.toLowerCase() === 'admin' || user.role?.toLowerCase() === 'admin' || user.is_superuser;
   const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
 
@@ -137,7 +137,11 @@ const ProductManager = ({ initialSearch = '' }) => {
       addToast('Đã xóa sản phẩm thành công!', 'success');
       loadData();
     } catch (e) {
-      addToast('Lỗi xóa sản phẩm!', 'error');
+      if (e.response?.status === 409) {
+        addToast(e.response.data.detail || 'Sản phẩm này đã có đơn hàng, không thể xóa để bảo toàn lịch sử!', 'error');
+      } else {
+        addToast('Lỗi xóa sản phẩm!', 'error');
+      }
     }
   }, [token, addToast, showConfirm, loadData]);
 
@@ -200,14 +204,14 @@ const ProductManager = ({ initialSearch = '' }) => {
   return (
     <div>
       {/* Search Bar & Filters */}
-      <div className="flex flex-col gap-4 mb-8 bg-white/40 p-5 rounded-[2.5rem] shadow-sm border border-white/50 backdrop-blur-sm">
+      <div className="flex flex-col gap-4 mb-8 bg-white/40 p-5 rounded-xl shadow-sm border border-white/50 backdrop-blur-sm">
         <div className="flex flex-col md:flex-row justify-between gap-4">
           <div className="relative group w-full max-w-md">
             <input
               type="text"
               placeholder="Tìm kiếm tên sản phẩm, mã xe, ID..."
               value={searchTerm}
-              className={`w-full pl-12 pr-10 py-4 bg-white/80 border-2 rounded-[1.5rem] shadow-sm outline-none font-bold text-gray-700 focus:ring-2 focus:ring-blue-400/50 transition-all placeholder:text-gray-400 ${searchTerm ? 'border-blue-400 ring-2 ring-blue-200' : 'border-slate-100'}`}
+              className={`w-full pl-12 pr-10 py-4 bg-white/80 border-2 rounded-xl shadow-sm outline-none font-bold text-gray-700 focus:ring-2 focus:ring-blue-400/50 transition-all placeholder:text-gray-400 ${searchTerm ? 'border-blue-400 ring-2 ring-blue-200' : 'border-slate-100'}`}
               onChange={e => setSearchTerm(e.target.value)}
             />
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl opacity-60">🔍</span>
@@ -410,7 +414,7 @@ const ProductManager = ({ initialSearch = '' }) => {
                     ) : (
                       <div
                         onClick={() => { setEditingStockId(p.ma_sanpham); setTempStockValue(p.ton_kho); }}
-                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl border cursor-pointer transition-all duration-300 group/stock ${(p.ton_kho || 0) > 5 ? 'bg-emerald-50 border-emerald-100 hover:bg-emerald-100' : 'bg-red-50 border-red-100 hover:bg-red-100'} mx-auto`}
+                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border cursor-pointer transition-all duration-300 group/stock ${(p.ton_kho || 0) > 5 ? 'bg-emerald-50 border-emerald-100 hover:bg-emerald-100' : 'bg-red-50 border-red-100 hover:bg-red-100'} mx-auto`}
                         title="Click để sửa nhanh tồn kho"
                       >
                         <span className={`text-base font-black ${(p.ton_kho || 0) > 5 ? 'text-emerald-600' : 'text-red-600'}`}>{p.ton_kho ?? 0}</span>

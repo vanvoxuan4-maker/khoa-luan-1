@@ -34,8 +34,8 @@ const AdminUserDetail = () => {
     const [originalRole, setOriginalRole] = useState(null); // Lưu quyền gốc để so sánh
 
     const { addToast, showConfirm } = useNotification();
-    const token = localStorage.getItem('admin_access_token');
-    const adminInfo = JSON.parse(localStorage.getItem('admin_info') || '{}');
+    const token = sessionStorage.getItem('admin_access_token');
+    const adminInfo = JSON.parse(sessionStorage.getItem('admin_info') || '{}');
     const isSelf = user?.ma_user === adminInfo?.ma_user;
 
     const fetchUser = async () => {

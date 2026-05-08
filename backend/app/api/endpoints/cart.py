@@ -18,6 +18,8 @@ def add_to_cart(item: CartItemCreate, db: Session = Depends(get_db), current_use
     if hasattr(product, 'is_active') and not product.is_active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sản phẩm ngừng kinh doanh")
     if item.so_luong > product.ton_kho:
+        if product.ton_kho <= 0:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sản phẩm hiện đã hết hàng")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Kho chỉ còn {product.ton_kho} sản phẩm.")
 
     user_cart = db.query(GioHang).filter(GioHang.ma_user == current_user.ma_user).first()

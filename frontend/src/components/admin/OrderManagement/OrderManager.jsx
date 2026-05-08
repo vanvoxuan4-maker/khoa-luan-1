@@ -82,7 +82,7 @@ const OrderManager = ({ highlightOrderId }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  const token = localStorage.getItem('admin_access_token');
+  const token = sessionStorage.getItem('admin_access_token');
 
   // ─── DEBOUNCE SEARCH TERM (500ms) ──────────────────────────────────────────
   useEffect(() => {

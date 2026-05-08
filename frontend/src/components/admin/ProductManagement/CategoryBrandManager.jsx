@@ -17,7 +17,7 @@ const ManagerList = ({ title, icon, data, type, onEdit, onDelete, onToggleActive
   <div className="flex-1 flex flex-col gap-5">
     {/* ... (Header components) ... */}
     <div className="flex items-center gap-4 mb-3 px-2">
-      <span className="text-3xl bg-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-md text-blue-600">{icon}</span>
+      <span className="text-3xl bg-white w-12 h-12 rounded-xl flex items-center justify-center shadow-md text-blue-600">{icon}</span>
       <h3 className={`text-2xl font-black uppercase tracking-wider ${galaxyTextClass}`}>{title}</h3>
       <span className="ml-auto bg-blue-100 text-blue-700 text-sm font-bold px-3 py-1.5 rounded-xl border border-blue-200 shadow-sm">{data.length}</span>
     </div>
@@ -26,7 +26,7 @@ const ManagerList = ({ title, icon, data, type, onEdit, onDelete, onToggleActive
     <div className="grid grid-cols-1 gap-3 max-h-[600px] overflow-y-auto pr-3 custom-scrollbar pb-10">
       {data.map((item, i) => (
         <div key={i} className="relative group transition-all duration-300 hover:-translate-y-1">
-          <div className="relative flex items-center justify-between p-4 rounded-2xl border border-indigo-100 bg-white/80 backdrop-blur-md shadow-sm hover:shadow-lg hover:bg-white transition-all">
+          <div className="relative flex items-center justify-between p-4 rounded-xl border border-indigo-100 bg-white/80 backdrop-blur-md shadow-sm hover:shadow-lg hover:bg-white transition-all">
             <div className="flex items-center gap-4 overflow-hidden w-full">
               <div className="w-14 h-14 shrink-0 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-2xl overflow-hidden shadow-inner">
                 {(item.hinh_anh || item.logo) ? (
@@ -89,7 +89,7 @@ const ModalForm = ({ type, formData, setFormData, onSubmit, onCancel, isEditing 
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-[#0f172a] w-full max-w-lg p-8 rounded-[2rem] shadow-2xl border border-slate-700 relative overflow-hidden group">
+      <div className="bg-[#0f172a] w-full max-w-lg p-8 rounded-xl shadow-2xl border border-slate-700 relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-40 h-40 bg-purple-600 rounded-full blur-[80px] -mr-10 -mt-10 opacity-20 pointer-events-none"></div>
 
         <h3 className="text-2xl font-black text-white mb-6 flex items-center gap-3 relative z-10">
@@ -167,7 +167,7 @@ const ModalForm = ({ type, formData, setFormData, onSubmit, onCancel, isEditing 
 const CategoryBrandManager = () => {
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
-  const token = localStorage.getItem('admin_access_token');
+  const token = sessionStorage.getItem('admin_access_token');
 
   const [activeModal, setActiveModal] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -256,12 +256,12 @@ const CategoryBrandManager = () => {
   };
 
   return (
-    <div className="animate-fade-in-up p-6 md:p-8 rounded-[2.5rem] relative overflow-hidden bg-[#f0f4ff] min-h-screen">
+    <div className="animate-fade-in-up p-6 md:p-8 rounded-2xl relative overflow-hidden bg-[#f0f4ff] min-h-screen">
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-300/30 rounded-full blur-[100px] animate-pulse z-0"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-300/30 rounded-full blur-[100px] animate-pulse delay-700 z-0"></div>
 
       <div className="relative z-10 max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6 bg-white/60 backdrop-blur-md p-8 rounded-[2.5rem] border border-white shadow-sm">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6 bg-white/60 backdrop-blur-md p-8 rounded-xl border border-white shadow-sm">
           <div>
             <h2 className={`text-3xl font-black mb-2 ${galaxyTextClass}`}>CẤU HÌNH SẢN PHẨM</h2>
             <p className="text-slate-500 font-medium text-lg">Cấu hình danh mục và thương hiệu xe đạp</p>
@@ -270,14 +270,14 @@ const CategoryBrandManager = () => {
           <div className="flex gap-4 w-full md:w-auto">
             <button
               onClick={() => openAddModal('category')}
-              className="flex-1 md:flex-none flex items-center gap-3 px-8 py-4 bg-[#8a2be2] hover:bg-[#713f12] text-white rounded-2xl font-bold shadow-lg shadow-orange-900/10 transition-all active:scale-95 text-base"
+              className="flex-1 md:flex-none flex items-center gap-3 px-8 py-4 bg-[#8a2be2] hover:bg-[#713f12] text-white rounded-xl font-bold shadow-lg shadow-orange-900/10 transition-all active:scale-95 text-base"
             >
               <span className="text-1xl font-black bg-white/20 w-8 h-8 rounded-full flex items-center justify-center">+</span>
               THÊM DANH MỤC
             </button>
             <button
               onClick={() => openAddModal('brand')}
-              className="flex-1 md:flex-none flex items-center gap-3 px-8 py-4 bg-[#8a2be2] hover:bg-[#713f12] text-white rounded-2xl font-bold shadow-lg shadow-orange-900/10 transition-all active:scale-95 text-base"
+              className="flex-1 md:flex-none flex items-center gap-3 px-8 py-4 bg-[#8a2be2] hover:bg-[#713f12] text-white rounded-xl font-bold shadow-lg shadow-orange-900/10 transition-all active:scale-95 text-base"
             >
               <span className="text-xl font-black bg-white/20 w-8 h-8 rounded-full flex items-center justify-center">+</span>
               THÊM THƯƠNG HIỆU

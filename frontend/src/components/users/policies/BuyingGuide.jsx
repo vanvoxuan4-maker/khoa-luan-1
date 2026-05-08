@@ -174,7 +174,7 @@ const BuyingGuide = () => {
                                     <p className="text-blue-100 font-medium mb-3">
                                         Kiểm tra trạng thái đơn hàng của bạn mọi lúc mọi nơi
                                     </p>
-                                    <Link to="/my-orders" className="font-bold hover:text-yellow-300 transition-colors">
+                                    <Link to="/profile?tab=orders" className="font-bold hover:text-yellow-300 transition-colors">
                                         👉 Xem đơn hàng của tôi
                                     </Link>
                                 </div>

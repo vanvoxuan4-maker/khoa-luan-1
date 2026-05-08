@@ -20,13 +20,13 @@ const AdminLayout = ({ children }) => {
   }, []);
 
   // ĐỌC TỪ ADMIN STORAGE (không phải legacy keys)
-  const user = JSON.parse(localStorage.getItem('admin_info') || '{}');
+  const user = JSON.parse(sessionStorage.getItem('admin_info') || '{}');
   // Check admin role (case-insensitive)
   const isAdmin = user.quyen?.toLowerCase() === 'admin' || user.role?.toLowerCase() === 'admin' || user.is_superuser === true;
 
   const handleLogout = async () => {
     try {
-      const token = localStorage.getItem('admin_access_token');
+      const token = sessionStorage.getItem('admin_access_token');
       if (token) {
         await axios.post(`${API_BASE_URL}/logout`, {}, {
           headers: { Authorization: `Bearer ${token}` }
@@ -36,8 +36,8 @@ const AdminLayout = ({ children }) => {
       console.error('Error logging out:', error);
     } finally {
       // CHỈ XÓA ADMIN SESSION
-      localStorage.removeItem('admin_access_token');
-      localStorage.removeItem('admin_info');
+      sessionStorage.removeItem('admin_access_token');
+      sessionStorage.removeItem('admin_info');
 
       // Cleanup legacy admin keys if any
       localStorage.removeItem('admin_user_info');

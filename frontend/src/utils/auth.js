@@ -7,12 +7,19 @@ import { useState, useEffect } from 'react';
 const isAdminContext = () => window.location.pathname.startsWith('/admin');
 
 /**
+ * Admin dùng sessionStorage để cô lập session theo từng tab (tránh lỗi cross-tab).
+ * User dùng localStorage để persist khi reload.
+ */
+const adminStorage = sessionStorage;
+const userStorage  = localStorage;
+
+/**
  * Tìm token tốt nhất có sẵn.
  * Ưu tiên token của context hiện tại, nếu không có thì lấy token của context kia.
  */
 export const getBestToken = () => {
-    const userToken = localStorage.getItem('user_access_token');
-    const adminToken = localStorage.getItem('admin_access_token');
+    const userToken  = userStorage.getItem('user_access_token');
+    const adminToken = adminStorage.getItem('admin_access_token');
     if (isAdminContext()) return adminToken || userToken;
     return userToken || adminToken;
 };
@@ -21,8 +28,8 @@ export const getBestToken = () => {
  * Tìm thông tin người dùng tốt nhất.
  */
 export const getBestUserInfo = () => {
-    const userInfo = localStorage.getItem('user_info');
-    const adminInfo = localStorage.getItem('admin_info');
+    const userInfo  = userStorage.getItem('user_info');
+    const adminInfo = adminStorage.getItem('admin_info');
     if (isAdminContext()) return adminInfo ? JSON.parse(adminInfo) : (userInfo ? JSON.parse(userInfo) : null);
     return userInfo ? JSON.parse(userInfo) : (adminInfo ? JSON.parse(adminInfo) : null);
 };
@@ -32,24 +39,28 @@ export const getBestUserInfo = () => {
  */
 export const getToken = () => {
     return isAdminContext()
-        ? localStorage.getItem('admin_access_token')
-        : localStorage.getItem('user_access_token');
+        ? adminStorage.getItem('admin_access_token')
+        : userStorage.getItem('user_access_token');
 };
 
 /**
  * Lưu token cho ngữ cảnh hiện tại
  */
 export const setToken = (token) => {
-    const key = isAdminContext() ? 'admin_access_token' : 'user_access_token';
-    localStorage.setItem(key, token);
+    if (isAdminContext()) {
+        adminStorage.setItem('admin_access_token', token);
+    } else {
+        userStorage.setItem('user_access_token', token);
+    }
 };
 
 /**
  * Lấy thông tin user cho ngữ cảnh hiện tại
  */
 export const getUserInfo = () => {
-    const key = isAdminContext() ? 'admin_info' : 'user_info';
-    const data = localStorage.getItem(key);
+    const key  = isAdminContext() ? 'admin_info' : 'user_info';
+    const store = isAdminContext() ? adminStorage : userStorage;
+    const data = store.getItem(key);
     return data ? JSON.parse(data) : null;
 };
 
@@ -57,8 +68,11 @@ export const getUserInfo = () => {
  * Lưu thông tin user cho ngữ cảnh hiện tại
  */
 export const setUserInfo = (userInfo) => {
-    const key = isAdminContext() ? 'admin_info' : 'user_info';
-    localStorage.setItem(key, JSON.stringify(userInfo));
+    if (isAdminContext()) {
+        adminStorage.setItem('admin_info', JSON.stringify(userInfo));
+    } else {
+        userStorage.setItem('user_info', JSON.stringify(userInfo));
+    }
 };
 
 /**
@@ -66,11 +80,11 @@ export const setUserInfo = (userInfo) => {
  */
 export const logout = () => {
     if (isAdminContext()) {
-        localStorage.removeItem('admin_access_token');
-        localStorage.removeItem('admin_info');
+        adminStorage.removeItem('admin_access_token');
+        adminStorage.removeItem('admin_info');
     } else {
-        localStorage.removeItem('user_access_token');
-        localStorage.removeItem('user_info');
+        userStorage.removeItem('user_access_token');
+        userStorage.removeItem('user_info');
     }
 };
 
@@ -78,12 +92,11 @@ export const logout = () => {
  * Xóa sạch tất cả các loại session
  */
 export const clearAllSessions = () => {
-    const keys = [
-        'admin_access_token', 'admin_info', 'admin_user_info',
-        'user_access_token', 'user_info', 'user_user_info',
-        'access_token', 'user'
-    ];
-    keys.forEach(k => localStorage.removeItem(k));
+    const userKeys = ['user_access_token', 'user_info', 'user_user_info', 'access_token', 'user'];
+    userKeys.forEach(k => userStorage.removeItem(k));
+
+    const adminKeys = ['admin_access_token', 'admin_info', 'admin_user_info'];
+    adminKeys.forEach(k => adminStorage.removeItem(k));
 };
 
 /**
@@ -97,8 +110,6 @@ export const isAdmin = (user) => {
 
 /**
  * Kiểm tra tài khoản có đang ở trạng thái inactive không.
- * Phiên bản tĩnh — đọc localStorage tại thời điểm gọi.
- * Dùng trong async functions (CartContext guards) hoặc ngoài React component.
  */
 export const isInactiveUser = () => {
     const info = getBestUserInfo();
@@ -107,11 +118,6 @@ export const isInactiveUser = () => {
 
 /**
  * React Hook phiên bản reactive của isInactiveUser.
- * Tự cập nhật khi AxiosInterceptor dispatch event 'userstatuschange'
- * (kích hoạt khi user focus lại tab sau khi admin đổi trạng thái).
- * Dùng trong các component React để UI phản ánh ngay, không cần reload trang.
- *
- * @returns {boolean} true nếu tài khoản đang inactive
  */
 export const useIsInactive = () => {
     const [isInactive, setIsInactive] = useState(() => isInactiveUser());

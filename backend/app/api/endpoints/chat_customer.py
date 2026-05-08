@@ -3,6 +3,7 @@ import json
 import asyncio
 import traceback
 import uuid
+import time
 from datetime import datetime
 from typing import List, Optional
 
@@ -28,6 +29,21 @@ router = APIRouter()
 # ---------------- CONFIG AI ----------------
 genai.configure(api_key=settings.GOOGLE_API_KEY)
 
+# ---------------- IN-MEMORY CACHE (TTL 5 phút cho dữ liệu tĩnh) ----------------
+# Tối ưu: danh mục và chính sách hiếm thay đổi → cache để Gemini không cần
+# query DB mỗi lần gọi tool, giảm độ trễ "AI đang nghĩ" ~50-100ms mỗi request.
+_cache: dict = {}
+_CACHE_TTL = 300  # 5 phút
+
+def _get_cache(key: str):
+    entry = _cache.get(key)
+    if entry and time.time() - entry["t"] < _CACHE_TTL:
+        return entry["v"]
+    return None
+
+def _set_cache(key: str, value):
+    _cache[key] = {"v": value, "t": time.time()}
+
 # ---------------- CONSOLIDATED TOOLS ----------------
 
 def liet_ke_danh_muc():
@@ -35,10 +51,15 @@ def liet_ke_danh_muc():
     Liệt kê tất cả danh mục sản phẩm hiện có trong cửa hàng.
     Gọi tool này đầu tiên khi khách hỏi về loại xe, để biết đúng tên danh mục cần tra cứu.
     """
+    cached = _get_cache("danh_muc")
+    if cached is not None:
+        return cached
     db = SessionLocal()
     try:
         cats = db.query(Danhmuc).filter(Danhmuc.is_active == True).all()
-        return [{"ma": c.ma_danhmuc, "ten": c.ten_danhmuc} for c in cats]
+        result = [{"ma": c.ma_danhmuc, "ten": c.ten_danhmuc} for c in cats]
+        _set_cache("danh_muc", result)
+        return result
     except Exception as e:
         return f"Lỗi: {str(e)}"
     finally:
@@ -46,8 +67,10 @@ def liet_ke_danh_muc():
 
 def tra_cuu_mua_hang(loai: str, tu_khoa: str = "", ma_khuyen_mai: str = None):
     """
-    Tra cứu: 'san_pham' (cần tu_khoa là tên sản phẩm hoặc tên danh mục chính xác từ tool liệt_kầ_danh_mục),
-    'size_xe' (cần tu_khoa là chiều cao), 'khuyen_mai' (tra cứu mã ma_khuyen_mai).
+    Tra cứu thông tin:
+    - loai='san_pham': tìm sản phẩm (tu_khoa là tên sản phẩm hoặc tên danh mục chính xác).
+    - loai='size_xe': tư vấn size (tu_khoa là chiều cao cm).
+    - loai='khuyen_mai': liệt kê TẤT CẢ mã giảm giá đang còn hiệu lực. Gọi khi khách hỏi về voucher, mã ưu đãi, khuyến mãi.
     """
     db = SessionLocal()
     try:
@@ -132,16 +155,67 @@ def tra_cuu_mua_hang(loai: str, tu_khoa: str = "", ma_khuyen_mai: str = None):
                 })
             return result
         elif loai == 'size_xe':
-            try: h = float(tu_khoa)
-            except: return "Hệ thống: Hãy nhập chiều cao của bạn (ví dụ: 170)."
-            if h < 150: s = "Size XS"
-            elif h < 165: s = "Size S"
-            elif h < 175: s = "Size M"
-            else: s = "Size L/XL"
-            return f"Dựa trên chiều cao {h}cm, bạn phù hợp với {s}."
+            try:
+                h = float(tu_khoa)
+            except:
+                return "Hệ thống: Hãy nhập chiều cao của bạn (ví dụ: 170)."
+            if h < 148:
+                s = "Size XS"
+                note = "Bạn nên cân nhắc xe trẻ em hoặc xe gấp bánh nhỏ cho phù hợp nhất."
+            elif h < 155:
+                s = "Size XS hoặc S"
+                note = "Vùng chuyển tiếp — nên thử trực tiếp để chọn chính xác nhé!"
+            elif h < 165:
+                s = "Size S"
+                note = "Phù hợp với hầu hết các dòng xe phổ thông, nhiều mẫu đẹp để lựa chọn."
+            elif h < 172:
+                s = "Size M"
+                note = "Đây là Size phổ biến nhất tại Shop, nhiều mẫu và màu sắc để chọn lựa!"
+            elif h < 180:
+                s = "Size M hoặc L"
+                note = "Vùng chuyển tiếp — nên thử trực tiếp hoặc đo chiều dài chân (inseam) để chắc chắn hơn."
+            elif h < 188:
+                s = "Size L"
+                note = "Phù hợp tốt với chiều cao của bạn, Shop có đầy đủ mẫu Size L."
+            else:
+                s = "Size XL"
+                note = "Shop có một số dòng xe Size XL rất phù hợp, mình sẽ tư vấn thêm cho bạn!"
+            return (
+                f"📏 Với chiều cao **{h}cm**, bạn phù hợp với **{s}**.\n\n"
+                f"💡 *{note}*\n\n"
+                f"👉 Bạn đang quan tâm đến dòng xe nào? (xe đường trường, địa hình, đường phố, xe gấp...)"
+            )
         elif loai == 'khuyen_mai':
-            vouchers = db.query(Makhuyenmai).filter(Makhuyenmai.is_active == True).limit(5).all()
-            return [{"code": v.ma_giamgia, "giam": v.giatrigiam} for v in vouchers]
+            cached_v = _get_cache("khuyen_mai")
+            if cached_v is not None:
+                return cached_v
+            now = datetime.now()
+            vouchers = db.query(Makhuyenmai).filter(
+                Makhuyenmai.is_active == True,
+                Makhuyenmai.ngay_ketthuc >= now
+            ).order_by(Makhuyenmai.ngay_ketthuc.asc()).limit(10).all()
+            if not vouchers:
+                result_v = "Hiện tại cửa hàng chưa có mã khuyến mãi nào đang hoạt động."
+            else:
+                result_v = []
+                for v in vouchers:
+                    kieu = v.kieu_giamgia.value if hasattr(v.kieu_giamgia, 'value') else str(v.kieu_giamgia)
+                    if kieu == 'percentage':
+                        mo_ta_giam = f"Giảm {v.giatrigiam:.0f}%"
+                        if v.giam_toida:
+                            mo_ta_giam += f" (tối đa {v.giam_toida:,.0f} VND)"
+                    else:
+                        mo_ta_giam = f"Giảm {v.giatrigiam:,.0f} VND"
+                    item_v = {
+                        "code": v.ma_giamgia,
+                        "mo_ta_giam": mo_ta_giam,
+                        "don_toithieu": f"{v.don_toithieu:,.0f} VND" if v.don_toithieu else "Không giới hạn",
+                        "han_dung": v.ngay_ketthuc.strftime('%d/%m/%Y') if v.ngay_ketthuc else "Không xác định",
+                        "luot_con_lai": (v.solandung - v.solan_hientai) if v.solandung else "Không giới hạn",
+                    }
+                    result_v.append(item_v)
+            _set_cache("khuyen_mai", result_v)
+            return result_v
         return "Loại tra cứu không hợp lệ."
     except Exception as e: return f"Lỗi: {str(e)}"
     finally: db.close()
@@ -154,7 +228,11 @@ def quan_ly_don_hang_ca_nhan(hanh_dong: str, ma_don: str = None, ma_user: int = 
     try:
         if hanh_dong == 'tra_cuu':
             if ma_don:
-                o = db.query(DonHang).filter(DonHang.ma_don_hang == ma_don).first()
+                try:
+                    ma_don_q = int(ma_don)
+                except (ValueError, TypeError):
+                    return f"Mã đơn hàng không hợp lệ: '{ma_don}'."
+                o = db.query(DonHang).filter(DonHang.ma_don_hang == ma_don_q).first()
                 if not o: return "Không tìm thấy đơn hàng này."
                 return {"ma_don": o.ma_don_hang, "trang_thai": str(o.trang_thai), "tong": f"{o.tong_tien:,} VND"}
             orders = db.query(DonHang).filter(
@@ -171,7 +249,11 @@ def quan_ly_don_hang_ca_nhan(hanh_dong: str, ma_don: str = None, ma_user: int = 
             } for o in orders]
         elif hanh_dong == 'huy_don':
             if not ma_don: return "Cần cung cấp mã đơn hàng để hủy."
-            o = db.query(DonHang).filter(DonHang.ma_don_hang == ma_don).first()
+            try:
+                ma_don_int = int(ma_don)
+            except (ValueError, TypeError):
+                return f"Mã đơn hàng không hợp lệ: '{ma_don}'."
+            o = db.query(DonHang).filter(DonHang.ma_don_hang == ma_don_int).first()
             if not o: return f"Không tìm thấy đơn hàng #{ma_don}."
 
             # 1. PHẢI hỏi xác nhận trước
@@ -209,7 +291,7 @@ def quan_ly_don_hang_ca_nhan(hanh_dong: str, ma_don: str = None, ma_user: int = 
                 # COD (hoặc VNPAY chưa thanh toán): set failed
                 o.trangthai_thanhtoan = 'failed'
                 db.query(ThanhToan).filter(
-                    ThanhToan.ma_don_hang == ma_don,
+                    ThanhToan.ma_don_hang == ma_don_int,
                     ThanhToan.trang_thai == 'pending'
                 ).update({'trang_thai': 'failed'})
             else:
@@ -217,8 +299,8 @@ def quan_ly_don_hang_ca_nhan(hanh_dong: str, ma_don: str = None, ma_user: int = 
                 msg += "\n\n⚠️ **Lưu ý**: Vì đơn này đã thanh toán qua VNPAY, bạn vui lòng liên hệ Admin (Hotline: 0961.178.265) để được hỗ trợ thủ tục hoàn tiền nhé."
 
             # 6. Ghi lịch sử hủy
-            db.add(LichSuDonHang(
-                ma_don_hang=ma_don,
+            db.add(LichSuDonHang(  # type: ignore[call-arg]
+                ma_don_hang=ma_don_int,
                 trang_thai='cancelled',
                 mo_ta='Đơn hàng đã được khách hàng hủy qua chatbot.'
             ))
@@ -233,32 +315,39 @@ def thong_tin_cua_hang_chinh_sach(loai: str):
     """
     Thông tin: 'cua_hang' (địa chỉ, hotline), 'chinh_sach' (bảo hành, đổi trả).
     """
+    cache_key = f"chinh_sach_{loai}"
+    cached = _get_cache(cache_key)
+    if cached is not None:
+        return cached
     if loai == 'cua_hang':
-        return {
+        result = {
             "ten": "Bike Shop",
             "dia_chi": "Xã Thượng Đức, TP. Đà Nẵng",
             "hotline": "0961.178.265",
             "email": "vanvoxuan4@gmail.com",
             "gio_mo_cua": "Thứ 2 - Thứ 7: 8:00–20:00 | Chủ nhật: 9:00–18:00"
         }
-    return {
-        "bao_hanh": {
-            "khung_suon": "5 năm",
-            "linh_kien_phu": "1 - 2 năm (phanh, giảm xóc, truyền động)"
-        },
-        "dieu_kien_ap_dung": [
-            "Sản phẩm còn trong thời hạn bảo hành",
-            "Có hóa đơn mua hàng hoặc thông tin đơn hàng trên hệ thống",
-            "Lỗi do nhà sản xuất (không áp dụng nếu do người dùng sử dụng sai cách hoặc tác động ngoại lực)"
-        ],
-        "khong_bao_hanh": [
-            "Hư hỏng do tai nạn, va đập, ngã xe",
-            "Tự ý tháo lắp, sửa chữa ngoài cửa hàng",
-            "Hao mòn tự nhiên (lốp, má phanh, xích...)"
-        ],
-        "doi_tra": "Đổi trả trong 7 ngày nếu sản phẩm lỗi do nhà sản xuất, còn nguyên tem hộp",
-        "ho_tro": "Mang xe trực tiếp đến cửa hàng tại Xã Thượng Đức, TP. Đà Nẵng hoặc gọi Hotline 0961.178.265"
-    }
+    else:
+        result = {
+            "bao_hanh": {
+                "khung_suon": "5 năm",
+                "linh_kien_phu": "1 - 2 năm (phanh, giảm xóc, truyền động)"
+            },
+            "dieu_kien_ap_dung": [
+                "Sản phẩm còn trong thời hạn bảo hành",
+                "Có hóa đơn mua hàng hoặc thông tin đơn hàng trên hệ thống",
+                "Lỗi do nhà sản xuất (không áp dụng nếu do người dùng sử dụng sai cách hoặc tác động ngoại lực)"
+            ],
+            "khong_bao_hanh": [
+                "Hư hỏng do tai nạn, va đập, ngã xe",
+                "Tự ý tháo lắp, sửa chữa ngoài cửa hàng",
+                "Hao mòn tự nhiên (lốp, má phanh, xích...)"
+            ],
+            "doi_tra": "Đổi trả trong 7 ngày nếu sản phẩm lỗi do nhà sản xuất, còn nguyên tem hộp",
+            "ho_tro": "Mang xe trực tiếp đến cửa hàng tại Xã Thượng Đức, TP. Đà Nẵng hoặc gọi Hotline 0961.178.265"
+        }
+    _set_cache(cache_key, result)
+    return result
 
 my_tools = [liet_ke_danh_muc, tra_cuu_mua_hang, quan_ly_don_hang_ca_nhan, thong_tin_cua_hang_chinh_sach]
 
@@ -303,13 +392,20 @@ Bạn là Trợ lý ảo của 'Bike Shop'. Hãy hỗ trợ khách hàng mua s�
    - KHÔNG bọc tên link bằng dấu ** (sẽ gây lỗi render). Chỉ dùng [Tên]({link}) thuần.
    - Nếu kết quả gồm mục `xem_them: True`, BẮT BUỘC thêm dòng cuối:
      `👉 [Xem thêm toàn bộ {ten_danh_muc}]({xem_them_link})`
-3. `quan_ly_don_hang_ca_nhan`: Tra cứu hoặc Hủy đơn (Cần xac_nhan=True).
+3. `tra_cuu_mua_hang(loai='khuyen_mai')`: Liệt kê mã giảm giá còn hiệu lực.
+   - Gọi ngay khi khách hỏi về voucher, mã ưu đãi, khuyến mãi, mã giảm giá.
+   - Hiển thị dưới dạng BẢNG MARKDOWN:
+     | Mã voucher | Ưu đãi | Đơn tối thiểu | Hạn dùng | Lượt còn lại |
+     |---|---|---|---|---|
+     | `{code}` | {mo_ta_giam} | {don_toithieu} | {han_dung} | {luot_con_lai} |
+   - Nếu tool trả về chuỗi (không phải list), hiển thị nguyên văn thông báo đó.
+4. `quan_ly_don_hang_ca_nhan`: Tra cứu hoặc Hủy đơn (Cần xac_nhan=True).
    - Khi tra cứu danh sách, PHẢI hiển thị dưới dạng bảng Markdown:
      | Mã đơn | Trạng thái | Ngày đặt | Tổng tiền |
      |---|---|---|---|
    - Mỗi mã đơn PHẢI được gắn link động: [Đơn hàng #{ma_thực}](/my-orders/{ma_thực}) (KHÔNG dùng **).
    - KHÔNG được dùng placeholder hay text cố định.
-4. `thong_tin_cua_hang_chinh_sach`: Địa chỉ, Hotline, Quy định bảo hành.
+5. `thong_tin_cua_hang_chinh_sach`: Địa chỉ, Hotline, Quy định bảo hành.
 💡 LƯU Ý: Không tự đoán ID. Chỉ dùng dữ liệu thực từ Tool. Luôn ưu tiên trải nghiệm khách hàng lên hàng đầu.
 
 """
@@ -338,7 +434,7 @@ def get_customer_chat_sessions(db: Session = Depends(get_db), current_user: User
     ).filter(
         LichSuChat.user_id == current_user.ma_user,
         LichSuChat.context_type == "customer_ai",
-        LichSuChat.session_id != None
+        LichSuChat.session_id.isnot(None)
     ).group_by(LichSuChat.session_id).order_by(text("last_active DESC")).all()
     
     return [{"session_id": s[0], "title": s[1] or "Cuộc trò chuyện mới"} for s in sessions]
@@ -376,7 +472,7 @@ def chat_with_customer_ai(item: ChatRequest, session_id: Optional[str] = None, d
     s_id = session_id or str(uuid.uuid4())[:18]
 
     # 1. Lưu tin nhắn User
-    new_user_msg = LichSuChat(
+    new_user_msg = LichSuChat(  # type: ignore[call-arg]
         user_id=current_user.ma_user, 
         role="user", 
         message=item.message, 
@@ -448,7 +544,7 @@ def chat_with_customer_ai(item: ChatRequest, session_id: Optional[str] = None, d
         reply = customer_fallback(item.message, current_user.ma_user)
 
     # 5. Lưu tin nhắn Bot
-    ai_msg = LichSuChat(
+    ai_msg = LichSuChat(  # type: ignore[call-arg]
         user_id=current_user.ma_user, 
         role="assistant", 
         message=reply, 
@@ -503,7 +599,7 @@ async def stream_chat_with_customer_ai(item: ChatRequest, session_id: Optional[s
     is_new_session = len(history_msgs) == 0
 
     # Lưu tin nhắn user vào DB
-    new_user_msg = LichSuChat(
+    new_user_msg = LichSuChat(  # type: ignore[call-arg]
         user_id=current_user.ma_user,
         role="user",
         message=item.message,
@@ -544,9 +640,14 @@ async def stream_chat_with_customer_ai(item: ChatRequest, session_id: Optional[s
                 prompt = f"[Hệ thống nội bộ - Ngày: {current_date_str}, {user_info}] {message_text}"
 
                 # ✅ Tách pha Tool-call (không stream) và pha Text (stream thực sự)
+                # ✅ Dùng run_in_executor để không chặn event loop khi chờ Gemini API
+                loop = asyncio.get_running_loop()
                 MAX_TOOL_ROUNDS = 5
                 for _ in range(MAX_TOOL_ROUNDS):
-                    probe_response = chat.send_message(prompt)
+                    _prompt = prompt  # capture giá trị hiện tại trước khi await
+                    probe_response = await loop.run_in_executor(
+                        None, lambda: chat.send_message(_prompt)
+                    )
                     candidate = probe_response.candidates[0]
 
                     round_tool_calls = [
@@ -574,13 +675,16 @@ async def stream_chat_with_customer_ai(item: ChatRequest, session_id: Optional[s
                 else:
                     full_reply = "Xin lỗi, mình không thể tổng hợp thông tin lúc này."
 
-                # Stream từng từ ra frontend
+                # ✅ Stream theo cụm 4 từ để tăng tốc độ phản hồi
+                # (Cũ: 1 từ/0.04s → 150 từ = 6s | Mới: 4 từ/0.025s → 150 từ ≈ 0.95s)
                 if full_reply:
                     words = full_reply.split(" ")
-                    for i, word in enumerate(words):
-                        chunk = word if i == 0 else " " + word
+                    CHUNK_SIZE = 4
+                    for i in range(0, len(words), CHUNK_SIZE):
+                        chunk_words = words[i : i + CHUNK_SIZE]
+                        chunk = (" " if i > 0 else "") + " ".join(chunk_words)
                         yield f"data: {json.dumps({'chunk': chunk, 'session_id': s_id})}\n\n"
-                        await asyncio.sleep(0.04)
+                        await asyncio.sleep(0.025)
 
         except asyncio.CancelledError:
             # Client disconnect - không re-raise, để finally chạy lưu DB
@@ -600,7 +704,7 @@ async def stream_chat_with_customer_ai(item: ChatRequest, session_id: Optional[s
                 save_db = SessionLocal()
                 try:
                     reply_to_save = full_reply.strip() if full_reply.strip() else "[Phản hồi bị gián đoạn]"
-                    ai_msg = LichSuChat(
+                    ai_msg = LichSuChat(  # type: ignore[call-arg]
                         user_id=ma_user,
                         role="assistant",
                         message=reply_to_save,

@@ -190,50 +190,52 @@ const Navbar = () => {
       </div>
 
       <div className="bg-blue-700 text-white py-3 shadow-lg">
-        <div className="container mx-auto px-4 flex items-center justify-between gap-10">
+        <div className="container mx-auto px-4 grid grid-cols-[1fr_auto_1fr] items-center gap-10">
+          
+          {/* Logo - Column 1 */}
+          <div className="flex justify-start">
+            <Link to="/" className="flex items-center gap-3 flex-shrink-0 group">
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.5)] overflow-hidden group-hover:scale-110 transition-all duration-500 relative border-2 border-white/30"
+                style={{ background: 'linear-gradient(135deg, #6366f1 0%, #3b82f6 50%, #06b6d4 100%)' }}>
+                <svg viewBox="0 0 100 100" className="w-12 h-12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="neon_grad_nav" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#FFFFFF" />
+                      <stop offset="100%" stopColor="#22D3EE" />
+                    </linearGradient>
+                  </defs>
+                  <g className="animate-spin-slow origin-center" style={{ transformBox: 'fill-box' }}>
+                    <circle cx="30" cy="65" r="16" stroke="url(#neon_grad_nav)" strokeWidth="2.5" strokeDasharray="8 4" />
+                    <circle cx="30" cy="65" r="5" fill="#FFFFFF" />
+                  </g>
+                  <g className="animate-spin-reverse-slow origin-center" style={{ transformBox: 'fill-box' }}>
+                    <circle cx="75" cy="65" r="16" stroke="url(#neon_grad_nav)" strokeWidth="2.5" strokeDasharray="8 4" />
+                    <circle cx="75" cy="65" r="4" fill="#22D3EE" />
+                  </g>
+                  <path
+                    d="M30 65 L 42 35 L 75 65 M 42 35 L 65 35 M 58 65 L 42 35"
+                    stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]"
+                  />
+                </svg>
+              </div>
+              <div className="flex flex-col">
+                <span className="font-black text-2xl tracking-tighter text-white leading-none">
+                  BIKE<span className="text-yellow-400">STORE</span>
+                </span>
+                <span className="text-[9px] font-bold text-blue-200 tracking-[0.2em] uppercase">
+                  Premium Bicycles
+                </span>
+              </div>
+            </Link>
+          </div>
 
-          {/* Logo giữ nguyên nhưng chỉnh lại màu text cho hợp nền xanh */}
-          <Link to="/" className="flex items-center gap-3 flex-shrink-0 group">
-            <div className="w-14 h-14 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.5)] overflow-hidden group-hover:scale-110 transition-all duration-500 relative border-2 border-white/30"
-              style={{ background: 'linear-gradient(135deg, #6366f1 0%, #3b82f6 50%, #06b6d4 100%)' }}> {/* Electric Blue Gradient */}
-              <svg viewBox="0 0 100 100" className="w-12 h-12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <linearGradient id="neon_grad_nav" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#FFFFFF" /> {/* White */}
-                    <stop offset="100%" stopColor="#22D3EE" /> {/* Cyan */}
-                  </linearGradient>
-                </defs>
-                <g className="animate-spin-slow origin-center" style={{ transformBox: 'fill-box' }}>
-                  <circle cx="30" cy="65" r="16" stroke="url(#neon_grad_nav)" strokeWidth="2.5" strokeDasharray="8 4" />
-                  <circle cx="30" cy="65" r="5" fill="#FFFFFF" />
-                </g>
-                <g className="animate-spin-reverse-slow origin-center" style={{ transformBox: 'fill-box' }}>
-                  <circle cx="75" cy="65" r="16" stroke="url(#neon_grad_nav)" strokeWidth="2.5" strokeDasharray="8 4" />
-                  <circle cx="75" cy="65" r="4" fill="#22D3EE" />
-                </g>
-                <path
-                  d="M30 65 L 42 35 L 75 65 M 42 35 L 65 35 M 58 65 L 42 35"
-                  stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]"
-                />
-              </svg>
-            </div>
-            <div className="flex flex-col">
-              <span className="font-black text-2xl tracking-tighter text-white leading-none">
-                BIKE<span className="text-yellow-400">STORE</span>
-              </span>
-              <span className="text-[9px] font-bold text-blue-200 tracking-[0.2em] uppercase">
-                Premium Bicycles
-              </span>
-            </div>
-          </Link>
-
-          {/* Search Bar - ROUNDED + LIVE SUGGESTIONS */}
-          <div ref={searchRef} className="hidden lg:block flex-1 max-w-xl relative z-[60]">
+          {/* Search Bar - Column 2 (Centered) */}
+          <div ref={searchRef} className="hidden lg:block w-[520px] relative z-[60]">
             <form onSubmit={handleSearch} className="relative">
               <input
                 type="text"
                 placeholder="Tìm kiếm sản phẩm..."
-                className="w-full pl-6 pr-16 py-2.5 text-slate-800 font-bold bg-white border-2 border-transparent focus:border-blue-300 placeholder-slate-400 transition-all focus:outline-none focus:ring-4 focus:ring-blue-500/30 shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_25px_rgba(0,0,0,0.2)]"
+                className="w-full pl-6 pr-16 py-2.5 text-slate-800 font-bold bg-white border-2 border-transparent focus:border-blue-300 placeholder-slate-400 transition-all focus:outline-none focus:ring-4 focus:ring-blue-500/30 shadow-[0_10px_30px_rgba(0,0,0,0.2)] hover:shadow-[0_15px_35px_rgba(0,0,0,0.25)]"
                 style={{ borderRadius: 30 }}
                 value={searchTerm}
                 onChange={(e) => {
@@ -301,11 +303,11 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Actions: Đăng nhập / Giỏ hàng */}
-          <div className="flex items-center gap-6">
+          {/* Actions: Đăng nhập / Giỏ hàng - Column 3 (Right) */}
+          <div className="flex items-center justify-end gap-6">
 
             {/* Wishlist */}
-            <Link to="/wishlist" className="flex items-center gap-2 text-white hover:text-yellow-400 transition-colors relative group">
+            <Link to="/wishlist" className="flex flex-col items-center gap-1 text-white hover:text-yellow-400 transition-colors relative group">
               <div className="w-10 h-10 rounded-full bg-blue-800 flex items-center justify-center border border-blue-600 shadow-md relative icon-btn group-hover:bg-blue-600">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
                 {wishlistItems.length > 0 && (
@@ -314,13 +316,13 @@ const Navbar = () => {
                   </span>
                 )}
               </div>
-              <div className="hidden sm:block text-sm font-bold">
+              <div className="hidden sm:block text-xs font-bold whitespace-nowrap">
                 Yêu thích
               </div>
             </Link>
 
             {/* Cart */}
-            <Link to="/cart" className="flex items-center gap-2 text-white hover:text-yellow-400 transition-colors relative group">
+            <Link to="/cart" className="flex flex-col items-center gap-1 text-white hover:text-yellow-400 transition-colors relative group">
               <div className="w-10 h-10 rounded-full bg-blue-800 flex items-center justify-center border border-blue-600 shadow-md relative icon-btn group-hover:bg-blue-600">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                 {cartCount > 0 && (
@@ -329,7 +331,7 @@ const Navbar = () => {
                   </span>
                 )}
               </div>
-              <div className="hidden sm:block text-sm font-bold">
+              <div className="hidden sm:block text-xs font-bold whitespace-nowrap">
                 Giỏ hàng
               </div>
             </Link>
@@ -337,13 +339,13 @@ const Navbar = () => {
             {/* User Info - Đưa ra ngoài cùng bên phải */}
             {isLoggedIn ? (
               <div className="relative group z-50">
-                <button className="flex items-center gap-2 text-white hover:text-yellow-400 transition-colors">
-                  <div className="text-right hidden sm:block leading-tight">
-                    <p className="font-bold text-sm max-w-[150px] truncate">{userName}</p>
-                    {userEmail && <p className="text-[11px] text-blue-100 font-bold italic truncate max-w-[150px] opacity-80">{userEmail}</p>}
-                  </div>
+                <button className="flex items-center gap-3 text-white hover:text-yellow-400 transition-colors">
                   <div className="w-10 h-10 rounded-full bg-blue-800 flex items-center justify-center border border-blue-600 shadow-md">
                     <span className="text-xl">👤</span>
+                  </div>
+                  <div className="text-left hidden sm:block leading-tight">
+                    <p className="font-bold text-sm max-w-[150px] truncate">{userName}</p>
+                    {userEmail && <p className="text-[11px] text-blue-100 font-bold italic truncate max-w-[150px] opacity-80">{userEmail}</p>}
                   </div>
                 </button>
                 {/* Dropdown Menu */}
@@ -351,10 +353,10 @@ const Navbar = () => {
                   <Link to="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold hover:bg-blue-50 hover:text-blue-600 transition-colors">
                     <span>👤</span> Hồ sơ
                   </Link>
-                  <Link to="/profile/addresses" className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                  <Link to="/profile?tab=address" className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold hover:bg-blue-50 hover:text-blue-600 transition-colors">
                     <span>📍</span> Sổ địa chỉ
                   </Link>
-                  <Link to="/my-orders" className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                  <Link to="/profile?tab=orders" className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold hover:bg-blue-50 hover:text-blue-600 transition-colors">
                     <span>📦</span> Đơn mua
                   </Link>
                   <div className="h-px bg-slate-100 my-1"></div>
@@ -367,11 +369,11 @@ const Navbar = () => {
                 </div>
               </div>
             ) : (
-              <Link to="/login" className="flex items-center gap-2 text-white hover:text-yellow-400 transition-colors">
+              <Link to="/login" className="flex flex-col items-center gap-1 text-white hover:text-yellow-400 transition-colors">
                 <div className="w-10 h-10 rounded-full bg-blue-800 flex items-center justify-center border border-blue-600 shadow-md">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                 </div>
-                <div className="hidden sm:block text-sm font-bold">
+                <div className="hidden sm:block text-xs font-bold whitespace-nowrap">
                   Đăng nhập
                 </div>
               </Link>

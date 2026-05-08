@@ -112,7 +112,7 @@ const Dashboard = () => {
 
     const loadDashboard = async () => {
         try {
-            const token = localStorage.getItem('admin_access_token');
+            const token = sessionStorage.getItem('admin_access_token');
             const headers = { Authorization: `Bearer ${token}` };
 
             const [ordersRes, usersRes, productsRes, paymentsRes] = await Promise.all([

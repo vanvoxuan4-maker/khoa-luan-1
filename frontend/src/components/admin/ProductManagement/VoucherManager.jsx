@@ -4,7 +4,7 @@ import API_BASE_URL from '../../../utils/apiConfig';
 
 const VoucherManager = () => {
   const [vouchers, setVouchers] = useState([]);
-  const token = localStorage.getItem('admin_access_token');
+  const token = sessionStorage.getItem('admin_access_token');
 
   const [formData, setFormData] = useState({
     ma_giamgia: '', kieu_giamgia: 'percentage', giatrigiam: '', don_toithieu: 0, giam_toida: '', solandung: 100, ngay_ketthuc: ''
@@ -102,7 +102,7 @@ const VoucherManager = () => {
 
 
   return (
-    <div className="animate-fade-in-up min-h-screen p-6 rounded-[2rem] relative overflow-hidden bg-[#f0f4ff]">
+    <div className="animate-fade-in-up min-h-screen p-6 rounded-2xl relative overflow-hidden bg-[#f0f4ff]">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-300/30 rounded-full blur-[100px] animate-pulse"></div>
       <div className="absolute top-[20%] right-[-5%] w-[30%] h-[30%] bg-blue-300/30 rounded-full blur-[100px] animate-pulse delay-700"></div>
 
@@ -118,14 +118,14 @@ const VoucherManager = () => {
             <input
               type="text"
               placeholder="Tìm kiếm mã voucher..."
-              className="w-full pl-12 pr-6 py-4 bg-white/70 backdrop-blur-md border border-white rounded-2xl shadow-sm outline-none font-bold text-slate-700 focus:ring-2 focus:ring-indigo-400/50 transition-all placeholder:font-normal placeholder:text-slate-400 relative z-10"
+              className="w-full pl-12 pr-6 py-4 bg-white/70 backdrop-blur-md border border-white rounded-xl shadow-sm outline-none font-bold text-slate-700 focus:ring-2 focus:ring-indigo-400/50 transition-all placeholder:font-normal placeholder:text-slate-400 relative z-10"
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
 
           <button
             onClick={() => setIsAdding(!isAdding)}
-            className={`px-8 py-4 ${isAdding ? 'bg-slate-800' : 'bg-gradient-to-r from-indigo-600 to-purple-600'} text-white font-black rounded-2xl shadow-xl hover:shadow-indigo-500/30 transition-all flex items-center gap-2 active:scale-95`}
+            className={`px-8 py-4 ${isAdding ? 'bg-slate-800' : 'bg-gradient-to-r from-indigo-600 to-purple-600'} text-white font-black rounded-xl shadow-xl hover:shadow-indigo-500/30 transition-all flex items-center gap-2 active:scale-95`}
           >
             <span className="text-xl">{isAdding ? '✕' : '+'}</span>
             <span className="uppercase tracking-widest text-xs">
@@ -136,7 +136,7 @@ const VoucherManager = () => {
 
         {/* FORM NHẬP LIỆU: TOGGLEABLE SECTION (RESTORED DARK GALAXY) */}
         {isAdding && (
-          <div className="animate-fade-in-down bg-[#0f172a]/90 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-2xl shadow-indigo-500/20 border border-slate-700/50 mb-12 relative overflow-hidden">
+          <div className="animate-fade-in-down bg-[#0f172a]/90 backdrop-blur-xl p-8 rounded-2xl shadow-2xl shadow-indigo-500/20 border border-slate-700/50 mb-12 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600 rounded-full blur-[100px] -mr-20 -mt-20 opacity-20 pointer-events-none"></div>
 
             <h3 className="text-xl font-bold text-white mb-8 flex items-center gap-3 relative z-10">
@@ -157,7 +157,7 @@ const VoucherManager = () => {
                   value={formData.ma_giamgia}
                   onChange={e => setFormData({ ...formData, ma_giamgia: e.target.value.toUpperCase() })}
                   placeholder="VD: SIÊU_HÈ_2026"
-                  className="w-full bg-[#1e293b]/50 border border-slate-600 rounded-2xl px-5 h-14 font-black text-blue-100 text-lg placeholder:font-bold placeholder:text-slate-600 outline-none focus:border-blue-500 focus:bg-[#1e293b] focus:shadow-[0_0_20px_rgba(59,130,246,0.2)] transition-all uppercase tracking-[0.2em]"
+                  className="w-full bg-[#1e293b]/50 border border-slate-600 rounded-xl px-5 h-14 font-black text-blue-100 text-lg placeholder:font-bold placeholder:text-slate-600 outline-none focus:border-blue-500 focus:bg-[#1e293b] focus:shadow-[0_0_20px_rgba(59,130,246,0.2)] transition-all uppercase tracking-[0.2em]"
                 />
               </div>
 
@@ -167,7 +167,7 @@ const VoucherManager = () => {
                   <select
                     value={formData.kieu_giamgia}
                     onChange={e => setFormData({ ...formData, kieu_giamgia: e.target.value })}
-                    className="w-full bg-[#1e293b]/50 border border-slate-600 rounded-2xl pl-10 pr-4 h-14 font-black text-blue-100 text-[10px] outline-none focus:border-blue-500 cursor-pointer focus:bg-[#1e293b] transition-all appearance-none"
+                    className="w-full bg-[#1e293b]/50 border border-slate-600 rounded-xl pl-10 pr-4 h-14 font-black text-blue-100 text-[10px] outline-none focus:border-blue-500 cursor-pointer focus:bg-[#1e293b] transition-all appearance-none"
                   >
                     <option value="percentage">% PHẦN TRĂM</option>
                     <option value="fixed_amount">💲 TIỀN MẶT</option>
@@ -187,7 +187,7 @@ const VoucherManager = () => {
                   value={formData.giatrigiam}
                   onChange={e => setFormData({ ...formData, giatrigiam: e.target.value })}
                   placeholder={formData.kieu_giamgia === 'percentage' ? "VD: 15 %" : "VD: 50000 VND"}
-                  className="w-full bg-[#1e293b]/50 border border-slate-600 rounded-2xl px-5 h-14 font-black text-sm text-white outline-none focus:border-blue-500 focus:bg-[#1e293b] focus:shadow-[0_0_20px_rgba(59,130,246,0.2)] transition-all"
+                  className="w-full bg-[#1e293b]/50 border border-slate-600 rounded-xl px-5 h-14 font-black text-sm text-white outline-none focus:border-blue-500 focus:bg-[#1e293b] focus:shadow-[0_0_20px_rgba(59,130,246,0.2)] transition-all"
                 />
               </div>
 
@@ -198,7 +198,7 @@ const VoucherManager = () => {
                     type="number" min="0" onKeyDown={blockInvalidChar}
                     value={formData.don_toithieu}
                     onChange={e => setFormData({ ...formData, don_toithieu: e.target.value })}
-                    className="w-full bg-[#1e293b]/50 border border-slate-600 rounded-2xl pl-5 pr-14 h-14 font-black text-sm text-white outline-none focus:border-blue-500 focus:bg-[#1e293b] transition-all"
+                    className="w-full bg-[#1e293b]/50 border border-slate-600 rounded-xl pl-5 pr-14 h-14 font-black text-sm text-white outline-none focus:border-blue-500 focus:bg-[#1e293b] transition-all"
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-500 pointer-events-none">VND</span>
                 </div>
@@ -210,7 +210,7 @@ const VoucherManager = () => {
                   type="number" min="1" onKeyDown={blockInvalidChar}
                   value={formData.solandung}
                   onChange={e => setFormData({ ...formData, solandung: e.target.value })}
-                  className="w-full bg-[#1e293b]/50 border border-slate-600 rounded-2xl px-5 h-14 font-black text-sm text-white outline-none focus:border-blue-500 focus:bg-[#1e293b] transition-all"
+                  className="w-full bg-[#1e293b]/50 border border-slate-600 rounded-xl px-5 h-14 font-black text-sm text-white outline-none focus:border-blue-500 focus:bg-[#1e293b] transition-all"
                 />
               </div>
 
@@ -223,7 +223,7 @@ const VoucherManager = () => {
                     onChange={e => setFormData({ ...formData, giam_toida: e.target.value })}
                     placeholder="Không giới hạn"
                     disabled={formData.kieu_giamgia !== 'percentage'}
-                    className={`w-full bg-[#1e293b]/50 border border-slate-600 rounded-2xl pl-5 pr-14 h-14 font-black text-sm text-white outline-none focus:border-blue-500 focus:bg-[#1e293b] transition-all ${formData.kieu_giamgia !== 'percentage' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`w-full bg-[#1e293b]/50 border border-slate-600 rounded-xl pl-5 pr-14 h-14 font-black text-sm text-white outline-none focus:border-blue-500 focus:bg-[#1e293b] transition-all ${formData.kieu_giamgia !== 'percentage' ? 'opacity-50 cursor-not-allowed' : ''}`}
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-500 pointer-events-none">VND</span>
                 </div>
@@ -235,7 +235,7 @@ const VoucherManager = () => {
                   type="date"
                   value={formData.ngay_ketthuc}
                   onChange={e => setFormData({ ...formData, ngay_ketthuc: e.target.value })}
-                  className="w-full bg-[#1e293b]/50 border border-slate-600 rounded-2xl px-5 h-14 font-black text-sm text-blue-100 outline-none focus:border-blue-500 focus:bg-[#1e293b] transition-all cursor-pointer [color-scheme:dark]"
+                  className="w-full bg-[#1e293b]/50 border border-slate-600 rounded-xl px-5 h-14 font-black text-sm text-blue-100 outline-none focus:border-blue-500 focus:bg-[#1e293b] transition-all cursor-pointer [color-scheme:dark]"
                 />
               </div>
 
@@ -266,7 +266,7 @@ const VoucherManager = () => {
 
         <div className="relative min-h-[400px] mb-20">
           {loading && (
-            <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center gap-3 rounded-[2.5rem]">
+            <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center gap-3 rounded-2xl">
               <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
               <span className="text-indigo-600 font-black text-[11px] uppercase tracking-[0.2em] animate-pulse">Đang truy vấn kho voucher...</span>
             </div>
@@ -283,9 +283,9 @@ const VoucherManager = () => {
 
                 return (
                   <div key={v.ma_khuyenmai} className="relative group transition-all duration-300 hover:-translate-y-2">
-                    <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-[2rem] opacity-0 group-hover:opacity-20 blur transition duration-500"></div>
+                    <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl opacity-0 group-hover:opacity-20 blur transition duration-500"></div>
 
-                    <div className="relative bg-white/80 backdrop-blur-xl rounded-[2rem] overflow-hidden border border-white shadow-xl hover:shadow-2xl transition-all flex flex-col">
+                    <div className="relative bg-white/80 backdrop-blur-xl rounded-2xl overflow-hidden border border-white shadow-xl hover:shadow-2xl transition-all flex flex-col">
                       <div className={`p-6 relative text-white overflow-hidden ${isClosed ? 'bg-slate-600 grayscale opacity-80' : 'bg-gradient-to-br from-indigo-600 via-blue-600 to-indigo-700'}`}>
                         <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/20 rounded-full blur-3xl"></div>
                         <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-indigo-900/40 rounded-full blur-3xl"></div>
@@ -468,7 +468,7 @@ const VoucherManager = () => {
                 );
               })
             ) : (
-              <div className="col-span-full py-20 text-center bg-white/40 backdrop-blur-md rounded-[3rem] border-2 border-dashed border-slate-300">
+              <div className="col-span-full py-20 text-center bg-white/40 backdrop-blur-md rounded-2xl border-2 border-dashed border-slate-300">
                 <span className="text-4xl mb-4 block">🔎</span>
                 <p className="text-slate-400 font-black uppercase tracking-widest text-xs italic">
                   Không tìm thấy Voucher nào khớp với từ khóa của bạn

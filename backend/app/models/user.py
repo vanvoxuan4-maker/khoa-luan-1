@@ -5,13 +5,12 @@ import datetime
 from sqlalchemy.orm import relationship
 import enum
 
-# 👇 ĐỊNH NGHĨA ENUM CHỮ HOA (Khớp với SQL vừa chạy)
 class QuyenEnum(str, enum.Enum):
-    customer = "customer"  # Đổi thành chữ thường
-    admin = "admin"        # Đổi thành chữ thường
+    customer = "customer"
+    admin = "admin"
 
 class TrangThaiUserEnum(str, enum.Enum):
-    active = "active"      # Đổi thành chữ thường
+    active = "active"
     inactive = "inactive"
     banned = "banned"
 

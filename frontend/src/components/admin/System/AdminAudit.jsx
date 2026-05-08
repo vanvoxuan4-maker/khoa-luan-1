@@ -26,7 +26,7 @@ const AdminAudit = () => {
     // Debounced filters state to prevent too many API calls
     const [debouncedFilters, setDebouncedFilters] = useState(filters);
 
-    const getToken = () => localStorage.getItem('admin_access_token');
+    const getToken = () => sessionStorage.getItem('admin_access_token');
 
     // Sync filters to debouncedFilters with delay (increased to 800ms for date typing)
     useEffect(() => {
@@ -72,7 +72,7 @@ const AdminAudit = () => {
     }, [pagination, debouncedFilters]);
 
     const fetchAuditLogs = async () => {
-        const token = localStorage.getItem('admin_access_token');
+        const token = sessionStorage.getItem('admin_access_token');
         setLoading(true);
         try {
             const params = new URLSearchParams({

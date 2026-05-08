@@ -26,7 +26,7 @@ const ConfigHub = () => {
         return (
             <button
                 onClick={() => setActiveTab(tab.id)}
-                className={`group relative px-8 py-4 rounded-[1.5rem] flex flex-col items-center gap-2 transition-all duration-300 font-bold text-sm tracking-wide whitespace-nowrap overflow-hidden
+                className={`group relative px-8 py-4 rounded-xl flex flex-col items-center gap-2 transition-all duration-300 font-bold text-sm tracking-wide whitespace-nowrap overflow-hidden
           ${isActive
                         ? 'bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 text-white shadow-xl shadow-blue-500/40 scale-105'
                         : 'bg-white/60 text-gray-600 hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50 hover:text-blue-700 hover:shadow-lg hover:scale-102'
@@ -49,8 +49,8 @@ const ConfigHub = () => {
         <div className="animate-fade-in-up">
             {/* TAB NAVIGATION */}
             <div className="mb-10 relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-purple-400/20 to-pink-400/20 rounded-[2.5rem] blur-xl" />
-                <div className="relative bg-white/50 backdrop-blur-md p-2 rounded-[2.5rem] shadow-lg border border-white/80 flex gap-3 justify-center">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-purple-400/20 to-pink-400/20 rounded-3xl blur-xl" />
+                <div className="relative bg-white/50 backdrop-blur-md p-2 rounded-3xl shadow-lg border border-white/80 flex gap-3 justify-center">
                     {tabs.map(tab => (
                         <TabButton key={tab.id} tab={tab} />
                     ))}

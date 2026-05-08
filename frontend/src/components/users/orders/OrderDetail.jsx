@@ -93,7 +93,7 @@ const OrderDetail = () => {
                 setOrder(res.data);
             } catch (err) {
                 addToast('Không tìm thấy đơn hàng này.', 'error');
-                navigate('/my-orders');
+                navigate('/profile?tab=orders');
             } finally {
                 setLoading(false);
             }
@@ -113,7 +113,7 @@ const OrderDetail = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             addToast('Đã hủy đơn hàng thành công!', 'success');
-            navigate('/my-orders');
+            navigate('/profile?tab=orders');
         } catch (err) {
             addToast(err.response?.data?.detail || 'Có lỗi xảy ra.', 'error');
         }
@@ -200,7 +200,7 @@ const OrderDetail = () => {
                         </div>
                         {/* Back button */}
                         <button
-                            onClick={() => navigate('/my-orders')}
+                            onClick={() => navigate('/profile?tab=orders')}
                             style={{
                                 display: 'inline-flex', alignItems: 'center', gap: 6,
                                 padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: 13,
@@ -211,7 +211,7 @@ const OrderDetail = () => {
                             onMouseEnter={e => { e.currentTarget.style.background = '#EFF6FF'; }}
                             onMouseLeave={e => { e.currentTarget.style.background = '#fff'; }}
                         >
-                            ← Lịch sử đơn hàng
+                            ← Quay lại
                         </button>
                     </div>
                     {/* Divider */}

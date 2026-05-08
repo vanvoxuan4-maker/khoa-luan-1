@@ -26,7 +26,7 @@ const PaymentManager = () => {
     setLoading(true);
     setRefreshing(true);
     try {
-      const token = localStorage.getItem('admin_access_token');
+      const token = sessionStorage.getItem('admin_access_token');
       const params = new URLSearchParams();
       if (debouncedSearch) params.append('search', debouncedSearch);
       if (filterStatus !== 'all') {
@@ -138,23 +138,46 @@ const PaymentManager = () => {
           </div>
         </div>
 
-        {/* FILTERS - TIGHT CONTAINER TO AVOID EMPTY SPACE */}
-        <div className="bg-white p-2.5 rounded-[1.2rem] border border-gray-100 flex items-center gap-2 shadow-sm shrink-0">
-          <FilterButton statusKey="all" label="Tất cả" icon="📂" />
-          <FilterButton statusKey="pending" label="Đang chờ" icon="⏳" />
-          <FilterButton statusKey="success" label="Thành công" icon="✅" />
-          <FilterButton statusKey="refunded" label="Hoàn tiền" icon="↩️" />
-          <FilterButton statusKey="failed" label="Đã hủy" icon="🚫" />
+        {/* SEARCH & FILTERS */}
+        <div className="bg-white p-2.5 rounded-[1.2rem] border border-gray-100 flex flex-wrap items-center gap-3 shadow-sm flex-1">
+          {/* SEARCH INPUT */}
+          <div className="relative flex-1 min-w-[300px]">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+            <input
+              type="text"
+              placeholder="Mã đơn hàng, SĐT, Mã giao dịch VNPay"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+            />
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 bg-slate-200 text-slate-500 rounded-full text-[10px] flex items-center justify-center hover:bg-slate-300 transition-colors"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <FilterButton statusKey="all" label="Tất cả" icon="📂" />
+            <FilterButton statusKey="pending" label="Đang chờ" icon="⏳" />
+            <FilterButton statusKey="success" label="Thành công" icon="✅" />
+            <FilterButton statusKey="refunded" label="Hoàn tiền" icon="↩️" />
+            <FilterButton statusKey="failed" label="Đã hủy" icon="🚫" />
+          </div>
+
           {/* Refresh Button */}
-        <button
-          onClick={fetchPayments}
-          disabled={refreshing || loading}
-          className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap shadow-sm bg-green-500 text-white hover:bg-green-600 hover:shadow-lg hover:scale-105 active:scale-95 ${refreshing || loading ? 'opacity-70 cursor-not-allowed' : ''}`}
-          title="Làm mới danh sách"
-        >
-          <span className={`text-sm ${refreshing || loading ? 'animate-spin' : ''}`}>🔄</span>
-          {refreshing || loading ? 'Đang tải...' : 'Làm mới'}
-        </button>
+          <button
+            onClick={fetchPayments}
+            disabled={refreshing || loading}
+            className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap shadow-sm bg-green-500 text-white hover:bg-green-600 hover:shadow-lg hover:scale-105 active:scale-95 ${refreshing || loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+            title="Làm mới danh sách"
+          >
+            <span className={`text-sm ${refreshing || loading ? 'animate-spin' : ''}`}>🔄</span>
+            {refreshing || loading ? 'Đang tải...' : 'Làm mới'}
+          </button>
         </div>
       </div>
 

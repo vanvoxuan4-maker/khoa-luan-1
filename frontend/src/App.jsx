@@ -23,10 +23,8 @@ import Cart from './components/users/orders/Cart';
 import Wishlist from './components/users/Wishlist/Wishlist';
 import Checkout from './components/users/orders/Checkout';
 import OrderSuccess from './components/users/orders/OrderSuccess';
-import OrderHistory from './components/users/orders/OrderHistory';
 import OrderDetail from './components/users/orders/OrderDetail';
 import VNPayPayment from './components/users/orders/VNPayPayment';
-import UserAddressPage from './components/users/account/UserAddressPage';
 
 
 import HomePage from './components/users/layouts/HomePage';
@@ -47,9 +45,9 @@ import Unauthorized from './components/common/Unauthorized';
 const AdminGuard = ({ children }) => {
   const { addToast } = useNotification();
   // Chỉ chấp nhận session admin rõ ràng (dựa trên admin token/info)
-  const adminToken = localStorage.getItem('admin_access_token');
+  const adminToken = sessionStorage.getItem('admin_access_token');
   const userToken = localStorage.getItem('user_access_token');
-  const adminInfo = JSON.parse(localStorage.getItem('admin_info') || '{}');
+  const adminInfo = JSON.parse(sessionStorage.getItem('admin_info') || '{}');
 
   const isAdminSession = adminToken && (
     adminInfo.quyen?.toLowerCase() === 'admin' ||
@@ -70,12 +68,31 @@ const AdminGuard = ({ children }) => {
   return children;
 };
 
-// 🛡️ 2. Bảo vệ trang User: Chỉ dùng user token
+// 🛡️ 2. Bảo vệ trang User: Yêu cầu đăng nhập bằng tài khoản User
 const AuthGuard = ({ children }) => {
-  // Lấy token từ USER storage
-  const token = localStorage.getItem('user_access_token');
-  if (!token) return <Navigate to="/login" replace />;
+  const userToken = localStorage.getItem('user_access_token');
+  if (!userToken) return <Navigate to="/login" replace />;
   return children;
+};
+
+// 🛡️ 3. Chặn Admin vào toàn bộ trang User → tự động redirect về /admin
+//    Dùng pattern "pathless layout route" của React Router v6 (dùng <Outlet />)
+const AdminBlockGuard = () => {
+  const adminToken = sessionStorage.getItem('admin_access_token');
+  const adminInfo = JSON.parse(sessionStorage.getItem('admin_info') || '{}');
+
+  const isAdminSession = adminToken && (
+    adminInfo.quyen?.toLowerCase() === 'admin' ||
+    adminInfo.role?.toLowerCase() === 'admin' ||
+    adminInfo.is_superuser === true
+  );
+
+  // Admin đang đăng nhập → không được vào trang user, về trang quản trị
+  if (isAdminSession) {
+    return <Navigate to="/admin" replace />;
+  }
+
+  return <Outlet />;
 };
 
 // Wrapper cho Login/Register (Sử dụng AuthContainer mới với hiệu ứng trượt)
@@ -153,40 +170,13 @@ function App() {
 
 
             <Routes>
-              {/* --- USER ROUTES --- */}
-              <Route path="/" element={<UserLayout noContainer={true}><HomePage /></UserLayout>} />
-              <Route path="/products" element={<UserLayout noContainer={true}><ProductList /></UserLayout>} />
-              <Route path="/products/:id" element={<UserLayout><ProductDetail /></UserLayout>} />
-              <Route path="/promotions" element={<UserLayout noContainer={true}><Promotions /></UserLayout>} />
-              <Route path="/about" element={<UserLayout noContainer={true}><AboutUs /></UserLayout>} />
-              <Route path="/contact" element={<UserLayout noContainer={true}><Contact /></UserLayout>} />
-              <Route path="/warranty" element={<UserLayout noContainer={true}><Warranty /></UserLayout>} />
-              <Route path="/chinh-sach-doi-tra" element={<UserLayout noContainer={true}><ReturnPolicy /></UserLayout>} />
-              <Route path="/guide" element={<UserLayout noContainer={true}><BuyingGuide /></UserLayout>} />
-
-              <Route path="/cart" element={<AuthGuard><UserLayout><Cart /></UserLayout></AuthGuard>} />
-              <Route path="/wishlist" element={<AuthGuard><UserLayout noContainer={true}><Wishlist /></UserLayout></AuthGuard>} />
-              <Route path="/checkout" element={<AuthGuard><UserLayout><Checkout /></UserLayout></AuthGuard>} />
-
-              <Route path="/payment-success" element={<UserLayout><OrderSuccess /></UserLayout>} />
-
-              <Route path="/payment-result" element={<UserLayout><VNPayPayment /></UserLayout>} />
-              <Route path="/payment-failed" element={<UserLayout><div className="p-20 text-center text-red-600 font-bold text-2xl">Thanh toán thất bại! Vui lòng thử lại.</div></UserLayout>} />
-
-              <Route path="/my-orders" element={<AuthGuard><UserLayout><OrderHistory /></UserLayout></AuthGuard>} />
-              <Route path="/my-orders/:id" element={<AuthGuard><UserLayout><OrderDetail /></UserLayout></AuthGuard>} />
-              <Route path="/profile" element={<AuthGuard><UserLayout><UserProfile /></UserLayout></AuthGuard>} />
-              <Route path="/profile/addresses" element={<AuthGuard><UserLayout><UserAddressPage /></UserLayout></AuthGuard>} />
-
-              {/* --- AUTH ROUTES --- */}
-              <Route path="/login" element={<LoginWrapper />} />
-              <Route path="/register" element={<RegisterWrapper />} />
-
-              {/* Public admin login so an already-logged-in user can still open admin login in another tab */}
+              {/* ============================================================
+                  ADMIN ROUTES - Đặt trước để ưu tiên khớp /admin/*
+              ============================================================ */}
+              {/* Trang đăng nhập Admin (nằm ngoài mọi guard) */}
               <Route path="/admin/login" element={<LoginWrapper />} />
 
-              {/* --- ADMIN ROUTES (CENTRALIZED PROTECTION) --- */}
-              {/* Group tất cả route /admin vào một cha duy nhất được bảo vệ bởi AdminGuard */}
+              {/* Toàn bộ trang quản trị được bảo vệ bởi AdminGuard */}
               <Route path="/admin" element={
                 <AdminGuard>
                   <AdminLayout />
@@ -201,9 +191,45 @@ function App() {
                 <Route path="audit" element={<AdminAudit />} />
               </Route>
 
+              {/* ============================================================
+                  USER ROUTES - Toàn bộ bọc trong AdminBlockGuard
+                  → Admin đăng nhập vào bất kỳ route nào dưới đây
+                    sẽ bị redirect tự động về /admin
+              ============================================================ */}
+              <Route element={<AdminBlockGuard />}>
+                {/* Trang công khai */}
+                <Route path="/" element={<UserLayout noContainer={true}><HomePage /></UserLayout>} />
+                <Route path="/products" element={<UserLayout noContainer={true}><ProductList /></UserLayout>} />
+                <Route path="/products/:id" element={<UserLayout><ProductDetail /></UserLayout>} />
+                <Route path="/promotions" element={<UserLayout noContainer={true}><Promotions /></UserLayout>} />
+                <Route path="/about" element={<UserLayout noContainer={true}><AboutUs /></UserLayout>} />
+                <Route path="/contact" element={<UserLayout noContainer={true}><Contact /></UserLayout>} />
+                <Route path="/warranty" element={<UserLayout noContainer={true}><Warranty /></UserLayout>} />
+                <Route path="/chinh-sach-doi-tra" element={<UserLayout noContainer={true}><ReturnPolicy /></UserLayout>} />
+                <Route path="/guide" element={<UserLayout noContainer={true}><BuyingGuide /></UserLayout>} />
+
+                {/* Trang đăng nhập / đăng ký user */}
+                <Route path="/login" element={<LoginWrapper />} />
+                <Route path="/register" element={<RegisterWrapper />} />
+
+                {/* Trang cần đăng nhập bằng tài khoản User (AuthGuard) */}
+                <Route path="/cart" element={<AuthGuard><UserLayout><Cart /></UserLayout></AuthGuard>} />
+                <Route path="/wishlist" element={<AuthGuard><UserLayout noContainer={true}><Wishlist /></UserLayout></AuthGuard>} />
+                <Route path="/checkout" element={<AuthGuard><UserLayout><Checkout /></UserLayout></AuthGuard>} />
+                <Route path="/my-orders" element={<Navigate to="/profile?tab=orders" replace />} />
+                <Route path="/my-orders/:id" element={<AuthGuard><UserLayout><OrderDetail /></UserLayout></AuthGuard>} />
+                <Route path="/profile" element={<AuthGuard><UserLayout><UserProfile /></UserLayout></AuthGuard>} />
+                <Route path="/profile/addresses" element={<Navigate to="/profile?tab=address" replace />} />
+
+                {/* Trang kết quả thanh toán */}
+                <Route path="/payment-success" element={<UserLayout><OrderSuccess /></UserLayout>} />
+                <Route path="/payment-result" element={<UserLayout><VNPayPayment /></UserLayout>} />
+                <Route path="/payment-failed" element={<UserLayout><div className="p-20 text-center text-red-600 font-bold text-2xl">Thanh toán thất bại! Vui lòng thử lại.</div></UserLayout>} />
+              </Route>
+
               <Route path="/unauthorized" element={<Unauthorized />} />
 
-              {/* 404 */}
+              {/* 404 → về trang chủ */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>

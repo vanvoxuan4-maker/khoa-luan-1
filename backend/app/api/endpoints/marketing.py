@@ -183,6 +183,31 @@ def get_vouchers(search: Optional[str] = None, db: Session = Depends(get_db)):
     return vouchers
 
 # --- PUBLIC VOUCHERS FOR USERS ---
+
+# ✅ Trả về danh sách mã voucher mà user hiện tại đã dùng (trong đơn còn hiệu lực)
+@router.get("/vouchers/my-used")
+def get_my_used_vouchers(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Trả về danh sách mã giảm giá (ma_giamgia string) mà user đã sử dụng
+    trong các đơn hàng không bị hủy/trả hàng/thất bại.
+    Frontend dùng để đánh dấu badge 'Đã sử dụng' trên trang Khuyến Mãi.
+    """
+    from app.models.order import DonHang
+    INVALID_STATES = ["cancelled", "returned", "failed"]
+    used_orders = db.query(DonHang).filter(
+        DonHang.ma_user == current_user.ma_user,
+        DonHang.ma_khuyenmai != None,
+        ~DonHang.trang_thai.in_(INVALID_STATES)
+    ).all()
+    used_codes = set()
+    for o in used_orders:
+        if o.voucher and o.voucher.ma_giamgia:
+            used_codes.add(o.voucher.ma_giamgia)
+    return {"used_codes": list(used_codes)}
+
 @router.get("/vouchers/public", response_model=List[VoucherOut])
 def get_public_vouchers(db: Session = Depends(get_db)):
     """
@@ -320,6 +345,7 @@ def validate_voucher(
     """
     Validate voucher code for user checkout
     """
+    from app.models.order import DonHang
     # Find voucher
     voucher = db.query(Makhuyenmai).filter(
         Makhuyenmai.ma_giamgia == request.ma_giamgia.upper()
@@ -352,10 +378,25 @@ def validate_voucher(
         )
     
     # Check usage limit
-    if voucher.solan_hientai >= voucher.solandung:
+    if voucher.solandung and voucher.solan_hientai >= voucher.solandung:
         return VoucherValidateResponse(
             valid=False,
             message="Mã giảm giá đã hết lượt sử dụng!",
+            discount_amount=0,
+            final_amount=request.tong_tien
+        )
+    
+    # ✅ FIX: Kiểm tra user đã dùng voucher này chưa
+    INVALID_STATES = ["cancelled", "returned", "failed"]
+    existing_usage = db.query(DonHang).filter(
+        DonHang.ma_user == current_user.ma_user,
+        DonHang.ma_khuyenmai == voucher.ma_khuyenmai,
+        ~DonHang.trang_thai.in_(INVALID_STATES)
+    ).first()
+    if existing_usage:
+        return VoucherValidateResponse(
+            valid=False,
+            message="Bạn đã sử dụng mã giảm giá này rồi! Mỗi tài khoản chỉ được dùng 1 lần.",
             discount_amount=0,
             final_amount=request.tong_tien
         )

@@ -22,7 +22,7 @@ const AdminChat = () => {
   const messagesEndRef = useRef(null);
   const isFirstLoad = useRef(true);
   const abortControllerRef = useRef(null);
-  const token = localStorage.getItem('admin_access_token');
+  const token = sessionStorage.getItem('admin_access_token');
 
   const scrollToBottom = (behavior = "smooth") => {
     const scrollBehavior = typeof behavior === 'string' ? behavior : "smooth";

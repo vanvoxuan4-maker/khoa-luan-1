@@ -3,6 +3,54 @@ import axios from 'axios';
 import API_BASE_URL from '../../../utils/apiConfig';
 import AnimatedLogo from '../../common/AnimatedLogo';
 
+const VIETNAM_PROVINCES = [
+  "An Giang", "Bắc Ninh", "Cà Mau", "Cao Bằng", "TP. Cần Thơ", "TP. Đà Nẵng",
+  "Đắk Lắk", "Điện Biên", "Đồng Nai", "Đồng Tháp", "Gia Lai", "TP. Hà Nội",
+  "Hà Tĩnh", "TP. Hải Phòng", "TP. Hồ Chí Minh", "TP. Huế", "Hưng Yên",
+  "Khánh Hoà", "Lai Châu", "Lạng Sơn", "Lào Cai", "Lâm Đồng", "Nghệ An",
+  "Ninh Bình", "Phú Thọ", "Quảng Ngãi", "Quảng Ninh", "Quảng Trị", "Sơn La",
+  "Tây Ninh", "Thái Nguyên", "Thanh Hóa", "Tuyên Quang", "Vĩnh Long"
+];
+
+const removeAccents = (str) => {
+  if (!str) return "";
+  return str.normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+const detectProvince = (address) => {
+  if (!address) return "";
+  const n = removeAccents(address);
+  
+  // Xóa các tiền tố gây nhiễu để so sánh từ khóa thuần túy
+  const nClean = n.replace(/tp\./g, '').replace(/thanh pho/g, '').replace(/tinh/g, '').trim();
+
+  // Các quy tắc ưu tiên nhận diện nhanh
+  if (nClean.includes("ha noi")) return "TP. Hà Nội";
+  if (nClean.includes("ho chi minh") || nClean.includes("hcm")) return "TP. Hồ Chí Minh";
+  if (nClean.includes("da nang")) return "TP. Đà Nẵng";
+  if (nClean.includes("hai phong")) return "TP. Hải Phòng";
+  if (nClean.includes("can tho")) return "TP. Cần Thơ";
+  if (nClean.includes("hue")) return "TP. Huế";
+
+  // Quét theo danh sách đầy đủ
+  const match = VIETNAM_PROVINCES.find(p => {
+      const pNorm = removeAccents(p)
+        .replace(/tp\./g, '')
+        .replace(/thanh pho/g, '')
+        .replace(/tinh/g, '')
+        .trim();
+      return nClean.includes(pNorm);
+  });
+
+  return match || "";
+};
+
 const sanitizeUsername = (val) => {
   if (!val) return '';
   return val
@@ -63,7 +111,7 @@ const Register = ({ onBackToLogin }) => {
     hovaten: '',
     sdt: '',
     dia_chi: '',
-    tinh_thanh: 'Hà Nội'
+    tinh_thanh: 'TP. Hà Nội'
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -84,6 +132,14 @@ const Register = ({ onBackToLogin }) => {
     if (/[^A-Za-z0-9]/.test(formData.password)) strength += 25;
     setPasswordStrength(strength);
   }, [formData.password]);
+
+  // TỰ ĐỘNG NHẬN DIỆN TỈNH THÀNH KHI NHẬP ĐỊA CHỈ (useEffect để đảm bảo đồng bộ)
+  useEffect(() => {
+    const detected = detectProvince(formData.dia_chi);
+    if (detected && detected !== formData.tinh_thanh) {
+      setFormData(prev => ({ ...prev, tinh_thanh: detected }));
+    }
+  }, [formData.dia_chi]);
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -112,7 +168,7 @@ const Register = ({ onBackToLogin }) => {
         hovaten: '',
         sdt: '',
         dia_chi: '',
-        tinh_thanh: 'Hà Nội'
+        tinh_thanh: 'TP. Hà Nội'
       });
       setErrors({});
       setTouched({});
@@ -154,9 +210,8 @@ const Register = ({ onBackToLogin }) => {
       value = value.replace(/\D/g, '');
     }
 
-    const updated = { ...formData, [name]: value };
-    setFormData(updated);
-    if (touched[name]) setErrors(validate(updated));
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (touched[name]) setErrors(validate({ ...formData, [name]: value }));
   };
 
   return (
@@ -244,7 +299,7 @@ const Register = ({ onBackToLogin }) => {
           label="địa chỉ giao hàng (mặc định)"
           name="dia_chi"
           icon="📍"
-          placeholder="địa chỉ liên hệ"
+          placeholder="địa chỉ liên hệ (v.d: 123 Lạch Tray, Hải Phòng)"
           value={formData.dia_chi}
           onChange={handleChange}
           onFocus={() => setFocusedField('dia_chi')}

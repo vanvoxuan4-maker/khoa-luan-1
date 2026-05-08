@@ -10,11 +10,20 @@ const StatusTracker = ({ history, expectedDate, status }) => {
     }
 
     // 1. Định nghĩa các bước tiêu chuẩn
+    const STATUS_MAP = {
+        'pending': 'CHỜ XÁC NHẬN',
+        'confirmed': 'ĐÃ XÁC NHẬN',
+        'shipping': 'ĐANG GIAO HÀNG',
+        'delivered': 'HOÀN THÀNH',
+        'cancelled': 'ĐÃ HỦY ĐƠN',
+        'returned': 'TRẢ HÀNG'
+    };
+
     const standardSteps = [
-        { id: 'pending', label: 'Đặt hàng', defaultDesc: 'Đơn hàng của bạn đã được tiếp nhận.' },
-        { id: 'confirmed', label: 'Xác nhận', defaultDesc: 'Shop đang chuẩn bị hàng cho bạn.' },
-        { id: 'shipping', label: 'Đang giao', defaultDesc: 'Đơn hàng sẽ sớm được giao đến bạn.' },
-        { id: 'delivered', label: 'Hoàn thành', defaultDesc: 'Cảm ơn bạn đã mua sắm tại BikeStore!' }
+        { id: 'pending', label: STATUS_MAP['pending'], defaultDesc: 'Đơn hàng của bạn đã được khởi tạo thành công.' },
+        { id: 'confirmed', label: STATUS_MAP['confirmed'], defaultDesc: 'Đơn hàng của bạn đã được xác nhận.' },
+        { id: 'shipping', label: STATUS_MAP['shipping'], defaultDesc: 'Đơn hàng đang được giao đến bạn.' },
+        { id: 'delivered', label: STATUS_MAP['delivered'], defaultDesc: 'Cảm ơn bạn đã mua sắm tại Bike Store!' }
     ];
 
     // Kiểm tra trạng thái đặc biệt
@@ -147,8 +156,8 @@ const StatusTracker = ({ history, expectedDate, status }) => {
                                             <span className={`text-xs font-black uppercase tracking-widest ${isPassed ? 'text-gray-300' : 'text-blue-600'}`}>{formattedDate} • {formattedTime}</span>
                                         </div>
                                         <h4 className={`text-base font-black uppercase tracking-tight mb-1 ${isLatest ? 'text-gray-900 scale-105 origin-left' : isPassed ? 'text-gray-400' : 'text-gray-600'}`}>
-                                            {item.label || item.trang_thai.toUpperCase()}
-                                            {isLatest && <span className="ml-2 text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full lowercase tracking-normal font-bold">Hiện tại</span>}
+                                            {item.label || STATUS_MAP[item.trang_thai.toLowerCase()] || item.trang_thai.toUpperCase()}
+                                            {isLatest && <span className="ml-2 text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full lowercase tracking-normal font-bold">hiện tại</span>}
                                         </h4>
                                         <p className={`text-sm font-medium leading-relaxed ${isPassed ? 'text-gray-400' : 'text-gray-500'}`}>
                                             {item.mo_ta}

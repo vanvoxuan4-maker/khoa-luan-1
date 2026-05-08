@@ -1,4 +1,4 @@
-import os
+﻿import os
 import io
 import uuid
 import unicodedata
@@ -236,45 +236,52 @@ def update_sanpham(ma_sanpham: int, item_update: SanphamUpdate, db: Session = De
 def delete_sanpham(ma_sanpham: int, db: Session = Depends(get_db), admin: User = Depends(check_admin_role)):
     db_product = db.query(Sanpham).filter(Sanpham.ma_sanpham == ma_sanpham).first()
     if not db_product:
-        raise HTTPException(status_code=404, detail="Sản phẩm không tồn tại")
-    
-    # Store product info before deletion for audit log
+        raise HTTPException(status_code=404, detail="San pham khong ton tai")
+
     product_name = db_product.ten_sanpham
     product_code = db_product.sanpham_code
-    
+
+    # KIEM TRA RANG BUOC DON HANG
+    order_count = db.query(ChiTietDonHang).filter(
+        ChiTietDonHang.ma_sanpham == ma_sanpham
+    ).count()
+    if order_count > 0:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Sản phẩm này không thể xóa vì đã có {order_count} đơn hàng liên quan. "
+                f"Vui lòng sử dụng tính năng 'Ẩn' để ngừng kinh doanh mà không ảnh hưởng đến lịch sử."
+            )
+        )
+
     try:
-        # 1. Xóa các dữ liệu liên quan trong DB
-        # Lưu ý: Hinhanh has cascade="all, delete-orphan" in Sanpham model
-        # nhưng ta vẫn delete trực tiếp để kích hoạt Hook 'after_delete' của Hinhanh
         db.query(Hinhanh).filter(Hinhanh.ma_sanpham == ma_sanpham).delete()
-        
         db.query(Danhgia).filter(Danhgia.ma_sanpham == ma_sanpham).delete()
         db.query(Dsyeuthich).filter(Dsyeuthich.ma_sanpham == ma_sanpham).delete()
         db.query(ChiTietGioHang).filter(ChiTietGioHang.ma_sanpham == ma_sanpham).delete()
-        db.query(ChiTietDonHang).filter(ChiTietDonHang.ma_sanpham == ma_sanpham).delete()
-        
+        # ChiTietDonHang KHONG xoa - bao ve lich su don hang
+
         db.delete(db_product)
         db.commit()
-        
-        # Audit log
+
         try:
             from app.api.endpoints.audit import create_audit_log
             create_audit_log(
                 db=db,
                 user_id=admin.ma_user,
                 action="delete",
-                description=f"Xóa sản phẩm: {product_name}",
+                description=f"Xoa san pham: {product_name}",
                 resource_type="product",
                 resource_id=ma_sanpham,
                 details={"product_code": product_code}
             )
         except Exception as e:
             print(f"Warning: Could not create audit log: {e}")
-        
-        return {"message": "Admin đã xóa sản phẩm và dọn dẹp dữ liệu thành công!"}
+
+        return {"message": "Admin da xoa san pham thanh cong!"}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Lỗi hệ thống: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Loi he thong: {str(e)}")
 
 from typing import Optional
 

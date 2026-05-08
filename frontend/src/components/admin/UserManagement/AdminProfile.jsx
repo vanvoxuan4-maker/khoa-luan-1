@@ -33,7 +33,7 @@ const AdminProfile = () => {
     }, []);
 
     const fetchAdminInfo = async () => {
-        const token = localStorage.getItem('admin_access_token');
+        const token = sessionStorage.getItem('admin_access_token');
         try {
             const res = await axios.get(`${API_BASE_URL}/users/me`, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -53,7 +53,7 @@ const AdminProfile = () => {
 
     const handleUpdateProfile = async (e) => {
         e.preventDefault();
-        const token = localStorage.getItem('admin_access_token');
+        const token = sessionStorage.getItem('admin_access_token');
         try {
             await axios.put(`${API_BASE_URL}/users/me`, formData, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -72,7 +72,7 @@ const AdminProfile = () => {
             return;
         }
 
-        const token = localStorage.getItem('admin_access_token');
+        const token = sessionStorage.getItem('admin_access_token');
         try {
             await axios.put(`${API_BASE_URL}/users/me/password`, {
                 old_password: passwordData.old_password,

@@ -3,6 +3,7 @@ import json
 import asyncio
 import traceback
 import uuid
+import time
 from datetime import date, datetime, timedelta
 from typing import List, Optional
 
@@ -30,19 +31,70 @@ genai.configure(api_key=settings.GOOGLE_API_KEY)
 
 def lay_bao_cao_admin(loai: str, ngay: str = None, so_ngay: int = 7):
     """
-    Lấy các báo cáo thống kê: 'doanh_thu' (cần ngay YYYY-MM-DD), 'don_hang', 'khach_hang', 'xu_huong' (cần so_ngay), 'ty_le_huy'.
+    Lấy các báo cáo thống kê: 'doanh_thu' (cần ngay YYYY-MM-DD hoặc để trống = hôm nay), 'don_hang', 'khach_hang', 'xu_huong' (cần so_ngay), 'ty_le_huy'.
     """
     db = SessionLocal()
     try:
         if loai == 'doanh_thu':
             target_date = datetime.strptime(ngay, "%Y-%m-%d").date() if ngay else date.today()
-            orders = db.query(DonHang).filter(func.date(DonHang.ngay_dat) == target_date, DonHang.trang_thai == 'delivered').all()
-            return {"ngay": str(target_date), "doanh_thu": sum(o.tong_tien for o in orders), "so_don_thanh_cong": len(orders)}
+
+            # --- Tầng 1: Doanh thu HÔM NAY ---
+            today_orders = db.query(DonHang).filter(
+                func.date(DonHang.ngay_dat) == target_date,
+                DonHang.trang_thai == 'delivered'
+            ).all()
+            today_revenue = sum(o.tong_tien for o in today_orders)
+            today_count = len(today_orders)
+
+            # --- Tầng 2: Doanh thu THÁNG NÀY ---
+            start_of_month = target_date.replace(day=1)
+            month_orders = db.query(DonHang).filter(
+                func.date(DonHang.ngay_dat) >= start_of_month,
+                func.date(DonHang.ngay_dat) <= target_date,
+                DonHang.trang_thai == 'delivered'
+            ).all()
+            month_revenue = sum(o.tong_tien for o in month_orders)
+            month_count = len(month_orders)
+
+            # --- Tầng 3: Doanh thu TỔNG (từ trước đến nay) ---
+            all_orders = db.query(DonHang).filter(DonHang.trang_thai == 'delivered').all()
+            total_revenue = sum(o.tong_tien for o in all_orders)
+            total_count = len(all_orders)
+
+            # --- Sản phẩm bán chạy nhất ---
+            from app.models.order import ChiTietDonHang
+            top_product = db.query(
+                ChiTietDonHang.ten_sanpham,
+                func.sum(ChiTietDonHang.so_luong).label("tong_sl")
+            ).join(DonHang, DonHang.ma_don_hang == ChiTietDonHang.ma_don_hang
+            ).filter(DonHang.trang_thai == 'delivered'
+            ).group_by(ChiTietDonHang.ten_sanpham
+            ).order_by(func.sum(ChiTietDonHang.so_luong).desc()).first()
+
+            return {
+                "ngay_bao_cao": str(target_date),
+                "hom_nay": {
+                    "doanh_thu": today_revenue,
+                    "so_don_thanh_cong": today_count
+                },
+                "thang_nay": {
+                    "doanh_thu": month_revenue,
+                    "so_don_thanh_cong": month_count,
+                    "thang": target_date.strftime("%m/%Y")
+                },
+                "tong_tich_luy": {
+                    "doanh_thu": total_revenue,
+                    "so_don_thanh_cong": total_count,
+                    "ghi_chu": "Tính từ ngày khai trương đến hiện tại"
+                },
+                "san_pham_ban_chay_nhat": top_product[0] if top_product else "Chưa có dữ liệu",
+                "luu_y": "Doanh thu chỉ tính các đơn hàng đã giao thành công (delivered). Không tính đơn hủy, trả hàng hoặc đang giao."
+            }
         
         elif loai == 'don_hang':
             results = db.query(DonHang.trang_thai, func.count(DonHang.ma_don_hang)).group_by(DonHang.trang_thai).all()
             stats = {str(r[0]): r[1] for r in results}
-            return {"tong_don": sum(stats.values()), "chi_tiet": stats}
+            return {"ghi_chu": "Thống kê tổng tất cả đơn hàng từ trước đến nay", "tong_don": sum(stats.values()), "chi_tiet": stats}
             
         elif loai == 'khach_hang':
             total_users = db.query(User).filter(User.quyen == 'customer').count()
@@ -66,9 +118,10 @@ def lay_bao_cao_admin(loai: str, ngay: str = None, so_ngay: int = 7):
     except Exception as e: return f"Lỗi: {str(e)}"
     finally: db.close()
 
+
 def tra_cuu_he_thong(loai: str, tu_khoa: str = "", so_luong: int = 5):
     """
-    Tra cứu: 'san_pham', 'danh_muc', 'thuong_hieu' (cần tu_khoa) hoặc 'don_hang_gan_day' (cần so_luong).
+    Tra cứu: 'san_pham' (cần tu_khoa) hoặc 'don_hang_gan_day' (cần so_luong).
     """
     db = SessionLocal()
     try:
@@ -81,12 +134,6 @@ def tra_cuu_he_thong(loai: str, tu_khoa: str = "", so_luong: int = 5):
         if loai == 'san_pham':
             p = db.query(Sanpham).filter(Sanpham.ten_sanpham.ilike(f"%{tu_khoa}%")).first()
             if p: return {"ten": p.ten_sanpham, "gia": p.gia, "ton_kho": p.ton_kho, "id": p.ma_sanpham}
-        elif loai == 'danh_muc':
-            c = db.query(Danhmuc).filter(Danhmuc.ten_danhmuc.ilike(f"%{tu_khoa}%")).first()
-            if c: return {"ten": c.ten_danhmuc, "mo_ta": c.mo_ta}
-        elif loai == 'thuong_hieu':
-            b = db.query(Thuonghieu).filter(Thuonghieu.ten_thuonghieu.ilike(f"%{tu_khoa}%")).first()
-            if b: return {"ten": b.ten_thuonghieu, "xuat_xu": b.xuat_xu}
         elif loai == 'voucher':
             query = db.query(Makhuyenmai)
             if tu_khoa:
@@ -124,7 +171,7 @@ def tra_cuu_he_thong(loai: str, tu_khoa: str = "", so_luong: int = 5):
 
 def quan_ly_kho_va_hang_hoa(hanh_dong: str, ma_sp: int = None, gia_tri: float = None, so_ngay: int = 30):
     """
-    Quản lý: 'kiem_tra_ton' (ngưỡng gia_tri), 'sp_ban_chay' (so_ngay), 'doi_ton_kho' (ma_sp, gia_tri), 'doi_gia' (ma_sp, gia_tri).
+    Quản lý: 'kiem_tra_ton' (ngưỡng gia_tri), 'sp_ban_chay' (so_ngay), 'doi_ton_kho' (ma_sp, gia_tri).
     """
     db = SessionLocal()
     try:
@@ -138,17 +185,12 @@ def quan_ly_kho_va_hang_hoa(hanh_dong: str, ma_sp: int = None, gia_tri: float = 
             products = db.query(Sanpham.ten_sanpham, func.sum(ChiTietDonHang.so_luong).label('total_sold')).join(ChiTietDonHang).join(DonHang).filter(func.date(DonHang.ngay_dat) >= start_date, DonHang.trang_thai == 'delivered').group_by(Sanpham.ma_sanpham, Sanpham.ten_sanpham).order_by(text('total_sold DESC')).limit(5).all()
             return [{"ten": p.ten_sanpham, "da_ban": p.total_sold} for p in products] if products else "Không có dữ liệu."
             
-        elif hanh_dong in ['doi_ton_kho', 'doi_gia']:
+        elif hanh_dong == 'doi_ton_kho':
             product = db.query(Sanpham).filter(Sanpham.ma_sanpham == ma_sp).first()
             if not product: return f"Không tìm thấy ID {ma_sp}."
-            if hanh_dong == 'doi_ton_kho':
-                old = product.ton_kho
-                product.ton_kho = int(gia_tri)
-                msg = f"Đã đổi tồn kho {product.ten_sanpham} từ {old} -> {gia_tri}."
-            else:
-                old = product.gia
-                product.gia = gia_tri
-                msg = f"Đã đổi giá {product.ten_sanpham} từ {old:,} -> {gia_tri:,} VND."
+            old = product.ton_kho
+            product.ton_kho = int(gia_tri)
+            msg = f"Đã đổi tồn kho {product.ten_sanpham} từ {old} -> {gia_tri}."
             db.commit()
             return msg
             
@@ -289,20 +331,28 @@ Nhiệm vụ: Hỗ trợ quản trị cửa hàng RÕ RÀNG, DỄ NHÌN.
 3. **CHÀO HỎI**: Một câu chào ngắn gọn đầu tiên.
 4. **BẢNG BIỂU (QUAN TRỌNG)**:
    - Dùng bảng Markdown cho dữ liệu số (doanh thu, tồn kho).
+   - ĐẶC BIỆT: Khi hiển thị danh sách **tồn kho** hoặc **sản phẩm**, PHẢI dùng bảng với các cột: | ID | Tên sản phẩm | Số lượng tồn |.
    - ĐẶC BIỆT: Khi liệt kê danh sách Voucher, PHẢI dùng bảng với các cột: | Mã Voucher | Giá trị giảm | Trạng thái |.
    - ĐẶC BIỆT: Khi hiển thị **danh sách toàn bộ khách hàng** (`hanh_dong='danh_sach'`), PHẢI dùng bảng: | STT | Họ và tên | Tên đăng nhập | Email | Trạng thái | Ngày đăng ký |. Ghi rõ tổng số ở đầu.
    - ĐẶC BIỆT: Khi hiển thị kết quả tìm kiếm user hoặc danh sách trùng tên, PHẢI dùng bảng: | Họ và tên | Tên đăng nhập | Email | Trạng thái |.
 5. **TRẠNG THÁI VOUCHER**: Hiển thị rõ ràng mã nào đang "Hoạt động" và mã nào "Đã tắt".
 6. **KHÔNG HALLUCINATION**: Tuyệt đối KHÔNG tự nghĩ ra tên mã giảm giá (như BIKE10, FREESHIP, SUMMER20). CHỈ được dùng dữ liệu thật từ Tools trả về. Nếu Tools trả về danh sách trống, hãy báo cáo trung thực là chưa có mã nào.
 7. **XƯNG HÔ CHUYÊN NGHIỆP**: 
-   - Tuyệt đối KHÔNG đề cập đến mã ID (như ID=1, Admin ID=1) trong câu trả lời cho người dùng.
+   - Đối với các mặt hàng (Sản phẩm, Đơn hàng, Voucher), NÊN hiển thị mã ID để Anh tiện việc tra cứu và ra lệnh.
+   - Duy nhất đối với tài khoản cá nhân, tuyệt đối KHÔNG đề cập đến mã ID của Admin (như Mã Admin) để đảm bảo tính thẩm mỹ.
    - Sử dụng xưng hô nhất quán: "Em" (AI) và "Anh" (Admin). KHÔNG dùng "Anh/Chị", chỉ dùng "Anh".
    - Luôn giữ thái độ cầu thị, chuyên nghiệp và hỗ trợ tận tâm.
 8. **QUẢN LÝ TÀI KHOẢN USER** (dùng tool `quan_ly_tai_khoan_user`):
    - **Khi Admin muốn xem danh sách khách hàng**: gọi `hanh_dong='danh_sach'`, có thể chỉ định `so_luong` (mặc định 20, tối đa 50). Hiển thị dạng bảng Markdown đầy đủ.
    - Khi Admin muốn tìm user: gọi `hanh_dong='tim_kiem'`, `tu_khoa=<tên/email>`.
-   - Khi Admin muốn đổi sang `active` hoặc `inactive`: gọi tool ngay, không cần hỏi thêm.
    - KHÔNG được thay đổi tài khoản Admin.
+
+   **ÁNH XẠ TRẠNG THÁI — BẮT BUỘC ĐỌC KỸ:**
+   - Các từ → `active`: "kích hoạt", "mở khóa", "hoạt động trở lại", "active".
+   - Các từ → `inactive`: "vô hiệu hóa", "tạm khóa", "tạm dừng", "tạm thời khóa", "deactivate", "inactive". ⚠️ **TUYỆT ĐỐI KHÔNG NHẦM với banned**.
+   - Các từ → `banned`: "cấm vĩnh viễn", "ban tài khoản", "xóa quyền truy cập vĩnh viễn", "banned".
+
+   - Khi Admin muốn đổi sang `active` hoặc `inactive`: gọi tool ngay, không cần hỏi thêm.
    - **QUY TRÌNH CẤM TÀI KHOẢN (banned) — BẮT BUỘC 2 BƯỚC**:
      * Bước 1: Khi Admin yêu cầu cấm/ban tài khoản, PHẢI hỏi xác nhận trước bằng mẫu câu: "Anh chắc chắn muốn cấm vĩnh viễn **[tên đăng nhập]** ([họ tên]) chứ? Một khi thực hiện, tài khoản này sẽ không thể đăng nhập. Gõ 'Xác nhận' để em tiến hành."
      * Bước 2: CHỈ gọi tool với `trang_thai_moi='banned'` khi Admin đã trả lời xác nhận rõ ràng.
@@ -316,6 +366,7 @@ Nhiệm vụ: Hỗ trợ quản trị cửa hàng RÕ RÀNG, DỄ NHÌN.
        - **Trạng thái cũ**: [trạng thái trước]
        - **Trạng thái mới**: [trạng thái sau]
    - Dùng tiếng Việt: "Hoạt động" / "Tạm khoá" / "Cấm vĩnh viễn".
+
 
 ⚡ VÍ DỤ MẪU:
 Chào Anh! Rất vui được hỗ trợ Anh trong ca làm việc hôm nay. ✨
@@ -388,7 +439,7 @@ def chat_with_admin_ai(item: ChatRequest, session_id: Optional[str] = None, db: 
         raw_title = item.message.strip()
         title_text = raw_title[:80] + "..." if len(raw_title) > 80 else raw_title
 
-    user_msg = LichSuChat(
+    user_msg = LichSuChat(  # type: ignore[call-arg]
         user_id=admin.ma_user, role="user", message=item.message, 
         context_type="admin_ai", session_id=actual_session_id,
         title=title_text
@@ -503,30 +554,30 @@ async def stream_chat_with_admin_ai(item: ChatRequest, session_id: Optional[str]
                 yield f"data: {json.dumps({'chunk': full_reply, 'session_id': s_id})}\n\n"
                 await asyncio.sleep(0.01)
             else:
+                # ✅ Tối ưu: Không tạo lại model mỗi request.
+                # Inject ngày hiện tại vào prompt thay vì vào system_instruction.
                 current_date_str = datetime.now().strftime('%d/%m/%Y')
-                dynamic_sys_instruct = f"{sys_instruct}\nHôm nay là: {current_date_str}"
-                current_model = genai.GenerativeModel(
-                    'gemini-3.1-flash-lite-preview',
-                    tools=my_tools,
-                    system_instruction=dynamic_sys_instruct
-                )
+                prompt = f"[Hệ thống: Hôm nay {current_date_str}, Quản trị viên: {hovaten}] {message_text}"
 
-                chat = current_model.start_chat(
+                chat = model.start_chat(
                     history=gemini_history,
                     enable_automatic_function_calling=True
                 )
-                prompt = f"[Hệ thống: Quản trị viên: {hovaten}] {message_text}"
 
-                # Gọi AI (enable_automatic_function_calling xử lý tool tự động)
-                response = chat.send_message(prompt)
+                # ✅ Dùng run_in_executor: Gemini SDK là blocking — chạy trong thread pool
+                # để không chặn event loop trong khi chờ API response (~1–3s)
+                loop = asyncio.get_event_loop()
+                response = await loop.run_in_executor(None, lambda: chat.send_message(prompt))
                 full_reply = response.text or "Xin lỗi, mình không thể xử lý yêu cầu này lúc này."
 
-                # Stream từng từ ra frontend
+                # ✅ Stream theo cụm 4 từ (giống chat_customer): 150 từ = ~0.95s thay vì ~6s
                 words = full_reply.split(" ")
-                for i, word in enumerate(words):
-                    chunk = word if i == 0 else " " + word
+                CHUNK_SIZE = 4
+                for i in range(0, len(words), CHUNK_SIZE):
+                    chunk_words = words[i : i + CHUNK_SIZE]
+                    chunk = (" " if i > 0 else "") + " ".join(chunk_words)
                     yield f"data: {json.dumps({'chunk': chunk, 'session_id': s_id})}\n\n"
-                    await asyncio.sleep(0.04)
+                    await asyncio.sleep(0.025)
 
         except asyncio.CancelledError:
             pass

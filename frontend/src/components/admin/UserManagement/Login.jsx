@@ -46,8 +46,10 @@ const Login = ({ onSwitchToRegister, onSwitchToForgot }) => {
             let finalRole = (serverUser.is_superuser || String(serverUser.quyen || '').toUpperCase() === 'ADMIN') ? 'admin' : 'user';
 
             const storageKeyPrefix = finalRole === 'admin' ? 'admin' : 'user';
-            localStorage.setItem(`${storageKeyPrefix}_access_token`, res.data.access_token);
-            localStorage.setItem(`${storageKeyPrefix}_info`, JSON.stringify({ ...serverUser, quyen: finalRole }));
+            // Admin → sessionStorage (cô lập tab), User → localStorage (persist khi reload)
+            const store = finalRole === 'admin' ? sessionStorage : localStorage;
+            store.setItem(`${storageKeyPrefix}_access_token`, res.data.access_token);
+            store.setItem(`${storageKeyPrefix}_info`, JSON.stringify({ ...serverUser, quyen: finalRole }));
 
             setNotification({
                 type: 'success',
@@ -146,13 +148,12 @@ const Login = ({ onSwitchToRegister, onSwitchToForgot }) => {
 
             {notification && (
                 <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[120] animate-fade-in-down">
-                    <div className={`flex items-center gap-4 px-8 py-4 rounded-2xl border backdrop-blur-xl shadow-2xl transition-all duration-500 ${
-                        notification.type === 'success' 
-                            ? 'bg-emerald-500 text-white border-none' 
+                    <div className={`flex items-center gap-4 px-8 py-4 rounded-2xl border backdrop-blur-xl shadow-2xl transition-all duration-500 ${notification.type === 'success'
+                            ? 'bg-emerald-500 text-white border-none'
                             : notification.message?.includes('chờ kích hoạt')
-                                ? 'bg-[#FDE68A] text-amber-900 border-amber-300/50 shadow-amber-900/10' 
+                                ? 'bg-[#FDE68A] text-amber-900 border-amber-300/50 shadow-amber-900/10'
                                 : 'bg-rose-500 text-white border-none'
-                    }`}>
+                        }`}>
                         <span className="text-xl">
                             {notification.type === 'success' ? '✨' : notification.message?.includes('chờ kích hoạt') ? '⏳' : '⚠️'}
                         </span>

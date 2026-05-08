@@ -213,7 +213,7 @@ const Promotions = () => {
     const copyToClipboard = (code) => {
         navigator.clipboard.writeText(code);
         // NEW: Show toast instead of alert
-        setToast({ show: true, message: 'Đã sao chép mã', code: code });
+        setToast({ show: true, message: 'Đã lưu mã thành công!', code: code });
     };
 
     const getProductImage = (p) => {
@@ -228,31 +228,33 @@ const Promotions = () => {
     return (
         <>
             <Breadcrumb items={[{ label: 'Khuyến mãi' }]} />
-            <div className="animate-fade-in pb-20 overflow-hidden">
-                {/* NEW: TOAST NOTIFICATION */}
-                {toast.show && (
-                    <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
-                        <div className="animate-slide-down pointer-events-auto">
-                        <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[320px]">
-                            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+            
+            {/* TOAST NOTIFICATION - Moved outside to ensure visibility */}
+            {toast.show && (
+                <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[10000] pointer-events-none">
+                    <div className="animate-slide-up-toast pointer-events-auto">
+                        <div className="bg-white/90 backdrop-blur-xl border border-emerald-100 px-6 py-4 rounded-[1.5rem] shadow-[0_20px_50px_rgba(16,185,129,0.2)] flex items-center gap-4 min-w-[320px]">
+                            <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-200 text-white">
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                 </svg>
                             </div>
                             <div>
-                                <p className="font-black text-sm">{toast.message}</p>
-                                <p className="text-xs text-green-100 font-bold mt-1">{toast.code}</p>
+                                <p className="font-black text-slate-800 text-sm uppercase tracking-tight">{toast.message}</p>
+                                <p className="text-[10px] text-emerald-600 font-black mt-0.5 tracking-widest uppercase">Mã: {toast.code}</p>
                             </div>
                         </div>
-                        </div>
                     </div>
-                )}
+                </div>
+            )}
+
+            <div className="animate-fade-in pb-20 overflow-hidden">
 
                 {/* Add animation keyframes */}
                 <style>{`
-                @keyframes slide-down {
+                @keyframes slide-up-toast {
                     0% {
-                        transform: translateY(-100%);
+                        transform: translateY(100%);
                         opacity: 0;
                     }
                     100% {
@@ -260,8 +262,8 @@ const Promotions = () => {
                         opacity: 1;
                     }
                 }
-                .animate-slide-down {
-                    animation: slide-down 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+                .animate-slide-up-toast {
+                    animation: slide-up-toast 0.4s cubic-bezier(0.16, 1, 0.3, 1);
                 }
             `}</style>
                 {/* 1. HERO BANNER - AUTOMATIC SLIDER */}
@@ -481,7 +483,7 @@ const Promotions = () => {
                                         <div className="relative bg-white rounded-[2rem] border border-slate-100 ring-2 ring-indigo-500/20 shadow-xl flex overflow-hidden min-h-[160px] transition-all duration-300 group-hover:-translate-y-1 group-hover:ring-indigo-500/40">
                                             {/* Left Side: Ticket Graphic (Upgraded to Gradient) */}
                                             <div className="w-1/3 bg-gradient-to-br from-indigo-900 via-slate-900 to-indigo-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-                                                {/* Suble glow effect */}
+                                                {/* Subtle glow effect */}
                                                 <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.2),transparent)]"></div>
 
                                                 <span className="text-3xl mb-2 relative z-10 filter drop-shadow-md">🎫</span>

@@ -40,7 +40,7 @@ const AdminAddressManager = ({ user, onClose }) => {
         is_mac_dinh: false
     });
 
-    const token = localStorage.getItem('admin_access_token');
+    const token = sessionStorage.getItem('admin_access_token');
 
     useEffect(() => {
         if (user) fetchAddresses();
