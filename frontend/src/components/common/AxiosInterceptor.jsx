@@ -53,11 +53,14 @@ const AxiosInterceptor = () => {
 
     useEffect(() => {
         // 1. Request Interceptor: Tự động đính kèm token vào mọi request
+        //    Ngoại trừ: /login và /register — không gắn token để tránh cross-tab conflict
+        //    (admin login request không được mang user token và ngược lại)
         const requestInterceptor = axios.interceptors.request.use(
             (config) => {
-                const token = getBestToken();
-                if (token) {
-                    config.headers.Authorization = `Bearer ${token}`;
+                const isAuthEndpoint = config.url?.includes('/login') || config.url?.includes('/register');
+                if (!isAuthEndpoint) {
+                    const token = getBestToken();
+                    if (token) config.headers.Authorization = `Bearer ${token}`;
                 }
                 return config;
             },
@@ -122,7 +125,13 @@ const AxiosInterceptor = () => {
                         ? ['admin_access_token', 'admin_info', 'admin_user_info']
                         : ['user_access_token', 'user_info', 'user_user_info'];
 
-                    keysToRemove.forEach(key => localStorage.removeItem(key));
+                    // Fix B2: Admin token lưu ở sessionStorage, user token lưu ở localStorage
+                    //         Phải xóa đúng storage, không được nhầm lẫn
+                    if (isAdminRequest) {
+                        keysToRemove.forEach(key => sessionStorage.removeItem(key));
+                    } else {
+                        keysToRemove.forEach(key => localStorage.removeItem(key));
+                    }
 
                     // Reset flags trước khi redirect
                     isAlerting.current = false;

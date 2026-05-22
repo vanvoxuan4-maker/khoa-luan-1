@@ -36,7 +36,7 @@ Trợ lý ảo thông minh tích hợp trực tiếp vào hệ thống quản tr
 
 ### Backend
 - **Framework:** FastAPI (Python)
-- **Database:** PostgreSQL/MySQL (SQLAlchemy ORM)
+- **Database:** PostgreSQL (SQLAlchemy ORM)
 - **AI:** Google Generative AI (Gemini 3.1 Flash Lite Review)
 - **Auth:** JWT Authentication, Bcrypt Password Hashing
 

@@ -15,13 +15,14 @@ const userStorage  = localStorage;
 
 /**
  * Tìm token tốt nhất có sẵn.
- * Ưu tiên token của context hiện tại, nếu không có thì lấy token của context kia.
+ * Mỗi context chỉ nhận đúng token của mình — KHÔNG fallback sang context sai.
+ * Tránh lỗi: admin login request vô tình mang user token (cross-tab session conflict).
  */
 export const getBestToken = () => {
     const userToken  = userStorage.getItem('user_access_token');
     const adminToken = adminStorage.getItem('admin_access_token');
-    if (isAdminContext()) return adminToken || userToken;
-    return userToken || adminToken;
+    if (isAdminContext()) return adminToken;  // Admin context: chỉ dùng admin token
+    return userToken;                         // User context: chỉ dùng user token
 };
 
 /**
